@@ -75,7 +75,7 @@ Accuracy (accuracy.wer)
 
 Generation speed (generation.speed)
 
-| Model      | Config            | latency_mean_s | latency_p95_s | rtf_mean | throughput_qps | output_tokens_per_request_second | Source                         |
+| Model      | Config            | latency_mean_s | latency_p95_s | rtf_mean | throughput_qps | output_tok_per_req_s | Source                         |
 | ---------- | ----------------- | -------------- | ------------- | -------- | -------------- | ------------------------------ | ------------------------------ |
 | Qwen3-Omni | EN, voice_clone=T | 3.06           | 4.32          | 0.87     | 5.224          | 4.7                            | PR #411 [H200, V1-pipeline, full-set, c=16] |
 | Qwen3-Omni | EN, voice_clone=F | 2.60           | 3.70          | 0.73     | 6.151          | 5.5                            | PR #411 [H200, V1-pipeline, full-set, c=16] |
@@ -120,7 +120,7 @@ Accuracy (accuracy.wer)
 
 Generation speed (generation.speed)
 
-| Model      | Config            | latency_mean_s | latency_p95_s | rtf_mean | throughput_qps | output_tokens_per_request_second | Source                                                                  |
+| Model      | Config            | latency_mean_s | latency_p95_s | rtf_mean | throughput_qps | output_tok_per_req_s | Source                                                                  |
 | ---------- | ----------------- | -------------- | ------------- | -------- | -------------- | ------------------------------ | ----------------------------------------------------------------------- |
 | Qwen3-Omni | EN, voice_clone=T | 7.961          | 11.789        | 2.2217   | 2.001          | 1.8                            | local v1 sweep [H200, full-set, c=16, sequential generate+transcribe]  |
 | Qwen3-Omni | EN, voice_clone=F | 6.906          | 10.342        | 1.9382   | 2.307          | 2.1                            | local v1 sweep [H200, full-set, c=16, sequential generate+transcribe]  |

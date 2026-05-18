@@ -311,8 +311,8 @@ def apply_slack(
     for conc, m in p95.items():
         thresholds = {
             "throughput_qps_min": round(m["throughput_qps"] * slack_higher, 2),
-            "output_tokens_per_request_second_min": round(
-                m["output_tokens_per_request_second"] * slack_higher,
+            "output_tok_per_req_s_min": round(
+                m["output_tok_per_req_s"] * slack_higher,
                 1,
             ),
             "latency_mean_s_max": round(m["latency_mean_s"] * slack_lower, 1),
@@ -356,13 +356,12 @@ def assert_speed_thresholds(
         f"throughput_qps {throughput_qps} < "
         f"{level_thresholds['throughput_qps_min']} at concurrency {concurrency}",
     )
-    output_tokens_per_request_second = summary.get("output_tokens_per_request_second")
+    output_tok_per_req_s = summary.get("output_tok_per_req_s")
     checks.check(
-        output_tokens_per_request_second is not None
-        and output_tokens_per_request_second
-        >= level_thresholds["output_tokens_per_request_second_min"],
-        f"output_tokens_per_request_second {output_tokens_per_request_second} < "
-        f"{level_thresholds['output_tokens_per_request_second_min']} "
+        output_tok_per_req_s is not None
+        and output_tok_per_req_s >= level_thresholds["output_tok_per_req_s_min"],
+        f"output_tok_per_req_s {output_tok_per_req_s} < "
+        f"{level_thresholds['output_tok_per_req_s_min']} "
         f"at concurrency {concurrency}",
     )
     latency_mean_s = summary.get("latency_mean_s")

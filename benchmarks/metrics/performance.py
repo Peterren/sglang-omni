@@ -11,7 +11,7 @@ Metric semantics:
     Mean completion tokens per successful request with completion tokens.
 ``output_throughput``
     Completion tokens divided by measured benchmark wall-clock seconds.
-``output_tokens_per_request_second``
+``output_tok_per_req_s``
     Completion tokens divided by summed per-request engine/request-time seconds.
 ``output_token_rate``
     Per-request completion tokens divided by that request's engine/request time.
@@ -42,7 +42,7 @@ def _compute_token_metrics(
 
     token_metrics: dict = {}
     if total_engine_time > 0 and total_tokens > 0:
-        token_metrics["output_tokens_per_request_second"] = round(
+        token_metrics["output_tok_per_req_s"] = round(
             total_tokens / total_engine_time,
             1,
         )
@@ -129,10 +129,10 @@ def print_speed_summary(
         )
     if metrics.get("output_throughput") is not None:
         print(f"  {'Output throughput (tok/s):':<{lw}} {metrics['output_throughput']}")
-    if metrics.get("output_tokens_per_request_second") is not None:
+    if metrics.get("output_tok_per_req_s") is not None:
         print(
             f"  {'Output tokens/request-s:':<{lw}} "
-            f"{metrics['output_tokens_per_request_second']}"
+            f"{metrics['output_tok_per_req_s']}"
         )
     if metrics.get("output_tokens_mean") is not None:
         print(f"  {'Output tokens (mean):':<{lw}} {metrics['output_tokens_mean']:.0f}")

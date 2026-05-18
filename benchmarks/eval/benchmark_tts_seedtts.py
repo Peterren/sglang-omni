@@ -87,7 +87,7 @@ Accuracy (accuracy.wer)
 
 Generation speed (generation.speed)
 
-| Model  | Config           | latency_mean_s | latency_p95_s | rtf_mean | throughput_qps | output_tokens_per_request_second | Source                         |
+| Model  | Config           | latency_mean_s | latency_p95_s | rtf_mean | throughput_qps | output_tok_per_req_s | Source                         |
 | ------ | ---------------- | -------------- | ------------- | -------- | -------------- | ------------------------------ | ------------------------------ |
 | S2-Pro | EN, stream=False | 15.836         | 21.509        | 4.269    | 1.005          | 75.0                           | PR #411 [H200, full-set, c=16] |
 | S2-Pro | EN, stream=True  | 16.135         | 21.733        | 4.357    | 0.985          | 74.1                           | PR #411 [H200, full-set, c=16] |

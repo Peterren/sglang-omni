@@ -78,7 +78,7 @@ VC_SIMILARITY_MEAN_MIN = 60.0
 _VC_NON_STREAM_P95 = {
     16: {
         "throughput_qps": 6.187,
-        "output_tokens_per_request_second": 6.1,
+        "output_tok_per_req_s": 6.1,
         "latency_mean_s": 2.418,
         "rtf_mean": 0.7912,
     },

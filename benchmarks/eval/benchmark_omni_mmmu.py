@@ -42,7 +42,7 @@ Note (Xuesong): full 900 not runfor enable_audio = True — Issue #276 talker is
 
 Speed (speed)
 
-| Model      | Config             | latency_mean_s | latency_p95_s | throughput_qps | output_tokens_per_request_second | Source                                                     |
+| Model      | Config             | latency_mean_s | latency_p95_s | throughput_qps | output_tok_per_req_s | Source                                                     |
 | ---------- | ------------------ | -------------- | ------------- | -------------- | ------------------------------ | ---------------------------------------------------------- |
 | Qwen3-Omni | enable_audio=False | 5.987          | 21.167        | 1.313          | 85.0                           | PR #411 [H200, V1-pipeline, full-set, c=8, max_tokens=2048]       |
 | Qwen3-Omni | enable_audio=True  | 20.364         | 47.493        | 0.048          | 30.1                           | PR #411 [H200, V1-pipeline, **50-sample subset**, c=1, max_tokens=2048] |
@@ -61,7 +61,7 @@ Accuracy (summary)
 
 Speed (speed)
 
-| Model      | Config             | latency_mean_s | latency_p95_s | throughput_qps | output_tokens_per_request_second | Source                                                       |
+| Model      | Config             | latency_mean_s | latency_p95_s | throughput_qps | output_tok_per_req_s | Source                                                       |
 | ---------- | ------------------ | -------------- | ------------- | -------------- | ------------------------------ | ------------------------------------------------------------ |
 | Qwen3-Omni | enable_audio=False | 6.542          | 21.356        | 1.202          | 76.5                           | local v1 sweep [H200, full-set, c=8, max_tokens=2048]       |
 """

@@ -38,7 +38,7 @@ Accuracy
 
 Speed
 
-| Model      | Config                | completed | failed | latency_mean_s | latency_median_s | latency_p95_s | latency_p99_s | output_tokens_per_request_second | output_tokens_mean | output_tokens_total | prompt_tokens_mean | prompt_tokens_total | throughput_qps | Source                                                              |
+| Model      | Config                | completed | failed | latency_mean_s | latency_median_s | latency_p95_s | latency_p99_s | output_tok_per_req_s | output_tokens_mean | output_tokens_total | prompt_tokens_mean | prompt_tokens_total | throughput_qps | Source                                                              |
 | ---------- | --------------------- | --------- | ------ | -------------- | ---------------- | ------------- | ------------- | ------------------------------ | --------------- | ---------------- | ------------------ | ------------------- | -------------- | ------------------------------------------------------------------- |
 | Qwen3-Omni | thinker-only, ci-50, c=8 | 50        | 0      | 44.530         | 46.846           | 52.694        | 53.180        | 0.9                            | 40.0            | 2025             | 21684.0            | 1084218             | 0.167          | PR #411 [H200, c=8, max_tokens=256] |
 | Qwen3-Omni | thinker-talker, ci-50, c=8 | 50        | 0      | 40.423         | 40.063           | 63.088        | 81.046        | 1.0                            | 41.0            | 2050             | 21684.0            | 1084218             | 0.193          | PR #411 [H200, c=8, max_tokens=256] |
@@ -63,7 +63,7 @@ Accuracy
 
 Speed
 
-| Model      | Config                   | completed | failed | latency_mean_s | latency_median_s | latency_p95_s | latency_p99_s | output_tokens_per_request_second | output_tokens_mean | output_tokens_total | prompt_tokens_mean | prompt_tokens_total | throughput_qps | Source                                               |
+| Model      | Config                   | completed | failed | latency_mean_s | latency_median_s | latency_p95_s | latency_p99_s | output_tok_per_req_s | output_tokens_mean | output_tokens_total | prompt_tokens_mean | prompt_tokens_total | throughput_qps | Source                                               |
 | ---------- | ------------------------ | --------- | ------ | -------------- | ---------------- | ------------- | ------------- | ------------------------------ | --------------- | ---------------- | ------------------ | ------------------- | -------------- | ---------------------------------------------------- |
 | Qwen3-Omni | thinker-only, ci-50, c=8 | 50        | 0      | 133.245        | 137.354          | 155.201       | 159.106       | 0.3                            | 43              | 2172             | 21684              | 1084218             | 0.058          | local v1 sweep [H200, ci-50, c=8, max_tokens=256]   |
 """

@@ -57,7 +57,7 @@ Accuracy (accuracy)
 
 Speed (speed)
 
-| Model      | Config                | latency_mean_s | latency_p95_s | throughput_qps | output_tokens_per_request_second | Source                                          |
+| Model      | Config                | latency_mean_s | latency_p95_s | throughput_qps | output_tok_per_req_s | Source                                          |
 | ---------- | --------------------- | -------------- | ------------- | -------------- | ------------------------------ | ----------------------------------------------- |
 | Qwen3-Omni | modalities=text       | 0.209          | 0.290         | 38.31          | 9.9                            | PR #411 [H200, V1-pipeline, full-set, c=8]             |
 | Qwen3-Omni | modalities=text+audio | 0.207          | 0.278         | 38.59          | 10.0                           | PR #411 [H200, V1-pipeline, full-set, c=8, text-only server] |
@@ -81,7 +81,7 @@ Accuracy (summary)
 
 Speed (speed)
 
-| Model      | Config                         | latency_mean_s | latency_p95_s | throughput_qps | output_tokens_per_request_second | Source                                                                       |
+| Model      | Config                         | latency_mean_s | latency_p95_s | throughput_qps | output_tok_per_req_s | Source                                                                       |
 | ---------- | ------------------------------ | -------------- | ------------- | -------------- | ------------------------------ | ---------------------------------------------------------------------------- |
 | Qwen3-Omni | stage6 talker, mmsu-ci-2000    | 22.049         | 31.935        | 0.362          | 2.7                            | local v1 run [H200, 2000-sample stage-6 backing set, speech pipeline, c=1] |
 
