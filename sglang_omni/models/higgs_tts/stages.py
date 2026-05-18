@@ -232,20 +232,16 @@ def create_sglang_tts_engine_executor(
     model_path: str,
     *,
     device: str = "cuda:0",
-    max_new_tokens: int = 2048,
     server_args_overrides: dict[str, Any] | None = None,
 ):
     """sglang-backed AR engine for Higgs TTS — composes :class:`OmniScheduler`
     with Higgs-specific request/result adapters and model runner.
 
     Finish handling: sampler-driven EOC + delay wind-down is signalled by
-    setting ``req.finished_reason`` from inside the model runner, so the
-    upstream sglang scheduler's native ``req.finished()`` flow picks it up
-    without any custom iteration controller. ``max_new_tokens`` is a
-    server-side hard cap that clamps each request's
-    ``state.max_new_tokens`` from above before it reaches
-    ``SamplingParams`` (which is what sglang uses for the ``FINISH_LENGTH``
-    upper bound).
+    setting ``req.finished_reason`` from inside the model runner; sglang's
+    native ``FINISH_LENGTH`` cap comes from each request's own
+    ``SamplingParams.max_new_tokens`` (sourced from
+    ``HiggsTtsState.max_new_tokens``).
     """
     checkpoint_dir = resolve_checkpoint(model_path)
     gpu_id = int(device.split(":")[-1]) if ":" in device else 0
@@ -290,9 +286,7 @@ def create_sglang_tts_engine_executor(
     )
     model_runner = HiggsTTSModelRunner(model_worker, output_proc)
     model = model_worker.model_runner.model
-    request_builder, result_adapter = make_higgs_scheduler_adapters(
-        model, max_new_tokens_cap=max_new_tokens
-    )
+    request_builder, result_adapter = make_higgs_scheduler_adapters(model)
 
     return OmniScheduler(
         tp_worker=model_worker,
