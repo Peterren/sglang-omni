@@ -241,7 +241,7 @@ class TalkerPrefillBuilder:
             "pending_text_queue": self.tensor_rows_to_queue(
                 prefill["future_text_rows"]
             ),
-            "tts_pad_embed": tts_pad_embed[0].detach().cpu(),
+            "tts_pad_embed": tts_pad_embed[0].detach(),
             "tts_eos_embed": tts_eos_embed[0].detach(),
             "prompt_model_inputs": prompt_model_inputs,
         }

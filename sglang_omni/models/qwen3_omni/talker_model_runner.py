@@ -284,10 +284,10 @@ class QwenTalkerModelRunner(ModelRunner):
             bool(getattr(data, "thinker_chunks_done", False))
             and getattr(data, "tts_pad_embed", None) is not None
         ):
-            combined = combined + data.tts_pad_embed.to(
-                device=device,
-                dtype=dtype,
-            ).reshape(-1)
+            pad = data.tts_pad_embed.reshape(-1)
+            if pad.device != device or pad.dtype != dtype:
+                pad = pad.to(device=device, dtype=dtype)
+            combined = combined + pad
         else:
             return None
         return combined
