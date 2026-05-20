@@ -276,10 +276,10 @@ class QwenTalkerModelRunner(ModelRunner):
             getattr(data, "pending_text_queue", None)
         )
         if next_text is not None:
-            combined = combined + next_text.to(
-                device=device,
-                dtype=dtype,
-            ).reshape(-1)
+            next_text = next_text.reshape(-1)
+            if next_text.device != device or next_text.dtype != dtype:
+                next_text = next_text.to(device=device, dtype=dtype)
+            combined = combined + next_text
         elif (
             bool(getattr(data, "thinker_chunks_done", False))
             and getattr(data, "tts_pad_embed", None) is not None
