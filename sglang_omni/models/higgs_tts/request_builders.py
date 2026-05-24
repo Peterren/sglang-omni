@@ -25,6 +25,7 @@ class HiggsSGLangRequestData(SGLangARRequestData):
     num_codebooks: int = 8
     codebook_size: int = 1026
     output_codes: list[torch.Tensor] = field(default_factory=list)
+    generation_done: bool = False
 
 
 def _ref_audio_fingerprint(codes: list[list[int]] | None) -> str | None:

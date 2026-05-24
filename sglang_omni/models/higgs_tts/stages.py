@@ -247,8 +247,8 @@ def create_sglang_tts_engine_executor(
     gpu_id = int(device.split(":")[-1]) if ":" in device else 0
 
     overrides: dict[str, Any] = {
-        # Per-request slot state + Python decode loop are not graph-capturable.
-        "disable_cuda_graph": True,
+        "disable_cuda_graph": False,
+        "cuda_graph_max_bs": 32,
         "mem_fraction_static": 0.85,
         "max_running_requests": 16,
         "chunked_prefill_size": 8192,
@@ -300,7 +300,7 @@ def create_sglang_tts_engine_executor(
         model_runner=model_runner,
         request_builder=request_builder,
         result_adapter=result_adapter,
-        on_abort=model.reset_request,
+        abort_callback=model.reset_request,
     )
 
 
