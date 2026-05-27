@@ -95,11 +95,85 @@ const envText = envBadge.querySelector(".env-text");
 
 const historyList = $("#history");
 
-// --- mute toggle (persists across stream sessions) ----
+// --- Web Audio plumbing for live streaming playback ----
+//
+// Setting <audio>.src to a new blob URL on every incoming WAV chunk reloads
+// the element, which never finishes loading before the next chunk arrives —
+// so playback only kicks in once the stream completes. Instead we decode
+// each chunk into an AudioBuffer and schedule it on the AudioContext
+// timeline, which gives seamless real-time playback.
+
+let audioCtx = null;
+let muteGain = null;
+let nextStartTime = 0;
+let scheduledSources = [];
+let speakingTimer = null;
 let muted = false;
+
+function ensureAudioCtx() {
+  if (!audioCtx) {
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new Ctor();
+    muteGain = audioCtx.createGain();
+    muteGain.gain.value = muted ? 0 : 1;
+    muteGain.connect(audioCtx.destination);
+  }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function stopScheduledPlayback() {
+  for (const src of scheduledSources) {
+    try { src.stop(); } catch {}
+    try { src.disconnect(); } catch {}
+  }
+  scheduledSources = [];
+  nextStartTime = audioCtx ? audioCtx.currentTime : 0;
+  if (speakingTimer) {
+    clearTimeout(speakingTimer);
+    speakingTimer = null;
+  }
+  setSpeaking(false);
+}
+
+async function scheduleWavChunk(wavBytes) {
+  ensureAudioCtx();
+  // decodeAudioData wants a standalone ArrayBuffer.
+  const arrayBuffer = wavBytes.buffer.slice(
+    wavBytes.byteOffset,
+    wavBytes.byteOffset + wavBytes.byteLength,
+  );
+  let audioBuffer;
+  try {
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  } catch {
+    return; // skip unparseable chunk rather than blow up the stream
+  }
+
+  const source = audioCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(muteGain);
+
+  const now = audioCtx.currentTime;
+  const startAt = Math.max(nextStartTime, now + 0.02);
+  source.start(startAt);
+  nextStartTime = startAt + audioBuffer.duration;
+  scheduledSources.push(source);
+
+  // Keep the equalizer indicator on for as long as something is queued.
+  setSpeaking(true);
+  if (speakingTimer) clearTimeout(speakingTimer);
+  const msUntilEnd = (nextStartTime - audioCtx.currentTime) * 1000;
+  speakingTimer = setTimeout(() => {
+    setSpeaking(false);
+    speakingTimer = null;
+  }, msUntilEnd + 80);
+}
+
 muteButton.addEventListener("click", () => {
   muted = !muted;
-  liveAudio.muted = muted;
+  if (muteGain) muteGain.gain.value = muted ? 0 : 1;
+  liveAudio.muted = muted; // harmless; element is unused for playback now
   muteButton.setAttribute("aria-pressed", muted ? "true" : "false");
   muteButton.title = muted ? "Unmute live playback" : "Mute live playback";
 });
@@ -191,19 +265,34 @@ function renderTokenTabs() {
 
 function renderTokenGrid(category) {
   const grid = $("#token-grid");
-  grid.innerHTML = "";
+  grid.replaceChildren();
   for (const [name, desc] of TOKEN_CATEGORIES[category]) {
     const literal = `<|${category}:${name}|>`;
+
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "token-chip";
     chip.dataset.category = category;
     chip.title = `Insert ${literal}`;
-    chip.innerHTML = `
-      <span class="token-name">${literal}</span>
-      <span class="token-desc">${desc}</span>
-    `;
-    chip.addEventListener("click", () => insertTokenAtCursor(literal));
+
+    // textContent (not innerHTML) — the literal contains "<|…|>" which the
+    // HTML parser treats as a malformed tag and silently drops, leaving
+    // chips blank and unclickable. Use DOM construction to keep them text.
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "token-name";
+    nameSpan.textContent = literal;
+
+    const descSpan = document.createElement("span");
+    descSpan.className = "token-desc";
+    descSpan.textContent = desc;
+
+    chip.append(nameSpan, descSpan);
+    chip.addEventListener("click", () => {
+      insertTokenAtCursor(literal);
+      // Brief visual flash so the user sees the click registered.
+      chip.classList.add("flash");
+      setTimeout(() => chip.classList.remove("flash"), 260);
+    });
     grid.appendChild(chip);
   }
 }
@@ -355,29 +444,15 @@ async function runStreaming() {
   lockButton(true);
   setStatus("Connecting to speech stream…", "busy");
 
-  liveAudio.removeAttribute("src");
-  liveAudio.muted = muted;
-  liveAudio.load();
+  // Resume / create the AudioContext synchronously within the user gesture
+  // chain so browsers don't refuse to start playback.
+  ensureAudioCtx();
+  stopScheduledPlayback();
 
   const started = performance.now();
   let chunkCount = 0;
   let firstAudioAt = null;
   const wavChunks = [];
-  let speakingActive = false;
-
-  // The "speaking" indicator stays active whenever the hidden live <audio>
-  // element is actually emitting sound (between play and ended/pause).
-  const onPlay = () => {
-    speakingActive = true;
-    setSpeaking(true);
-  };
-  const onEnded = () => {
-    speakingActive = false;
-    setSpeaking(false);
-  };
-  liveAudio.addEventListener("play", onPlay);
-  liveAudio.addEventListener("pause", onEnded);
-  liveAudio.addEventListener("ended", onEnded);
 
   try {
     const resp = await fetch("/api/synthesize/stream", {
@@ -413,9 +488,8 @@ async function runStreaming() {
         } catch {
           continue;
         }
-        if (event.error) {
-          throw new Error(event.error);
-        }
+        if (event.error) throw new Error(event.error);
+
         const audio = event.audio;
         if (!audio || !audio.data) continue;
 
@@ -427,30 +501,10 @@ async function runStreaming() {
           firstAudioAt = (performance.now() - started) / 1000;
         }
 
-        // Refresh the hidden live <audio> source with all chunks accumulated
-        // so far, preserving the current playback position so the user hears
-        // continuous audio rather than a restart on every chunk.
-        const combined = combineWavChunks(wavChunks);
-        const previewUrl = URL.createObjectURL(
-          new Blob([combined], { type: "audio/wav" }),
-        );
-        const savedTime = liveAudio.currentTime;
-        const wasPlaying = !liveAudio.paused;
-        liveAudio.src = previewUrl;
-        liveAudio.muted = muted;
-        liveAudio.addEventListener(
-          "loadedmetadata",
-          () => {
-            try {
-              liveAudio.currentTime = savedTime;
-            } catch {}
-            if (wasPlaying || chunkCount === 1) {
-              setSpeaking(true);
-              liveAudio.play().catch(() => {});
-            }
-          },
-          { once: true },
-        );
+        // Decode + schedule immediately. Don't await here — schedule fires
+        // and forgets so the SSE loop keeps draining while the decoder
+        // works in parallel.
+        scheduleWavChunk(wavBytes);
 
         setStatus(
           `Streaming · chunk ${chunkCount} · first audio ${firstAudioAt.toFixed(2)}s`,
@@ -463,29 +517,28 @@ async function runStreaming() {
       throw new Error("No audio was returned.");
     }
 
+    // Provide the full combined WAV in the Final audio bar so the user can
+    // scrub / re-listen / download. The live playback is already happening
+    // in the Web Audio graph and continues independently.
     const finalBytes = combineWavChunks(wavChunks);
-    const finalBlob = new Blob([finalBytes], { type: "audio/wav" });
-    const finalUrl = URL.createObjectURL(finalBlob);
+    const finalUrl = URL.createObjectURL(
+      new Blob([finalBytes], { type: "audio/wav" }),
+    );
     finalAudio.src = finalUrl;
 
     const elapsed = ((performance.now() - started) / 1000).toFixed(2);
     const ftf =
-      firstAudioAt !== null ? ` | first audio ${firstAudioAt.toFixed(2)}s` : "";
-    const meta = `${elapsed}s total | ${chunkCount} chunks${ftf}`;
+      firstAudioAt !== null ? ` · first audio ${firstAudioAt.toFixed(2)}s` : "";
+    const meta = `${elapsed}s total · ${chunkCount} chunks${ftf}`;
     setStatus(meta, "success");
     appendHistory({ text: inputText, audioUrl: finalUrl, meta });
   } catch (exc) {
+    stopScheduledPlayback();
     setStatus(`Request failed: ${exc.message}`, "error");
   } finally {
     lockButton(false);
-    liveAudio.removeEventListener("play", onPlay);
-    liveAudio.removeEventListener("pause", onEnded);
-    liveAudio.removeEventListener("ended", onEnded);
-    // Indicator follows the hidden audio: if it's still draining, leave it
-    // active; otherwise turn it off so the user sees the synthesis is done.
-    if (!speakingActive || liveAudio.paused || liveAudio.ended) {
-      setSpeaking(false);
-    }
+    // Indicator is driven by the scheduler's own timer — don't force it off
+    // here, the still-queued audio should keep the bars vibing until done.
   }
 }
 

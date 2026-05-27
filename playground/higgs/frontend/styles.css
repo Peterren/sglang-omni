@@ -565,6 +565,15 @@ input:focus {
 
 .token-chip:active { transform: translateY(1px); }
 
+.token-chip.flash {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.token-chip.flash .token-name,
+.token-chip.flash .token-desc { color: var(--bg); }
+
 .token-chip .token-name {
   font-family: "IBM Plex Mono", monospace;
   font-size: 11px;
