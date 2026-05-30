@@ -24,7 +24,10 @@ Our core features include:
    :caption: Cookbook
 
    cookbook/higgs_tts.md
-
+   cookbook/voxtral_tts.md
+   cookbook/qwen3_tts.md
+   cookbook/qwen3_omni.md
+   cookbook/llada2_uni.md
 
 .. toctree::
    :maxdepth: 1
