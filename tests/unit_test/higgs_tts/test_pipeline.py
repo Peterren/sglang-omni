@@ -940,7 +940,11 @@ def test_higgs_audio_codec_encode_batch_different_lengths_separate_calls() -> No
 def test_higgs_audio_codec_encode_batch_order_preserved() -> None:
     calls: list = []
     codec = _make_fake_encoder_codec(calls)
-    wavs = [torch.zeros(1, 1, 48000), torch.zeros(1, 1, 24000), torch.zeros(1, 1, 48000)]
+    wavs = [
+        torch.zeros(1, 1, 48000),
+        torch.zeros(1, 1, 24000),
+        torch.zeros(1, 1, 48000),
+    ]
     results = codec.encode_batch(wavs)
     assert len(results) == 3
     assert results[0].shape[0] == 150
