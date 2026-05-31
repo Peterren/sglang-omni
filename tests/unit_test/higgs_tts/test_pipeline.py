@@ -944,15 +944,21 @@ def test_higgs_audio_codec_encode_batch_order_preserved() -> None:
     calls: list = []
     codec = _make_fake_encoder_codec(calls)
     wavs = [
-        torch.zeros(1, 1, 48000),
-        torch.zeros(1, 1, 24000),
-        torch.zeros(1, 1, 48000),
+        torch.full((1, 1, 48000), 0.3),
+        torch.full((1, 1, 24000), 0.5),
+        torch.full((1, 1, 48000), 0.7),
     ]
+    ref0 = codec.encode_reference(wavs[0])
+    ref1 = codec.encode_reference(wavs[1])
+    ref2 = codec.encode_reference(wavs[2])
+    calls.clear()
+
     results = codec.encode_batch(wavs)
+
     assert len(results) == 3
-    assert results[0].shape[0] == 150
-    assert results[1].shape[0] == 75
-    assert results[2].shape[0] == 150
+    assert torch.equal(results[0], ref0)
+    assert torch.equal(results[1], ref1)
+    assert torch.equal(results[2], ref2)
 
 
 def test_higgs_audio_codec_encode_batch_matches_encode_reference() -> None:
