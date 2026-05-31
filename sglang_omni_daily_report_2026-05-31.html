@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang-Omni 每日 PR 学习日报 · 2026-05-31</title>
+<!-- 代码高亮（在线时启用，离线时自动回退到下方 CSS 样式） -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<style>
+  :root{
+    --bg:#0f1419; --card:#1a1f29; --card2:#222834; --ink:#e6e9ef; --muted:#9aa4b2;
+    --accent:#6e63da; --accent2:#36c2a8; --warn:#d97706; --good:#2ea043; --line:#2b3240;
+    --code-bg:#11151c; --pill:#2a3140;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0c1016,#0f1419 240px);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.75;font-size:16px}
+  .wrap{max-width:1040px;margin:0 auto;padding:32px 20px 80px}
+  header.top{text-align:center;padding:28px 0 8px}
+  header.top h1{font-size:30px;margin:0 0 6px;letter-spacing:.5px}
+  header.top .date{color:var(--muted);font-size:15px}
+  header.top .sub{color:var(--muted);font-size:14px;margin-top:10px}
+  a{color:var(--accent2);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* 概览 */
+  .overview{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin:22px 0 30px}
+  .overview h2{margin:0 0 14px;font-size:19px}
+  .stat-row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px}
+  .stat{flex:1;min-width:130px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:center}
+  .stat .n{font-size:26px;font-weight:700;color:var(--accent2)}
+  .stat .l{font-size:13px;color:var(--muted);margin-top:2px}
+  .topics{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .tag{display:inline-block;font-size:12.5px;padding:3px 10px;border-radius:999px;background:var(--pill);border:1px solid var(--line);color:var(--ink)}
+  .tag.perf{color:#ffd9a8;border-color:#5a3d1a}
+  .tag.bug{color:#ffb3b3;border-color:#5a2330}
+  .tag.arch{color:#bfb6ff;border-color:#3a3470}
+  .tag.ci{color:#9adfd0;border-color:#1d4d44}
+  .tag.docs{color:#cfd6e0}
+  .legend{font-size:13px;color:var(--muted);margin-top:14px}
+
+  /* 卡片 */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:18px 0;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.02)}
+  .card > summary{list-style:none;cursor:pointer;padding:18px 22px;display:flex;align-items:flex-start;gap:14px;user-select:none}
+  .card > summary::-webkit-details-marker{display:none}
+  .card[open] > summary{border-bottom:1px solid var(--line)}
+  .chev{flex:0 0 auto;margin-top:4px;color:var(--muted);transition:transform .2s}
+  .card[open] .chev{transform:rotate(90deg)}
+  .sum-main{flex:1}
+  .sum-title{font-size:17.5px;font-weight:650;margin:0}
+  .sum-meta{font-size:13px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .badge{font-size:11.5px;padding:2px 8px;border-radius:6px;background:#243018;color:#9be37d;border:1px solid #2f4422}
+  .pr-num{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--accent2)}
+  .one-liner{margin-top:8px;font-size:14.5px;color:#c7cedb}
+
+  .body{padding:6px 24px 26px}
+  .body h3{font-size:16px;margin:24px 0 8px;padding-left:11px;border-left:4px solid var(--accent)}
+  .body h4{font-size:14.5px;color:var(--accent2);margin:18px 0 6px}
+  .body p{margin:8px 0}
+  .body ul{margin:8px 0;padding-left:22px}
+  .body li{margin:5px 0}
+
+  .kb{background:var(--card2);border:1px solid var(--line);border-left:4px solid var(--accent2);border-radius:10px;padding:12px 16px;margin:12px 0}
+  .kb .term{font-weight:700;color:#fff;font-size:14.5px}
+  .kb .three{margin-top:6px}
+  .kb .three b{color:var(--accent2)}
+  .callout{background:#1c2330;border:1px dashed var(--line);border-radius:10px;padding:12px 16px;margin:12px 0;font-size:14.5px}
+  .callout.win{border-color:#2f4422;background:#16201a}
+  .analogy{color:#ffd9a8}
+  .takeaway{background:#17202b;border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:14px 0}
+
+  pre{background:var(--code-bg)!important;border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;margin:12px 0;font-size:13px;line-height:1.6}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  :not(pre) > code{background:#1c2230;color:#e3c7a0;padding:1.5px 6px;border-radius:5px;font-size:13px}
+  pre code{color:#cdd6e4;background:none;padding:0}
+
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left}
+  th{background:var(--card2);color:var(--accent2)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .pos{color:#7ee787}.neg{color:#ff9b9b}
+
+  .mini-cards .card summary{padding:14px 20px}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:40px;padding-top:20px;border-top:1px solid var(--line)}
+  .toolbar{display:flex;gap:10px;justify-content:center;margin:10px 0 0}
+  .btn{font-size:13px;background:var(--pill);border:1px solid var(--line);color:var(--ink);padding:6px 14px;border-radius:8px;cursor:pointer}
+  .btn:hover{border-color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>SGLang-Omni 每日 PR 学习日报</h1>
+  <div class="date">📅 2026-05-31 · 覆盖过去 24 小时内合并（merged）的 PR</div>
+  <div class="sub">仓库：<a href="https://github.com/sgl-project/sglang-omni/">sgl-project/sglang-omni</a> · 重点：Omni / 多模态 / 多阶段（multi-stage）推理架构</div>
+  <div class="toolbar">
+    <button class="btn" onclick="document.querySelectorAll('details.card').forEach(d=>d.open=true)">展开全部</button>
+    <button class="btn" onclick="document.querySelectorAll('details.card').forEach(d=>d.open=false)">收起全部</button>
+  </div>
+</header>
+
+<!-- ============ 当日概览 ============ -->
+<section class="overview">
+  <h2>📊 当日概览</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="n">12</div><div class="l">合并 PR 总数</div></div>
+    <div class="stat"><div class="n">6</div><div class="l">深度讲解（核心）</div></div>
+    <div class="stat"><div class="n">4</div><div class="l">CI / 基础设施</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">文档 / License</div></div>
+  </div>
+
+  <p style="margin:4px 0 6px;color:var(--muted);font-size:14px">主题分类：</p>
+  <div class="topics">
+    <span class="tag perf">性能优化 ×4</span>
+    <span class="tag bug">Bugfix ×2</span>
+    <span class="tag arch">架构/调度 ×1</span>
+    <span class="tag ci">CI/基建 ×4</span>
+    <span class="tag docs">文档 ×2</span>
+    <span class="tag">多模态视觉编码器</span>
+    <span class="tag">语音 / TTS 流水线</span>
+    <span class="tag">Talker / Code2Wav</span>
+  </div>
+
+  <div class="legend">
+    <b>今日主线故事</b>：围绕「<b>多阶段语音/多模态流水线</b>」的<b>延迟与吞吐优化</b>。
+    几条 PR 分别从不同环节下刀——视觉 patch embedding 走错了 cuDNN 慢路径（#539）、
+    Talker 白白等 Thinker 跑完才开口（#617）、参考音频被重复编码（#605）、音频编码器没编译（#612）；
+    再加上一条把<b>「流式 TTS 调度器」</b>抽象成可复用基类的架构 PR（#614），
+    以及一条修复 Talker 音色「跑偏」的 Bugfix（#602）。本报告对这 6 条做透彻拆解，CI/文档类仅做概述。
+  </div>
+</section>
+
+<p style="font-size:14px;color:var(--muted)">下面每张卡片都可点击展开/收起。讲解遵循「<b>把你当完全小白</b>」原则：每个可能不懂的概念都用
+<b>「它是什么 → 为什么需要 → 本 PR 怎么用」</b>三段式展开。</p>
+
+<!-- ============================================================= -->
+<!-- PR #539 -->
+<!-- ============================================================= -->
+<details class="card" open>
+  <summary>
+    <span class="chev">▶</span>
+    <span class="sum-main">
+      <p class="sum-title">#539 · Ming 视觉编码器：把 patch_embed 的 Conv3d 换成 F.linear</p>
+      <div class="sum-meta">
+        <span class="badge">merged</span>
+        <span class="pr-num">#539</span>
+        <span>作者 @edwingao28</span>
+        <span class="tag perf">性能</span><span class="tag">多模态视觉</span>
+        <a href="https://github.com/sgl-project/sglang-omni/pull/539" target="_blank">查看 PR ↗</a>
+      </div>
+      <p class="one-liner">🎯 一句话：视觉编码器开头那个「切图块」的卷积，因为形状特殊踩进了 cuDNN 的超慢算法（H100 上一次 3.7 秒！），改成数学上完全等价的矩阵乘法（<code>F.linear</code>），单张图的编码耗时从 ~8s 暴降到 ~0.02s。</p>
+    </span>
+  </summary>
+  <div class="body">
+
+    <h3>1. 它解决了什么问题</h3>
+    <p>多模态大模型要「看懂」图片，第一步是把图片切成一个个小方块（patch），再把每个方块投影成一个向量（embedding）。Ming-Omni 复用了 Qwen3-VL 的 <code>Qwen3VLVisionPatchEmbed</code> 模块，它内部用一个 <code>nn.Conv3d</code>（三维卷积）来做这件事。</p>
+    <p>问题在于：这个卷积的 <b>卷积核大小（kernel_size）正好等于输入的空间尺寸</b>，所以每个 patch 卷积出来只有 <b>1×1×1 一个输出格子</b>。这是一个「退化」的卷积——它名义上是卷积，实际上每个 patch 只是把所有像素加权求和成一个数。</p>
+    <div class="callout">
+      <b>痛点：</b>cuDNN（NVIDIA 的深度学习卷积库）<b>没有为这种 1×1×1 退化形状准备高效算法</b>，于是回退到一条极慢的通用路径。实测在 H100 bf16 上，<b>单次调用就要约 3.7 秒</b>，而且即使关掉 <code>cudnn.benchmark</code>、即使形状完全重复也不缓存优化。结果：在典型 MMMU（多模态理解基准）输入下，<b>光这一个算子就吃掉了整个编码器阶段约 8 秒/请求</b>，成了绝对的瓶颈。</p>
+    </div>
+
+    <h3>2. 具体做了什么改动</h3>
+    <p>核心洞察：<b>「kernel 覆盖整个输入的卷积」在数学上和「一次全连接（线性投影）」完全等价</b>。卷积本质就是「滑动窗口 + 加权求和」，当窗口不滑动（只有一个位置）时，它退化成 <code>y = W·x + b</code> 这种最普通的矩阵乘法。而矩阵乘法（GEMM）正是 cuBLAS 这类库<b>最擅长、最快</b>的运算。</p>
+    <p>改动只有一个文件 <code>models/ming_omni/components/vision_encoder.py</code>，新增一个等价替换函数：</p>
+<pre><code class="language-python">def _linear_patch_embed(patch_embed, pixel_values):
+    """把 Conv3d 投影改写成等价的 Linear。"""
+    # patch_dim = 通道数 × 时间块 × 高块 × 宽块
+    #   = 一个 patch 展平后的元素总数
+    patch_dim = (patch_embed.in_channels
+                 * patch_embed.temporal_patch_size
+                 * patch_embed.patch_size
+                 * patch_embed.patch_size)
+    return F.linear(
+        pixel_values.view(-1, patch_dim),               # 输入：每行是一个 patch 展平后的向量
+        patch_embed.proj.weight.view(patch_embed.embed_dim, -1),  # 权重：直接 reshape 卷积核
+        patch_embed.proj.bias,                          # 偏置照搬
+    )
+</code></pre>
+    <p>逐行解释（假设你没见过这段代码）：</p>
+    <ul>
+      <li><b><code>patch_dim</code></b>：算出「一个 patch 摊平后有多少个数」。比如 3 通道 × 2 时间 × 14 × 14 = 1176。</li>
+      <li><b><code>pixel_values.view(-1, patch_dim)</code></b>：把输入张量重排成「N 行 × patch_dim 列」的二维矩阵，每行就是一个 patch。<code>view</code> 不复制数据、只改解读方式，零开销。</li>
+      <li><b><code>patch_embed.proj.weight.view(embed_dim, -1)</code></b>：卷积层的权重原本是 4D/5D 张量，这里摊平成「输出维度 × patch_dim」的二维权重矩阵——这正是卷积核里那些数，只是换了个排列。</li>
+      <li><b><code>F.linear(x, W, b)</code></b>：执行 <code>x @ W.T + b</code>，调用 cuBLAS 的 GEMM 内核。</li>
+    </ul>
+    <p>调用处的替换也只有一行：</p>
+<pre><code class="language-diff">-        x = self.patch_embed(x)          # 旧：走 Conv3d → cuDNN 慢路径
++        # Conv3d 每个 patch 只有一个输出格子，等价于 Linear，避开 cuDNN 慢路径
++        x = _linear_patch_embed(self.patch_embed, x)
+</code></pre>
+    <p>作者还提到 <b>vLLM 在 <code>conv.py::Conv3dLayer</code> 里也做了完全相同的替换</b>——这是业界公认的处理手法，可信度高。同时加了单元测试，断言「Conv3d 输出」与「F.linear 输出」在 bf16 精度下数值一致（相对误差 ≤ 1.56%）。</p>
+
+    <h3>3. 涉及的知识点</h3>
+
+    <div class="kb">
+      <div class="term">📦 Patch Embedding（图块嵌入）</div>
+      <div class="three">
+        <b>是什么：</b>把图片切成固定大小的小方块（如 14×14 像素），每块压缩成一个向量。<br>
+        <b>为什么需要：</b>Transformer 只能处理「一串 token 向量」，没法直接吃像素矩阵。Patch embedding 就是「把图片翻译成 Transformer 能读的 token 序列」的第一步——相当于把一篇图画转成一串「视觉单词」。<br>
+        <b>本 PR 里：</b>它就是被优化的对象。功能不变（图块→向量），只是把底层实现从慢卷积换成快矩阵乘。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🧮 Conv3d / 卷积 vs. Linear / 全连接</div>
+      <div class="three">
+        <b>是什么：</b>卷积（Conv）是「一个小窗口在数据上滑动、每个位置做加权求和」；全连接（Linear）是「输入向量直接乘一个大权重矩阵」。<br>
+        <b>为什么需要分清：</b>当卷积窗口大到「一次盖住整个输入、根本不滑动」时，它退化成全连接。两者数学等价，但<b>底层用的 GPU 库不同</b>：卷积找 cuDNN，全连接找 cuBLAS。<br>
+        <b>本 PR 里：</b>cuDNN 对这个退化形状没有好算法（慢 3.7s），cuBLAS 对矩阵乘有极致优化（快到 0.02s）。<span class="analogy">类比：用「专业切菜机」去切一整块完整蛋糕——机器为反复切丝设计，处理「只切一刀」反而卡顿；不如直接用刀（GEMM）一刀下去。</span>
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">⚙️ cuDNN / cuBLAS 与 cudnn.benchmark</div>
+      <div class="three">
+        <b>是什么：</b>都是 NVIDIA 的 GPU 加速库；cuDNN 专攻卷积/池化等神经网络算子，cuBLAS 专攻矩阵运算（GEMM）。<code>cudnn.benchmark=True</code> 会让 cuDNN 在第一次遇到某形状时试跑多种算法、挑最快的缓存下来。<br>
+        <b>为什么需要：</b>同一个运算可以有几十种实现，针对不同形状/硬件各有优劣，benchmark 自动选优。<br>
+        <b>本 PR 里：</b>作者发现<b>即使开启 benchmark，cuDNN 对这个退化卷积也选不出快算法</b>——因为它压根没有适配该形状的高效内核。所以问题不在「没选优」，而在「最优也很慢」，唯一出路是换库（换成 cuBLAS 的 GEMM）。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🧊 bf16（bfloat16）精度</div>
+      <div class="three">
+        <b>是什么：</b>一种 16 位浮点格式，指数位和 float32 一样多（动态范围大），但尾数位少（精度低）。<br>
+        <b>为什么需要：</b>比 float32 省一半显存、算得更快，且因为动态范围大，比 float16 更不容易溢出，是大模型推理的主流精度。<br>
+        <b>本 PR 里：</b>因为 bf16 精度有限，单测的容差设为「相对误差 ≤ 2×0.78%」——换算法后结果不会逐位相同，但只要落在 bf16 噪声范围内就算等价。这也是为什么 MMMU 准确率从 0.62 微动到 0.60 被判定为「噪声内」。
+      </div>
+    </div>
+
+    <h3>4. 性能数据（MMMU，H100）</h3>
+    <table>
+      <tr><th>指标</th><th>修复前</th><th>修复后</th><th>变化</th></tr>
+      <tr><td>编码器阶段耗时</td><td class="num">~8 s</td><td class="num">~0.02 s</td><td class="pos">≈ 400×</td></tr>
+      <tr><td>平均延迟（100 样本）</td><td class="num">15.61 s</td><td class="num">7.68 s</td><td class="pos">−50.8%</td></tr>
+      <tr><td>中位延迟</td><td class="num">18.36 s</td><td class="num">4.20 s</td><td class="pos">−77.1%</td></tr>
+      <tr><td>吞吐 QPS</td><td class="num">0.063</td><td class="num">0.126</td><td class="pos">2.0×</td></tr>
+      <tr><td>准确率</td><td class="num">0.60</td><td class="num">0.60</td><td>持平</td></tr>
+    </table>
+
+    <h3>5. 我能学到什么 / 延伸思考</h3>
+    <div class="takeaway">
+      <ul>
+        <li><b>「数学等价、实现不等价」是性能优化的金矿。</b>同一个运算换种写法，可能就从慢库切到快库。遇到诡异的慢，先问：「这个算子是不是踩进了某个不该走的代码路径？」</li>
+        <li><b>退化形状是常见陷阱。</b>kernel=input、batch=1、序列长度=1 这类「边界形状」经常没有优化内核。性能分析时要特别留意。</li>
+        <li><b>用 profiler 定位瓶颈，而非凭感觉。</b>作者是通过逐阶段计时发现「就是这一个算子吃了 8s」，才精准下刀。</li>
+        <li><b>延伸学习：</b>卷积与矩阵乘的等价关系（im2col 原理）、cuDNN 算法选择机制、PyTorch 的 <code>F.linear</code> / <code>F.conv3d</code> 底层调度、Profiler（如 <code>torch.profiler</code> / Nsight）的使用。</li>
+      </ul>
+    </div>
+  </div>
+</details>
+
+<!-- ============================================================= -->
+<!-- PR #617 -->
+<!-- ============================================================= -->
+<details class="card" open>
+  <summary>
+    <span class="chev">▶</span>
+    <span class="sum-main">
+      <p class="sum-title">#617 · Qwen3-Omni Talker「部分启动（partial-start）」默认开启 + 运行时开关</p>
+      <div class="sum-meta">
+        <span class="badge">merged</span>
+        <span class="pr-num">#617</span>
+        <span>作者 @Hayden727</span>
+        <span class="tag perf">性能</span><span class="tag">多阶段语音流水线</span>
+        <a href="https://github.com/sgl-project/sglang-omni/pull/617" target="_blank">查看 PR ↗</a>
+      </div>
+      <p class="one-liner">🎯 一句话：让负责「发声」的 Talker 不必等「思考」的 Thinker 把整段文字写完，而是攒够 5 个文本块就开始合成语音，从而让两块 GPU 真正并行起来——首个音频块延迟（TTFC）最多降 34.5%，吞吐升 20.6%。</p>
+    </span>
+  </summary>
+  <div class="body">
+
+    <h3>1. 它解决了什么问题</h3>
+    <p>先理解 Qwen3-Omni 的<b>语音生成流水线</b>是怎么分工的。在默认的 2-GPU 拆分（disaggregated）拓扑里：</p>
+    <ul>
+      <li><b>GPU 0 跑 Thinker</b>：大语言模型，负责「想内容、生成文字」（比如把用户问题回答成一段话）。</li>
+      <li><b>GPU 1 跑 Talker_AR + Code2Wav</b>：Talker 把文字转成「音频 codec token」，Code2Wav（声码器）再把 token 还原成波形。</li>
+    </ul>
+    <div class="callout">
+      <b>痛点（profiling 发现）：</b>原本 Talker <b>必须等 Thinker 把整段文字全部生成完</b>才开始干活。作者在 H200 上用 SeedTTS 流式压测，逐阶段打点发现：Talker 的「输入→首个 codec」延迟竟然主导了整个 TTFC（c=8 时约 749ms），原因就是它<b>干等着 Thinker 那 ~400ms 的文本生成时间</b>，GPU 1 在这期间完全闲置。<span class="analogy">类比：同声传译时，翻译员不会等讲者把整段话说完才开口，而是听到一个完整意群就跟着翻——这样两个人才能并行，整体更快。</span>
+    </div>
+
+    <h3>2. 具体做了什么改动 + 知识点</h3>
+    <p>改动本身很「轻」——它<b>不是新写算法</b>，而是把一个早已实现、但默认关闭的能力（<code>enable_partial_start</code>）<b>翻成默认开启</b>，并补上一个可随时关掉的开关。涉及 3 个文件：</p>
+
+    <h4>(a) 配置默认值翻转：<code>models/qwen3_omni/config.py</code></h4>
+<pre><code class="language-diff"> def _talker_stage(*, gpu, process, enable_partial_start):   # 新增参数
+     return StageConfig(
+         name="talker_ar",
+         ...
+-            "enable_partial_start": False,    # 旧：硬编码关闭
++            "enable_partial_start": enable_partial_start,   # 新：由上层决定
+             "partial_start_min_chunks": 5,
+         },
+     )
+</code></pre>
+    <p>然后在两种拓扑里给出不同默认：</p>
+<pre><code class="language-diff"> # 默认 2-GPU 拆分拓扑：Thinker 和 Talker 在不同 GPU → 可以真并行
+ _speech_stages(thinker_gpu=0, talker_gpu=1, ...,
++               enable_partial_start=True)    # 默认开
+
+ # colocated（同卡）拓扑：Thinker、Talker 挤在同一张 GPU
+ _speech_stages(thinker_gpu=0, talker_gpu=0, ...,
++               enable_partial_start=False)   # 默认关
+</code></pre>
+    <div class="callout">
+      <b>为什么 colocated 默认关？</b>因为同卡拓扑下 Thinker 和 Talker <b>抢同一张 GPU 的算力</b>，让它们「并行」反而互相争抢、得不偿失，所以保守关闭。<b>这是一个很关键的工程判断：优化是否生效，取决于硬件拓扑。</b>
+    </div>
+
+    <h4>(b) 新增 CLI 开关：<code>cli/serve.py</code></h4>
+    <p>新增 <code>--talker-partial-start {default|on|off}</code>，并实现 <code>apply_partial_start_cli_overrides</code>。它做了一件很「防御性」的事——<b>只允许 Qwen3-Omni 的 talker 用这个开关，别的模型用了就报错</b>：</p>
+<pre><code class="language-python">for stage in matching_stages:
+    if stage.factory != _QWEN_PARTIAL_START_TALKER_FACTORY:
+        raise typer.BadParameter(
+            "--talker-partial-start currently supports only Qwen3-Omni "
+            f"talker; stage {stage.name!r} uses factory {stage.factory!r}")
+</code></pre>
+    <p>并且这个校验发生在「真正改配置之前」——测试 <code>test_ming_cli_rejects_..._before_mutating_factory_args</code> 专门验证：对 Ming 模型用这个开关时，会抛错<b>且不会留下半改的脏配置</b>。这叫<b>「fail fast，不留中间态」</b>。</p>
+
+    <div class="kb">
+      <div class="term">🏗️ 多阶段流水线（Multi-stage Pipeline）与 Stage / Factory</div>
+      <div class="three">
+        <b>是什么：</b>SGLang-Omni 把一次推理拆成若干「阶段（stage）」——preprocessing → image_encoder → thinker → decode → talker_ar → code2wav，每个 stage 是独立可调度单元，可绑定到不同 GPU/进程。每个 stage 由一个 <b>factory（工厂函数）</b>创建，<code>factory_args</code> 是它的构造参数。<br>
+        <b>为什么需要：</b>多模态/语音任务天然由异构子任务组成（看图、思考、发声），拆成阶段后才能各自用最合适的资源、独立扩缩、互相 overlap。<br>
+        <b>本 PR 里：</b><code>enable_partial_start</code> 就是 talker_ar 这个 stage 的一个 factory_arg。整个 PR 本质是「在多阶段框架里调一个 stage 的参数默认值 + 加 CLI 透传」。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🔀 Disaggregated（拆分）vs. Colocated（同卡）拓扑</div>
+      <div class="three">
+        <b>是什么：</b>Disaggregated 把不同阶段放在<b>不同 GPU</b>；Colocated 把它们挤在<b>同一张 GPU</b>。<br>
+        <b>为什么需要：</b>拆分能让阶段并行、互不抢资源，但要更多卡；同卡省卡，但阶段间会争抢算力。<br>
+        <b>本 PR 里：</b>partial-start 的收益<b>只有在拆分拓扑下才成立</b>（Thinker 在 GPU0 还在跑、Talker 在 GPU1 提前开工，二者真正重叠）。所以默认值按拓扑区分。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">⏱️ TTFC / RTF / ITL —— 流式语音的关键延迟指标</div>
+      <div class="three">
+        <b>是什么：</b><b>TTFC</b>（Time To First Chunk，首个音频块时间）＝用户从发请求到「听到第一声」的等待；<b>RTF</b>（Real-Time Factor，实时率）＝生成 1 秒音频需要的计算秒数，<1 才能「边生成边播不卡顿」；<b>ITL</b>（Inter-Token/chunk Latency）＝音频块之间的间隔。<br>
+        <b>为什么需要：</b>语音交互体验主要由「多久开口」（TTFC）和「会不会卡顿」（RTF）决定，光看总耗时不够。<br>
+        <b>本 PR 里：</b>partial-start 直接砍掉 Talker 的等待，TTFC c=8 降 34.5%、RTF p95 从 1.02 降到 0.73（终于 < 实时）；ITL 基本持平（符合预期，因为它优化的是「开口前」而非「块间」）。
+      </div>
+    </div>
+
+    <h3>3. 一个值得学的「严谨」细节：用数据消除疑虑</h3>
+    <p>前序 PR #475 把 partial-start 做成「默认关」，留了句话：「<code>audio_duration</code>（音频时长）必须稳定后才能翻默认」。本 PR 没有拍脑袋翻开关，而是做了<b>配对实验</b>来证明安全：</p>
+    <ul>
+      <li><b>噪声底（OFF vs OFF）</b>：同样配置跑两次，音频时长本身就有 12.88% 的随机波动（因为采样温度 0.7 带随机性）。</li>
+      <li><b>效应（ON vs OFF）</b>：开关带来的差异是 13.78%——<b>和噪声底几乎一样</b>，说明「开 partial-start 导致音频变长」其实是采样随机性，不是系统性问题。</li>
+      <li><b>WER（词错误率，用 Whisper 转写后比对）</b>：OFF 1.95% → ON 1.24%，可懂度不降反升。</li>
+    </ul>
+    <div class="callout win"><b>结论：</b>默认翻开安全，并保留 <code>--talker-partial-start off</code> 作为「逃生舱」。<b>这就是「用统计噪声分析为默认值变更背书」的范本。</b></div>
+
+    <h3>4. 我能学到什么 / 延伸思考</h3>
+    <div class="takeaway">
+      <ul>
+        <li><b>流水线并行的核心是「消除气泡（bubble）」</b>——任何一个阶段在干等另一个阶段，都是被浪费的算力。识别并填平这些空档，往往比优化单个算子收益更大。</li>
+        <li><b>「默认值也是一种产品决策」</b>：好能力默认关 = 没人用。但翻默认要有数据背书 + 逃生开关 + 按场景（拓扑）区分。</li>
+        <li><b>fail-fast 校验</b>：CLI 参数在「动配置之前」就校验合法性，避免留下半改的脏状态——这是健壮工具的标志。</li>
+        <li><b>延伸学习：</b>流水线/管线并行（pipeline parallelism）的 bubble 概念、流式推理（streaming inference）、TTS 评测指标体系（WER/RTF/TTFC）、用配对实验区分「信号 vs 噪声」。</li>
+      </ul>
+    </div>
+  </div>
+</details>
+
+<!-- ============================================================= -->
+<!-- PR #614 -->
+<!-- ============================================================= -->
+<details class="card" open>
+  <summary>
+    <span class="chev">▶</span>
+    <span class="sum-main">
+      <p class="sum-title">#614 · 抽象出共享的「流式 TTS 调度器」基类 StreamingSimpleScheduler</p>
+      <div class="sum-meta">
+        <span class="badge">merged</span>
+        <span class="pr-num">#614</span>
+        <span>作者 @JingwenGu0829</span>
+        <span class="tag arch">架构/调度</span><span class="tag">多阶段流水线</span>
+        <a href="https://github.com/sgl-project/sglang-omni/pull/614" target="_blank">查看 PR ↗</a>
+      </div>
+      <p class="one-liner">🎯 一句话：把「一边接收上游流式输出的文本/codec 块、一边增量合成音频」这套通用逻辑抽成一个可复用基类，让 Higgs、Fish-Audio S2-Pro、Qwen3-Omni Code2Wav 三个声码器都接上「流式」——首音频延迟和吞吐全面改善（Higgs 延迟 −57%、吞吐 2.4×）。</p>
+    </span>
+  </summary>
+  <div class="body">
+
+    <h3>1. 它解决了什么问题</h3>
+    <p>原来的声码器（vocoder）阶段是<b>「批处理（non-streaming）」</b>模式：必须等上游把<b>全部</b> codec token 算完，攒成一整批，才一次性解码成音频。用户体验上就是「憋很久，然后整段音频一起出来」。</p>
+    <p>要改成<b>流式（streaming）</b>——上游每吐出一小段 codec，声码器就立刻解码出一小段音频先播——听起来简单，但每个模型（Higgs / Fish S2-Pro / Qwen Code2Wav）都各写一套「流式状态管理」会<b>重复造轮子、且容易各自写错</b>（漏处理中止、内存泄漏、done 信号比数据先到等竞态）。</p>
+    <div class="callout"><b>痛点：</b>缺少一个统一的「流式 stage 调度器」骨架。每个声码器都要自己处理「新请求建立 → 收到 chunk → 收到 done → 中止清理 → 同时还要支持非流式批处理」这套复杂生命周期。</div>
+
+    <h3>2. 具体做了什么改动</h3>
+    <p>新增 463 行的 <code>scheduling/streaming_simple_scheduler.py</code>，定义基类 <code>StreamingSimpleScheduler</code>。它沿用了原 <code>SimpleScheduler</code> 的 <b>inbox/outbox（收件箱/发件箱队列）契约</b>，但内置了流式请求的完整生命周期。其精髓是<b>「模板方法（Template Method）设计模式」</b>——基类写死「流程骨架」，把「具体业务」留成空方法（hook）给子类填：</p>
+<pre><code class="language-python">class StreamingSimpleScheduler:
+    # —— 下面是留给子类重写的「钩子」，基类给出空默认实现 ——
+    def is_streaming_payload(self, payload) -> bool: ...      # 这个请求是流式还是批处理？
+    def on_streaming_new_request(self, rid, payload): ...     # 流式请求初始化（建状态）
+    def on_stream_chunk(self, rid, item) -> list[...]: ...    # 收到一个数据块 → 增量解码、产出音频
+    def on_stream_done(self, rid) -> list[...]: ...           # 收到结束信号 → 把尾巴 flush 出去
+    def clear_stream_state(self, rid): ...                    # 清理该请求的状态
+</code></pre>
+    <p>而具体的 Higgs 声码器只需<b>继承并填空</b>（新增 <code>higgs_tts/vocoder_scheduler.py</code>）：</p>
+<pre><code class="language-python">class HiggsStreamingVocoderScheduler(StreamingSimpleScheduler):
+    """增量解码 Higgs codec 行，并在结束时做一次批量收尾解码。"""
+    def is_streaming_payload(self, payload): ...        # 判断 payload 里有没有流式标记
+    def on_streaming_new_request(self, rid, payload): ...
+    def on_stream_chunk(self, rid, item):               # ← 核心：来一段 codec 就解一段音频
+        ... self._decode_delta(...) ...
+    def on_stream_done(self, rid): ...                  # ← 收尾
+    def clear_stream_state(self, rid): ...
+</code></pre>
+
+    <h4>基类如何处理「主循环」与各种消息</h4>
+    <p>基类的 <code>start()</code> 跑一个循环，不断从 inbox 取消息，按类型分发：</p>
+<pre><code class="language-python">def _handle_message(self, msg, loop):
+    if msg.type == "new_request":    # 新请求：可能是流式建立、也可能是非流式计算
+        self._handle_new_request_batch(self._collect_new_request_batch(msg), loop)
+    elif msg.type == "stream_chunk": # 流式数据块到了
+        self._on_chunk(msg.request_id, msg.data)
+    elif msg.type == "stream_done":  # 流式结束信号到了
+        self._on_done(msg.request_id)
+</code></pre>
+
+    <p>最精彩的是它处理了一个<b>典型的分布式竞态</b>：<b>「结束信号（done）可能比首个数据先到达」</b>。基类用一个 <code>_pending_done</code> 集合来「记账」：</p>
+<pre><code class="language-python">def _handle_stream_done(self, request_id):
+    with self._state_lock:
+        if request_id not in self._stream_payloads:   # 请求还没初始化，done 却先到了
+            if request_id in self._completed_non_streaming_request_ids:
+                return                                 # 已经按非流式处理完了，忽略
+            self._pending_done.add(request_id)         # 先记下「这个请求已经 done」，等初始化时补处理
+            return
+        for out in self.on_stream_done(request_id):    # 正常路径：触发收尾
+            if not self._is_aborted(request_id):
+                self.outbox.put(out)
+        ...
+</code></pre>
+    <p>对应地，新请求初始化时会检查这个「欠账」：</p>
+<pre><code class="language-python">def _handle_streaming_new_request(self, request_id, payload):
+    ...
+    self._stream_payloads[request_id] = payload
+    self.on_streaming_new_request(request_id, payload)
+    if request_id in self._pending_done:        # 之前 done 先到、被记账了
+        self._pending_done.discard(request_id)
+        self._handle_stream_done(request_id)    # 现在补做收尾
+</code></pre>
+
+    <h3>3. 涉及的知识点</h3>
+
+    <div class="kb">
+      <div class="term">🎛️ Vocoder（声码器）与 Codec Token</div>
+      <div class="three">
+        <b>是什么：</b>现代 TTS 不直接生成波形，而是先生成一串离散的「音频 codec token」（类似音频版的「单词」），再由声码器/解码器把 token 还原成可听的波形（waveform）。<br>
+        <b>为什么需要：</b>让「语言模型」可以像生成文字一样生成语音 token，统一了文本和音频的建模方式；token 也比原始波形紧凑得多。<br>
+        <b>本 PR 里：</b>声码器就是流式调度的对象——上游 Talker 吐 codec token，声码器边收边解成音频块。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🧩 Template Method（模板方法）设计模式</div>
+      <div class="three">
+        <b>是什么：</b>基类定义算法的「骨架流程」，把流程中可变的步骤留成抽象/空方法，由子类去实现。<br>
+        <b>为什么需要：</b>当多个场景「流程相同、细节不同」时，把流程写一遍、细节交给子类，避免重复，也保证所有子类的「易错流程（中止、清理、竞态）」都统一正确。<br>
+        <b>本 PR 里：</b>基类管「生命周期/竞态/批处理/中止清理」，三个声码器只填 <code>on_stream_chunk</code> 等业务钩子。<span class="analogy">类比：连锁餐厅的「标准出餐流程」（接单→备料→烹饪→出餐→清台）是总部定的，各分店只需填「这道菜具体怎么炒」。</span>
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">📨 Inbox/Outbox 队列契约 与 调度器（Scheduler）</div>
+      <div class="three">
+        <b>是什么：</b>每个 stage 调度器有一个收件箱（inbox）和发件箱（outbox）队列。上游把消息（new_request / stream_chunk / stream_done）塞进 inbox，调度器处理后把结果（result / error）塞进 outbox 交给下游。<br>
+        <b>为什么需要：</b>用队列解耦各阶段，让它们能异步、独立地跑在不同线程/进程，是多阶段流水线的通信基石。<br>
+        <b>本 PR 里：</b>新基类完整复用这套契约，所以能无缝插进现有流水线，同时既支持流式消息也支持非流式批处理消息。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🏁 竞态条件（Race Condition）与 done-before-data</div>
+      <div class="three">
+        <b>是什么：</b>在并发系统里，消息到达顺序不保证。「结束信号」理论上可能比「第一个数据块」甚至「请求初始化」更早被处理。<br>
+        <b>为什么需要处理：</b>不处理就会丢数据或永久卡住（收尾逻辑找不到状态）。<br>
+        <b>本 PR 里：</b>用 <code>_pending_done</code> 集合「记账」——done 先到就先记下，等请求真正建立后再补做收尾。再配合 <code>_state_lock</code>（可重入锁）保护共享状态、<code>_aborted_request_ids</code> 有上限地记录已中止请求（防内存无限增长）。
+      </div>
+    </div>
+
+    <h3>4. 性能数据（流式 vs 非流式）</h3>
+    <table>
+      <tr><th>模型</th><th>指标</th><th>非流式</th><th>流式</th><th>变化</th></tr>
+      <tr><td rowspan="3">Higgs Audio V3</td><td>平均延迟</td><td class="num">3.306s</td><td class="num">1.427s</td><td class="pos">−57%</td></tr>
+      <tr><td>吞吐 req/s</td><td class="num">4.621</td><td class="num">11.166</td><td class="pos">2.4×</td></tr>
+      <tr><td>首音频均值</td><td>—</td><td class="num">0.87s</td><td class="pos">新增能力</td></tr>
+      <tr><td rowspan="2">Fish S2-Pro</td><td>平均延迟</td><td class="num">15.33s</td><td class="num">11.99s</td><td class="pos">−22%</td></tr>
+      <tr><td>RTF 均值</td><td class="num">4.20</td><td class="num">3.25</td><td class="pos">−23%</td></tr>
+      <tr><td>Qwen3-Omni Code2Wav</td><td>吞吐 req/s</td><td class="num">4.500</td><td class="num">5.104</td><td class="pos">+13%</td></tr>
+    </table>
+    <p style="font-size:13.5px;color:var(--muted)">三个模型的 WER 均与非流式持平（流式没有牺牲可懂度），印证了「抽象正确」的价值。</p>
+
+    <h3>5. 我能学到什么 / 延伸思考</h3>
+    <div class="takeaway">
+      <ul>
+        <li><b>识别「重复的复杂逻辑」并抽象成基类</b>，是高质量代码库的标志。一次写对易错的并发/生命周期逻辑，所有子类共享这份「正确性」。</li>
+        <li><b>流式（streaming）几乎总能改善首响应延迟和吞吐</b>，因为它把「批量等待」换成「边算边出 + 各阶段重叠」。</li>
+        <li><b>并发系统必须显式处理「乱序消息」</b>（done 早于 data、abort 中途到达）。用「记账 + 锁 + 有界集合」是经典手法。</li>
+        <li><b>延伸学习：</b>设计模式（模板方法、策略模式）、生产者-消费者队列、流式/分块推理、Python 线程与锁（RLock）、有界缓存防内存泄漏。</li>
+      </ul>
+    </div>
+  </div>
+</details>
+
+<!-- ============================================================= -->
+<!-- PR #605 -->
+<!-- ============================================================= -->
+<details class="card" open>
+  <summary>
+    <span class="chev">▶</span>
+    <span class="sum-main">
+      <p class="sum-title">#605 · 优化 Higgs TTS 参考音频的缓存（reference code caching）</p>
+      <div class="sum-meta">
+        <span class="badge">merged</span>
+        <span class="pr-num">#605</span>
+        <span>作者 @BBuf</span>
+        <span class="tag perf">性能</span><span class="tag">缓存</span><span class="tag">TTS</span>
+        <a href="https://github.com/sgl-project/sglang-omni/pull/605" target="_blank">查看 PR ↗</a>
+      </div>
+      <p class="one-liner">🎯 一句话：声音克隆类 TTS 每次都要把「参考音频」重新加载+重采样+编码一遍，但同一段参考音频常被反复使用。这个 PR 加了一层（可开关的）缓存，重复请求直接命中，吞吐 +13.5%、延迟 −13%。</p>
+    </span>
+  </summary>
+  <div class="body">
+
+    <h3>1. 它解决了什么问题</h3>
+    <p>Higgs 是「声音克隆」TTS：你给它一段<b>参考音频（reference audio）</b>（某人的声音样本），它就能用那个人的音色读出你的目标文本。处理参考音频要走两步重活：</p>
+    <ul>
+      <li><b>preprocessing 阶段</b>：从磁盘/字节加载音频 → 重采样到 24kHz → 转成张量。</li>
+      <li><b>audio_encoder 阶段</b>：用 codec 把波形编码成「参考 codec 码」，再应用 delay pattern。</li>
+    </ul>
+    <div class="callout"><b>痛点：</b>在很多场景里（同一个发音人、批量评测、固定音色的服务），<b>同一段参考音频会被成百上千次请求复用</b>，但每次都从头加载+编码，纯属重复劳动。</div>
+
+    <h3>2. 具体做了什么改动</h3>
+    <p>核心是「<b>用内容做 key 的缓存</b>」，且默认关闭、靠环境变量 <code>SGLANG_OMNI_HIGGS_REF_CODE_CACHE=1</code> 开启（不影响默认行为，opt-in）。改动分三层：</p>
+
+    <h4>(a) 给状态对象加一个缓存键字段</h4>
+<pre><code class="language-diff"> class HiggsTtsState:
+     reference_waveform: Any | None = None
++    reference_cache_key: str | None = None   # 这段参考音频的「身份证」
+</code></pre>
+
+    <h4>(b) 设计稳健的缓存键（这是本 PR 最巧妙的部分）</h4>
+    <p>缓存的难点不是「存」，而是<b>「key 怎么取才既快又不出错」</b>。如果用文件路径当 key，文件被替换了就会「吃到过期的旧数据」（stale）；如果每次都把整个文件读出来做哈希，又太慢。作者的方案是<b>「分层 + 记账」</b>：</p>
+<pre><code class="language-python">def _reference_path_hash_memo_key(path):
+    stat_result = path.stat()
+    # 用「绝对路径 + 文件大小 + 修改时间 + 状态变更时间」组成快速指纹
+    memo_key = (f"{path.resolve()}:{stat_result.st_size}:"
+                f"{stat_result.st_mtime_ns}:{stat_result.st_ctime_ns}")
+    return memo_key, int(stat_result.st_size)
+</code></pre>
+    <p>但「大小+时间」可能被「同样大小、快速替换」的文件骗过，所以再加一道<b>「哨兵采样（sentinel）」</b>——只读文件的<b>头/中/尾</b>各 8KB 做哈希，低成本地探测内容是否真的变了：</p>
+<pre><code class="language-python">def _reference_path_sentinel(path, file_size):
+    # 读头部 8KB；文件够大就再读中间 8KB、尾部 8KB
+    chunks = [f.read(chunk_size)]
+    if file_size > 8192: ... 读中间 ...
+    if file_size > 16384: ... 读尾部 ...
+    return hash_bytes(b"".join(chunks) + f"|size:{file_size}".encode())
+</code></pre>
+    <p>只有当「stat 指纹」和「哨兵」都命中记忆（memo）时，才跳过「读整个文件算完整哈希」这步重活。完整哈希一旦算过就<b>记账到 <code>_REF_PATH_HASH_MEMO</code>（一个有上限的 LRU 字典）</b>，下次同一稳定文件直接复用。对于字节/base64 输入，则直接对原始字节哈希。单测专门验证了「同样大小、只改中间内容」不会被错误命中（不会 stale）。</p>
+
+    <h4>(c) 两个阶段各加一个缓存，命中就跳过重算</h4>
+    <p>preprocessing 缓存波形，audio_encoder 缓存「延迟后的 codec 码」：</p>
+<pre><code class="language-python"># audio_encoder 阶段：
+cached_delayed = reference_code_cache.get(state.reference_cache_key)
+if cached_delayed is not None:
+    delayed_rows = cached_delayed.tolist()      # 命中！直接用，跳过 codec 编码
+else:
+    ref_codes_TN = codec.encode_reference(waveform, sample_rate=24000)  # 未命中：真编码
+    delayed = apply_delay_pattern(ref_codes_TN)
+    delayed_rows = delayed.tolist()
+    reference_code_cache.put(state.reference_cache_key,
+                             delayed.to("cpu", torch.int32))   # 存为 CPU int32，省显存
+</code></pre>
+
+    <h3>3. 涉及的知识点</h3>
+
+    <div class="kb">
+      <div class="term">🗝️ 内容寻址缓存（Content-addressed Cache）与缓存失效</div>
+      <div class="three">
+        <b>是什么：</b>用「内容的哈希」而不是「名字/路径」作为缓存 key。内容相同 → key 相同 → 命中；内容一变 → key 变 → 自动失效。<br>
+        <b>为什么需要：</b>「按名字缓存」最大的坑是<b>同名不同内容</b>（文件被替换）会拿到过期数据。按内容寻址从根本上杜绝 stale。Git 就是用文件内容哈希做寻址的。<br>
+        <b>本 PR 里：</b>路径输入用「stat 指纹 + 头中尾哨兵 + 完整哈希」三级确认内容身份；字节输入直接哈希内容。<span class="analogy">类比：用「指纹」而非「姓名」认人——重名也不会认错。</span>
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🚀 记忆化（Memoization）与 LRU 有界缓存</div>
+      <div class="three">
+        <b>是什么：</b>记忆化＝把「算过的结果」存起来，下次同样输入直接返回。LRU（Least Recently Used）＝缓存满了就淘汰「最久没用过」的条目。<br>
+        <b>为什么需要：</b>避免重复计算；有界（设上限）则避免缓存无限膨胀吃光内存。<br>
+        <b>本 PR 里：</b><code>_REF_PATH_HASH_MEMO</code> 用 <code>OrderedDict</code> + <code>move_to_end</code> 实现 LRU，超过 1024 条就 <code>popitem(last=False)</code> 淘汰最旧的；<code>StageOutputCache</code> 同时按「条数」和「字节数」双重设上限。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🔊 重采样（Resample）、Delay Pattern 与多码本（Codebook）</div>
+      <div class="three">
+        <b>是什么：</b>重采样＝把任意采样率的音频统一转成模型要求的 24kHz。多码本编码＝把每个音频帧用多个码本（如 8 个）并行表示，信息更丰富。Delay pattern（延迟模式）＝让不同码本在时间上错开一帧，便于自回归逐步生成。<br>
+        <b>为什么需要：</b>统一采样率是模型输入前提；多码本+delay 是现代神经音频 codec（如 DAC、Encodec）提升音质、适配自回归生成的标准技巧。<br>
+        <b>本 PR 里：</b>这些都是「重活」——正因为算一次很贵，才值得缓存其结果。
+      </div>
+    </div>
+
+    <h3>4. 性能数据（SeedTTS，3 次中位数）</h3>
+    <table>
+      <tr><th>指标</th><th>基线</th><th>优化后</th><th>变化</th></tr>
+      <tr><td>吞吐 QPS</td><td class="num">7.514</td><td class="num">8.527</td><td class="pos">+13.5%</td></tr>
+      <tr><td>平均延迟</td><td class="num">1.684s</td><td class="num">1.465s</td><td class="pos">−13.0%</td></tr>
+      <tr><td>RTF 均值</td><td class="num">0.424</td><td class="num">0.366</td><td class="pos">−13.7%</td></tr>
+    </table>
+
+    <h3>5. 我能学到什么 / 延伸思考</h3>
+    <div class="takeaway">
+      <ul>
+        <li><b>缓存的难点 90% 在「失效正确性」，不在「存取」。</b>设计 key 时永远要问：「什么情况下内容变了但 key 没变？」（stale 风险）。</li>
+        <li><b>分层确认（快指纹 → 哨兵采样 → 完整哈希）</b>是「在准确性和开销间取平衡」的经典工程套路：大多数情况走廉价快路径，仅在必要时付昂贵代价。</li>
+        <li><b>新功能默认关、靠环境变量 opt-in</b>，是「不打扰既有行为、可灰度验证」的稳妥做法。</li>
+        <li><b>延伸学习：</b>内容寻址存储（Git/IPFS）、LRU 缓存实现、文件 stat 元数据、神经音频 codec（DAC/Encodec）、缓存一致性。</li>
+      </ul>
+    </div>
+  </div>
+</details>
+
+<!-- ============================================================= -->
+<!-- PR #612 -->
+<!-- ============================================================= -->
+<details class="card" open>
+  <summary>
+    <span class="chev">▶</span>
+    <span class="sum-main">
+      <p class="sum-title">#612 · 用 torch.compile 编译 Higgs 的 DAC 音频编码器</p>
+      <div class="sum-meta">
+        <span class="badge">merged</span>
+        <span class="pr-num">#612</span>
+        <span>作者 @yxs</span>
+        <span class="tag perf">性能</span><span class="tag">torch.compile</span>
+        <a href="https://github.com/sgl-project/sglang-omni/pull/612" target="_blank">查看 PR ↗</a>
+      </div>
+      <p class="one-liner">🎯 一句话：给 DAC 声学编码器套上 <code>torch.compile</code>（PyTorch 的即时编译器），并在加载时用一次假数据「预热」触发编译，RTF 改善 11.8%、吞吐 +8.5%，质量几乎无损。</p>
+    </span>
+  </summary>
+  <div class="body">
+
+    <h3>1. 它解决了什么问题</h3>
+    <p>DAC（Descript Audio Codec）的<b>声学编码器（acoustic encoder）</b>是 Higgs 处理参考音频的热点模块。PyTorch 默认是「eager 模式」——一行行 Python 代码逐个发射 GPU 算子。对于这种会被反复调用、形状相对固定的模块，eager 模式有两块浪费：<b>Python 解释开销</b>和<b>大量零碎的 GPU 内核启动</b>（每个小算子单独启动一次，启动本身就有固定开销）。</p>
+
+    <h3>2. 具体做了什么改动 + 知识点</h3>
+    <p>改动仅 6 行，在创建 audio_encoder 时：</p>
+<pre><code class="language-python">codec = get_or_load_codec(checkpoint_dir, device, dtype)
+codec.model.acoustic_encoder = torch.compile(           # ① 编译声学编码器
+    codec.model.acoustic_encoder, mode="default", dynamic=True
+)
+codec.encode_reference(                                  # ② 用一秒静音预热，触发编译
+    torch.zeros(codec.SAMPLE_RATE), sample_rate=codec.SAMPLE_RATE
+)
+</code></pre>
+    <p>两行代码各有讲究：</p>
+
+    <div class="kb">
+      <div class="term">⚡ torch.compile —— PyTorch 的即时编译（JIT）</div>
+      <div class="three">
+        <b>是什么：</b>PyTorch 2.x 引入的一行式加速器。它会追踪你的模型，把多个小算子<b>「融合（fusion）」</b>成更大的内核、消除 Python 开销、生成优化后的机器码。<br>
+        <b>为什么需要：</b>eager 模式逐算子执行有解释和内核启动开销；编译后能把「几十个小内核」合并成「几个大内核」，显著减少启动次数、提升 GPU 利用率。<br>
+        <b>本 PR 里：</b>只编译最热的 <code>acoustic_encoder</code>，用 <code>mode="default"</code> 求稳、<code>dynamic=True</code> 允许输入长度变化（音频时长不固定）。<span class="analogy">类比：eager 像「口译员逐句翻译」，compile 像「先把整段讲稿翻好打印出来照读」——一次性投入，后续高效。</span>
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🔥 编译预热（Warm-up）与 dynamic shapes</div>
+      <div class="three">
+        <b>是什么：</b><code>torch.compile</code> 是「懒编译」——第一次真正喂数据时才触发编译，这次会<b>特别慢</b>（要花时间编译）。预热＝在服务启动时先用一份假数据跑一遍，把这次「慢编译」提前到加载期，而非让第一个真实用户承担。<code>dynamic=True</code> 让编译产物能适配不同输入长度，避免每来一个新长度就重新编译。<br>
+        <b>为什么需要：</b>不预热的话，第一个真实请求会莫名其妙地慢好几秒，体验很差。<br>
+        <b>本 PR 里：</b><code>codec.encode_reference(torch.zeros(SAMPLE_RATE), ...)</code> 就是喂「1 秒静音」做预热。注意 #605 的单测里特地有句注释「忽略 #612 加的构造期预热调用」——可见这两个 PR 在同一模块上协作。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🚀 内核融合（Kernel Fusion）与启动开销</div>
+      <div class="three">
+        <b>是什么：</b>每次在 GPU 上跑一个算子都要「启动一个内核」，有固定的启动延迟。融合＝把多个相邻小算子合并成一个内核一次跑完。<br>
+        <b>为什么需要：</b>当模型由大量小算子组成时，「启动开销」会累积成主要瓶颈（GPU 算力没吃满，时间都耗在启动上）。<br>
+        <b>本 PR 里：</b>编译器把声学编码器里的小算子融合，减少启动次数，这是 RTF −11.8% 的主因。
+      </div>
+    </div>
+
+    <h3>3. 性能与权衡（n=6 对比，1088 SeedTTS-EN，c=16，H200）</h3>
+    <table>
+      <tr><th>指标</th><th>Eager</th><th>Compiled</th><th>变化</th></tr>
+      <tr><td>RTF（越低越快）</td><td class="num">0.462</td><td class="num">0.407</td><td class="pos">−11.8%</td></tr>
+      <tr><td>QPS</td><td class="num">8.11</td><td class="num">8.80</td><td class="pos">+8.5%</td></tr>
+      <tr><td>说话人相似度（WavLM）</td><td class="num">66.42</td><td class="num">66.06</td><td class="neg">−0.55%</td></tr>
+      <tr><td>WER p95 尾部</td><td class="num">9.24%</td><td class="num">9.85%</td><td class="neg">+0.6pp</td></tr>
+    </table>
+    <div class="callout"><b>诚实的权衡：</b>作者明确标出了代价——相似度降 0.55%、WER 尾部恶化 0.6pp。<b>性能优化常常不是「纯赚」，而是「用可接受的质量代价换速度」。把代价摆在桌面上，让评审能判断是否值得，是专业的做法。</b></div>
+
+    <h3>4. 我能学到什么 / 延伸思考</h3>
+    <div class="takeaway">
+      <ul>
+        <li><b><code>torch.compile</code> 是「低成本高回报」的优化首选</b>：一两行就能换 10% 左右加速。但要配合<b>预热</b>，否则首请求会被编译拖慢。</li>
+        <li><b>对会变长度的输入用 <code>dynamic=True</code></b>，避免反复重编译（recompile）拖垮性能。</li>
+        <li><b>用 n=6 多次重复 + 均值±标准差报告</b>，而不是单次跑分——这才能区分真实收益和测量噪声。</li>
+        <li><b>延伸学习：</b>TorchDynamo / TorchInductor 原理、CUDA 内核启动开销、CUDA Graph（另一种消除启动开销的手段）、编译与精度的微妙关系。</li>
+      </ul>
+    </div>
+  </div>
+</details>
+
+<!-- ============================================================= -->
+<!-- PR #602 -->
+<!-- ============================================================= -->
+<details class="card" open>
+  <summary>
+    <span class="chev">▶</span>
+    <span class="sum-main">
+      <p class="sum-title">#602 · 修复 Ming-Omni Talker 音色预设加载 + 增加生成时长护栏</p>
+      <div class="sum-meta">
+        <span class="badge">merged</span>
+        <span class="pr-num">#602</span>
+        <span>作者 @edwingao28</span>
+        <span class="tag bug">Bugfix</span><span class="tag">Talker / 语音</span>
+        <a href="https://github.com/sgl-project/sglang-omni/pull/602" target="_blank">查看 PR ↗</a>
+      </div>
+      <p class="one-liner">🎯 一句话：之前音色配置文件缺失时，服务只打个警告就硬撑着跑，导致默认音色「DB30」根本没有说话人锚点、声音几秒内就跑偏。本 PR 改成「缺了就立刻报错（fail fast）」，并加了一个「按文本长度封顶解码步数」的时长护栏。</p>
+    </span>
+  </summary>
+  <div class="body">
+
+    <h3>1. 它解决了什么问题</h3>
+    <p>Ming-Omni 的 Talker 用「音色预设（voice preset）」来决定说话人音色：<code>talker/data/voice_name.json</code> 里把音色名（如 <code>"DB30"</code>）映射到一段 <code>prompt_wav</code>（说话人样本音频）。这段样本是 CFM（声学生成模型）的<b>「说话人锚点」</b>——告诉模型「请用这个人的嗓音」。</p>
+    <div class="callout"><b>原 Bug：</b>当 <code>voice_name.json</code> 没被挂载进来时，旧代码只 <code>logger.warning</code> 一句，然后<b>带着空的音色字典继续服务</b>。于是默认音色 DB30 永远解析不到 prompt wav，CFM 在 <code>prompt_wav_lat=None</code>（没有任何说话人锚点）下运行——<b>输出几秒内就「飘走」、音色失控</b>。这是「静默失败（silent failure）」的典型危害：不报错，但结果是错的。</div>
+
+    <h3>2. 具体做了什么改动</h3>
+
+    <h4>(a) 把「静默警告」改成「快速失败」</h4>
+    <p>新增 <code>_validate_voice_presets</code>，在<b>加载时</b>就把所有问题暴露出来（同时改造了 <code>MingTalkerExecutor</code> 和 <code>MingStreamingTalkerScheduler</code> 两个入口）：</p>
+<pre><code class="language-python">def _validate_voice_presets(self, voice_dict, manifest_path, talker_dir):
+    # 配了默认音色，但清单里没有它 → 报错（而不是空跑）
+    if self._voice is not None and self._voice not in voice_dict:
+        raise ValueError(f"default voice {self._voice!r} not found in {manifest_path}...")
+    for name, entry in voice_dict.items():
+        rel_path = entry.get("prompt_wav_path")
+        if rel_path is None:                          # 清单条目缺字段 → 明确的 ValueError
+            raise ValueError(f"voice preset {name!r} ... missing prompt_wav_path")
+        resolved = os.path.join(talker_dir, rel_path)
+        if not os.path.isfile(resolved):              # 引用的 wav 文件不存在 → FileNotFoundError
+            raise FileNotFoundError(f"... references missing prompt wav {resolved}")
+        entry["prompt_wav_path"] = resolved           # 顺便把相对路径解析成绝对路径
+</code></pre>
+    <p>关键细节：用 <code>entry.get("prompt_wav_path")</code> 而非 <code>entry["..."]</code>，是为了<b>把模糊的 <code>KeyError</code> 换成带清晰信息的 <code>ValueError</code></b>——单测 <code>test_..._raises_value_error_not_key_error</code> 专门守护这点。同时加载逻辑也分了岔：</p>
+<pre><code class="language-diff"> if os.path.exists(voice_json):
+     ... 校验并加载 ...
++elif self._voice is not None:        # 没文件、但用户指定了默认音色 → 直接报错
++    raise FileNotFoundError(f"voice_name.json not found ...; default voice cannot be resolved")
+ else:
+-    logger.warning("voice_name.json not found ...")   # 旧：警告后硬撑
++    logger.info("no voice_name.json ...; presets disabled")  # 新：没配默认音色才允许「无预设」
+</code></pre>
+
+    <h4>(b) 请求时的解析顺序也理清了，并「提前到 CUDA 流之外」</h4>
+<pre><code class="language-python"># 在抢占 CUDA 流之前先解析，坏请求快速失败，不白白占着 GPU 资源
+if prompt_wav_path is not None:
+    pass                                        # ① 显式 prompt_wav_path 优先（单请求覆盖预设）
+elif voice_name is not None and voice_name in self.voice_json_dict:
+    prompt_text = self.voice_json_dict[voice_name]["prompt_text"]   # ② 用预设
+    prompt_wav_path = self.voice_json_dict[voice_name]["prompt_wav_path"]
+elif voice_name is not None:
+    raise ValueError(f"voice_name={voice_name!r} not found ... would run without a speaker anchor ...")  # ③ 指定了但找不到 → 报错
+else:
+    raise ValueError("requires either voice_name ... or prompt_wav_path. Both are None.")  # ④ 都没有 → 报错
+</code></pre>
+
+    <h4>(c) 时长护栏：按文本长度封顶 CFM 解码步数</h4>
+    <p>新增 <code>duration_capped_steps</code>，用「每字符约 0.36s、最低 2.0s」的启发式估算「这段文本最多该生成多长音频」，换算成解码步数上限，防止模型在某些输入下无限/超长生成：</p>
+<pre><code class="language-python">seconds_per_step = (self.patch_size * vae_patch_size * hop_size) / sample_rate
+max_duration_s = max(2.0, text_len * (5818.0 / 16000.0))   # 短文本兜底 2s，长文本按字数估
+max_steps_by_duration = max(1, int(max_duration_s / seconds_per_step))
+return min(requested_max_steps, max_steps_by_duration)     # 取「请求上限」和「时长上限」的较小值
+</code></pre>
+    <p>同时改了 <code>generate()</code> 的循环退出逻辑，保证<b>无论是因「停止 token」还是因「撞到步数上限」退出，最后一块都带 <code>last_chunk=True</code></b>——这样流式 VAE 才能正确 flush 出尾巴音频。两个单测分别覆盖了这两种退出路径。</p>
+
+    <h3>3. 涉及的知识点</h3>
+
+    <div class="kb">
+      <div class="term">🎙️ CFM（Conditional Flow Matching）与说话人锚点</div>
+      <div class="three">
+        <b>是什么：</b>CFM（条件流匹配）是一类生成式声学模型，能根据条件（文本 + 说话人样本）生成音频特征。「说话人锚点」就是那段 prompt wav 提供的音色条件。<br>
+        <b>为什么需要：</b>没有锚点，模型就不知道「该用谁的声音」，只能自由发挥 → 音色漂移、不稳定。<br>
+        <b>本 PR 里：</b>正是「锚点缺失（<code>prompt_wav_lat=None</code>）」导致声音跑偏。修复确保「要么有合法锚点、要么明确报错」，绝不在无锚点下静默生成。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🛑 Fail Fast（快速失败）vs 静默失败</div>
+      <div class="three">
+        <b>是什么：</b>Fail fast＝一旦检测到非法状态/配置，立刻、在最早的时机、用清晰的错误终止；反面是「静默失败」——继续跑但产出错误结果。<br>
+        <b>为什么需要：</b>静默失败最难排查（系统「看起来在工作」，但结果是错的，可能几天后才被发现）。Fail fast 把问题暴露在「加载/请求入口」，定位成本极低。<br>
+        <b>本 PR 里：</b>把「warning 后硬撑」改成「加载时校验清单、缺文件/缺字段/找不到音色立刻抛对应异常」，并选用语义正确的异常类型（<code>FileNotFoundError</code> / <code>ValueError</code>）。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🧯 资源获取时机：在 CUDA 流之外先校验</div>
+      <div class="three">
+        <b>是什么：</b>CUDA 流（stream）是 GPU 上的执行队列，进入流上下文意味着开始占用 GPU 资源。<br>
+        <b>为什么需要：</b>如果在「已经占住 GPU」之后才发现请求非法，会白白浪费/占用 GPU 资源。<br>
+        <b>本 PR 里：</b>作者把音色解析（可能抛错）<b>挪到 <code>with torch.cuda.stream(...)</code> 之前</b>——坏请求在碰 GPU 前就被打回，不持有任何 CUDA 资源。这是「尽早释放/尽晚获取昂贵资源」的好习惯。
+      </div>
+    </div>
+
+    <div class="kb">
+      <div class="term">🏁 解码步数上限与流式尾块 flush</div>
+      <div class="three">
+        <b>是什么：</b>自回归生成需要一个「停止条件」（停止 token 或步数上限）。流式输出时，最后一块必须被标记为「终块」，下游解码器（VAE）才知道「可以把缓冲里的尾巴吐出来了」。<br>
+        <b>为什么需要：</b>没有上限可能无限生成；终块标记漏了会丢失最后一段音频。<br>
+        <b>本 PR 里：</b><code>duration_capped_steps</code> 给出基于文本长度的合理上限；改写 <code>generate()</code> 保证「停止 token 退出」和「撞上限退出」两条路径都正确发出 <code>last_chunk=True</code>。
+      </div>
+    </div>
+
+    <h3>4. 我能学到什么 / 延伸思考</h3>
+    <div class="takeaway">
+      <ul>
+        <li><b>「静默失败」是最阴险的 bug</b>。配置/依赖缺失时，宁可大声报错，也不要带病运行产出垃圾结果。</li>
+        <li><b>选对异常类型本身就是文档</b>：<code>FileNotFoundError</code>（文件没了）、<code>ValueError</code>（值不对）能让调用方一眼看懂问题性质，比裸 <code>KeyError</code> 友好得多。</li>
+        <li><b>昂贵资源（GPU/锁/连接）要「晚获取、早释放」</b>：把可能失败的校验放在获取资源之前。</li>
+        <li><b>给开放式生成加「护栏」</b>（步数/时长上限）是生产系统的必备防御，防止异常输入拖垮服务。</li>
+        <li><b>延伸学习：</b>防御性编程、异常设计、流式生成的停止准则、神经声码器中的 VAE / hop_size / patch_size 概念。</li>
+      </ul>
+    </div>
+  </div>
+</details>
+
+<!-- ============================================================= -->
+<!-- 其余 PR：概述 -->
+<!-- ============================================================= -->
+<h3 style="border-left:4px solid var(--muted);padding-left:11px;margin-top:34px">📎 其余 6 个 PR（CI / 文档类，简要概述）</h3>
+<p style="font-size:14px;color:var(--muted)">这些 PR 不涉及核心算法/架构，按「深度优先于广度」原则只做一句话概述。</p>
+
+<div class="mini-cards">
+  <details class="card">
+    <summary><span class="chev">▶</span><span class="sum-main">
+      <p class="sum-title">#630 · 修复 Qwen3-Omni MMMU CI 的纯文本输出配置</p>
+      <div class="sum-meta"><span class="badge">merged</span><span class="pr-num">#630</span><span>@Hayden727</span><span class="tag ci">CI</span>
+      <a href="https://github.com/sgl-project/sglang-omni/pull/630" target="_blank">PR ↗</a></div>
+    </span></summary>
+    <div class="body">
+      <p>MMMU 测试是「图进、文字出」，但 CI 之前复用了完整的<b>带语音输出</b>的 colocated 配置——即使关掉 Talker，那些语音阶段仍会占用 GPU 显存余量，偶发触发 Thinker OOM / 500 错误。</p>
+      <p><b>改动：</b>新增专用的 <code>qwen3_omni_mmmu.yaml</code>（纯文本输出）和对应 fixture，让 MMMU CI 用 <code>--text-only</code> 路径跑。验证：50 样本、0 失败、准确率 66%。</p>
+      <p><b>知识点 · OOM（Out Of Memory）：</b>GPU 显存不够导致崩溃。多阶段服务里「用不上的阶段」也可能默默占显存，是常见隐患——按需裁剪配置能腾出余量。</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="chev">▶</span><span class="sum-main">
+      <p class="sum-title">#623 / #629 · 把 Higgs 接入 CI 及其阈值调校</p>
+      <div class="sum-meta"><span class="badge">merged</span><span class="pr-num">#623, #629</span><span>@zhaochenyang20</span><span class="tag ci">CI</span>
+      <a href="https://github.com/sgl-project/sglang-omni/pull/623" target="_blank">#623 ↗</a>
+      <a href="https://github.com/sgl-project/sglang-omni/pull/629" target="_blank">#629 ↗</a></div>
+    </span></summary>
+    <div class="body">
+      <p>#623 搭建 Higgs 模型的 CI 流程；#629 调整其在 CI 中的指标阈值（PR 描述里那句对 H20 硬件的吐槽很真实 😄）。</p>
+      <p><b>知识点 · CI 阈值（threshold）调校：</b>性能/质量类 CI 不能用「精确相等」做断言，因为硬件和采样有抖动。需要根据多次实测的「最坏情况」设一个既能抓回归、又不会频繁误报（flaky）的阈值。仓库里甚至有专门的 <code>tune-ci-thresholds</code> 工具来做这件事。</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="chev">▶</span><span class="sum-main">
+      <p class="sum-title">#621 · 新增 Whisper ASR 一致性（parity）CI</p>
+      <div class="sum-meta"><span class="badge">merged</span><span class="pr-num">#621</span><span>@zhaochenyang20</span><span class="tag ci">CI</span>
+      <a href="https://github.com/sgl-project/sglang-omni/pull/621" target="_blank">PR ↗</a></div>
+    </span></summary>
+    <div class="body">
+      <p>为加速 WER（词错误率）计算，新增 Whisper ASR 的一致性 CI。</p>
+      <p><b>知识点 · ASR 与 WER：</b>ASR（自动语音识别）把语音转成文字。评测 TTS 时常用「ASR 转写 + 比对原文」算 WER 来间接衡量「合成的语音是否可懂」——这条 CI 就是把这套评测自动化、提速。</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="chev">▶</span><span class="sum-main">
+      <p class="sum-title">#622 / #616 · README 重写、换 Apache-2.0 协议、更新文档 Logo</p>
+      <div class="sum-meta"><span class="badge">merged</span><span class="pr-num">#622, #616</span><span>@xinlij</span><span class="tag docs">文档</span>
+      <a href="https://github.com/sgl-project/sglang-omni/pull/622" target="_blank">#622 ↗</a>
+      <a href="https://github.com/sgl-project/sglang-omni/pull/616" target="_blank">#616 ↗</a></div>
+    </span></summary>
+    <div class="body">
+      <p>#622：License 从 MIT 换成 Apache-2.0、重写 README（加徽章、修文档链接、补全支持模型表）；#616：更新文档站 Logo 与仓库 URL。</p>
+      <p><b>知识点 · MIT vs Apache-2.0：</b>都是宽松开源协议。相比 MIT，Apache-2.0 多了<b>显式专利授权</b>和专利反制条款，对企业采用更友好，是大型基础设施项目的常见选择。</p>
+    </div>
+  </details>
+</div>
+
+<footer>
+  <p>📄 本日报由对 sgl-project/sglang-omni 过去 24 小时合并 PR 的分析自动生成 · 生成日期 2026-05-31</p>
+  <p>讲解深度优先于覆盖广度：6 个核心 PR 深度拆解 + 6 个 CI/文档 PR 概述。如需对某个 PR 再深入（如逐行读完整 diff、跑通对应单测），可继续提问。</p>
+</footer>
+
+</div>
+
+<!-- 代码高亮：在线则启用，离线静默失败、回退到 CSS 样式 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" onload="hljs.highlightAll()" onerror="void 0"></script>
+</body>
+</html>
