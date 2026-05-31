@@ -108,7 +108,10 @@ let audioCtx = null;
 let muteGain = null;
 let nextStartTime = 0;
 let scheduledSources = [];
+let playbackGeneration = 0;
+let playbackQueue = Promise.resolve();
 let muted = false;
+let synthesisInFlight = false;
 
 function ensureAudioCtx() {
   if (!audioCtx) {
@@ -123,6 +126,8 @@ function ensureAudioCtx() {
 }
 
 function stopScheduledPlayback() {
+  playbackGeneration += 1;
+  playbackQueue = Promise.resolve();
   for (const src of scheduledSources) {
     try { src.stop(); } catch {}
     try { src.disconnect(); } catch {}
@@ -131,8 +136,20 @@ function stopScheduledPlayback() {
   nextStartTime = audioCtx ? audioCtx.currentTime : 0;
 }
 
-async function scheduleWavChunk(wavBytes) {
-  ensureAudioCtx();
+function beginPlaybackSession() {
+  stopScheduledPlayback();
+  return playbackGeneration;
+}
+
+function enqueueWavChunk(wavBytes, generation) {
+  playbackQueue = playbackQueue
+    .catch(() => {})
+    .then(() => scheduleWavChunk(wavBytes, generation));
+}
+
+async function scheduleWavChunk(wavBytes, generation) {
+  if (generation !== playbackGeneration) return;
+  const ctx = ensureAudioCtx();
   // decodeAudioData wants a standalone ArrayBuffer.
   const arrayBuffer = wavBytes.buffer.slice(
     wavBytes.byteOffset,
@@ -140,20 +157,24 @@ async function scheduleWavChunk(wavBytes) {
   );
   let audioBuffer;
   try {
-    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    audioBuffer = await ctx.decodeAudioData(arrayBuffer);
   } catch {
     return; // skip unparseable chunk rather than blow up the stream
   }
+  if (generation !== playbackGeneration) return;
 
-  const source = audioCtx.createBufferSource();
+  const source = ctx.createBufferSource();
   source.buffer = audioBuffer;
   source.connect(muteGain);
+  source.onended = () => {
+    scheduledSources = scheduledSources.filter((src) => src !== source);
+  };
 
-  const now = audioCtx.currentTime;
+  const now = ctx.currentTime;
   const startAt = Math.max(nextStartTime, now + 0.02);
+  scheduledSources.push(source);
   source.start(startAt);
   nextStartTime = startAt + audioBuffer.duration;
-  scheduledSources.push(source);
 }
 
 muteButton.addEventListener("click", () => {
@@ -466,21 +487,29 @@ $("#clear-history").addEventListener("click", () => {
 // ---------------------------------------------------------------------------
 
 synthButton.addEventListener("click", async () => {
+  if (synthesisInFlight) return;
   if (!textInput.value.trim()) {
     setStatus("Please enter some text to synthesize.", "error");
     return;
   }
+  synthesisInFlight = true;
+  finalAudio.pause();
   finalAudio.removeAttribute("src");
   finalAudio.load();
-  if (streamToggle.checked) {
-    await runStreaming();
-  } else {
-    await runNonStreaming();
+  try {
+    if (streamToggle.checked) {
+      await runStreaming();
+    } else {
+      await runNonStreaming();
+    }
+  } finally {
+    synthesisInFlight = false;
   }
 });
 
 async function runNonStreaming() {
   const inputText = textInput.value;
+  stopScheduledPlayback();
   lockButton(true);
   setStatus("Submitting request…", "busy");
 
@@ -517,7 +546,7 @@ async function runStreaming() {
   // Resume / create the AudioContext synchronously within the user gesture
   // chain so browsers don't refuse to start playback.
   ensureAudioCtx();
-  stopScheduledPlayback();
+  const playbackRun = beginPlaybackSession();
 
   const started = performance.now();
   let chunkCount = 0;
@@ -571,10 +600,9 @@ async function runStreaming() {
           firstAudioAt = (performance.now() - started) / 1000;
         }
 
-        // Decode + schedule immediately. Don't await here — schedule fires
-        // and forgets so the SSE loop keeps draining while the decoder
-        // works in parallel.
-        scheduleWavChunk(wavBytes);
+        // Keep the SSE loop draining, but serialize decode/scheduling so chunks
+        // play in stream order and stale callbacks cannot leak into a new run.
+        enqueueWavChunk(wavBytes, playbackRun);
 
         setStatus(
           `Streaming · chunk ${chunkCount} · first audio ${firstAudioAt.toFixed(2)}s`,
