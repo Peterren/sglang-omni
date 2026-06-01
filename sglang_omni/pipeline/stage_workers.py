@@ -23,6 +23,8 @@ from sglang_omni.pipeline.tp_control import TPFollowerControlPlane, TPLeaderFano
 from sglang_omni.utils.gpu_memory import gpu_startup_lock
 from sglang_omni.utils.imports import import_string
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class StageLaunchConfig:
