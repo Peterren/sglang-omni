@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang-Omni 每日 PR 学习日报 · 2026-06-01</title>
+<style>
+  :root{
+    --bg:#0f1117; --card:#171a23; --card2:#1d212c; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7c9cff; --accent2:#54d6a3; --warn:#ffb454; --pink:#ff7eb6;
+    --code-bg:#0b0e14; --tag-bg:#23283480;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    line-height:1.75; font-size:15.5px;
+  }
+  .wrap{max-width:980px; margin:0 auto; padding:32px 22px 80px}
+  header.top{
+    background:linear-gradient(135deg,#1b2030,#11141d);
+    border:1px solid var(--line); border-radius:18px; padding:30px 30px 24px; margin-bottom:26px;
+  }
+  header.top h1{margin:0 0 6px; font-size:27px; letter-spacing:.3px}
+  header.top .sub{color:var(--muted); font-size:14px; margin-bottom:18px}
+  .meta-grid{display:flex; flex-wrap:wrap; gap:10px; margin-top:6px}
+  .chip{background:var(--tag-bg); border:1px solid var(--line); border-radius:999px; padding:5px 13px; font-size:13px; color:var(--ink)}
+  .chip b{color:var(--accent)}
+  .overview{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px 24px; margin-bottom:26px}
+  .overview h2{margin:0 0 12px; font-size:18px}
+  .theme{margin:14px 0}
+  .theme h3{font-size:14px; color:var(--accent2); margin:0 0 6px; letter-spacing:.5px}
+  .theme ul{margin:4px 0 0; padding-left:20px}
+  .theme li{margin:3px 0}
+  .pill{display:inline-block; font-size:11.5px; padding:2px 8px; border-radius:6px; margin-right:6px; font-weight:600}
+  .p-arch{background:#2d3566; color:#aebcff}
+  .p-mm{background:#16493b; color:#7ff0c6}
+  .p-perf{background:#5a3a12; color:#ffce8a}
+  .p-tts{background:#4a2350; color:#f3a9ff}
+  .p-ci{background:#3a3f4a; color:#c3ccda}
+  .p-doc{background:#33384a; color:#aeb6c6}
+
+  details.card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    margin:16px 0; overflow:hidden;
+  }
+  details.card[open]{box-shadow:0 6px 26px #0006}
+  summary{
+    cursor:pointer; list-style:none; padding:18px 22px; display:flex; gap:12px; align-items:flex-start;
+    user-select:none;
+  }
+  summary::-webkit-details-marker{display:none}
+  summary:hover{background:#1b1f2a}
+  .sumnum{font-variant-numeric:tabular-nums; color:var(--accent); font-weight:700; font-size:15px; min-width:64px}
+  .sumtitle{flex:1}
+  .sumtitle .t{font-weight:650; font-size:16.5px; line-height:1.45}
+  .sumtitle .m{color:var(--muted); font-size:12.5px; margin-top:5px}
+  .arrow{color:var(--muted); transition:transform .2s; margin-top:3px}
+  details[open] .arrow{transform:rotate(90deg)}
+  .body{padding:4px 24px 24px; border-top:1px solid var(--line)}
+  .body h4{
+    margin:22px 0 8px; font-size:15.5px; color:var(--accent2);
+    border-left:3px solid var(--accent2); padding-left:10px;
+  }
+  .body h5{margin:16px 0 6px; font-size:14px; color:var(--warn)}
+  .body p{margin:8px 0}
+  .body ul{margin:8px 0; padding-left:22px}
+  .body li{margin:5px 0}
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{background:#222736; padding:1.5px 6px; border-radius:5px; font-size:13px; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; color:#e0c8ff}
+  pre{
+    background:var(--code-bg); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; overflow:auto; font-size:12.7px; line-height:1.6;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  pre code{background:none; padding:0; color:#cdd6f4; font-size:12.7px}
+  .kc{background:#10141e; border:1px dashed #34507a; border-radius:10px; padding:12px 16px; margin:12px 0}
+  .kc .kt{color:var(--accent); font-weight:700; font-size:13.5px}
+  .kc .seg{margin-top:6px}
+  .kc .seg b{color:var(--accent2)}
+  blockquote{
+    margin:14px 0; padding:10px 16px; background:#15233010; border-left:3px solid var(--accent);
+    background:#141b28; border-radius:0 10px 10px 0; color:#cfd6e2;
+  }
+  .analogy{background:#1a1426; border:1px solid #3a2a52; border-radius:10px; padding:10px 16px; margin:12px 0}
+  .analogy::before{content:"🧠 类比　"; color:var(--pink); font-weight:700; font-size:13px}
+  .takeaway{background:#10211a; border:1px solid #1f5240; border-radius:10px; padding:6px 18px; margin:12px 0}
+  .ins{color:#7ff0c6}; .del{color:#ff9d9d}
+  table{border-collapse:collapse; width:100%; margin:14px 0; font-size:13px}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left}
+  th{background:#1d2230; color:var(--accent)}
+  .ci-list li{margin:7px 0}
+  footer{margin-top:40px; color:var(--muted); font-size:12.5px; text-align:center; border-top:1px solid var(--line); padding-top:20px}
+  hr.soft{border:none; border-top:1px dashed var(--line); margin:18px 0}
+  @media print{
+    body{background:#fff; color:#15181f; font-size:11.5px}
+    .wrap{max-width:none; padding:0}
+    details.card,.overview,header.top{break-inside:avoid; box-shadow:none; background:#fafbfd; border-color:#d7dce5}
+    details.card{page-break-inside:avoid}
+    summary{background:#eef1f7}
+    .body{border-top:1px solid #d7dce5}
+    pre{background:#0d1117; color:#e6edf3}
+    pre code{color:#e6edf3}
+    code{color:#5a2ca0; background:#eee}
+    .arrow{display:none}
+    a{color:#2a4fd0}
+    h1,.sumtitle .t{color:#11141d}
+    .body h4{color:#1c7a57}
+    blockquote,.analogy,.takeaway,.kc{background:#f3f5fa}
+    details:not([open]) .body{display:block!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>SGLang-Omni 每日 PR 学习日报</h1>
+  <div class="sub">报告日期：2026-06-01（覆盖窗口：过去 24 小时，约 2026-05-31 ~ 2026-06-01）· 仓库：
+    <a href="https://github.com/sgl-project/sglang-omni">sgl-project/sglang-omni</a></div>
+  <div class="meta-grid">
+    <span class="chip">合并 PR 总数 <b>18</b></span>
+    <span class="chip">深度讲解 <b>8</b></span>
+    <span class="chip">精简汇总 <b>10</b></span>
+    <span class="chip">主线 <b>Omni / 多模态 / 多阶段架构</b></span>
+  </div>
+</header>
+
+<section class="overview">
+  <h2>📌 当日总览</h2>
+  <p>这 24 小时仓库非常活跃，主线集中在三件事：① 把<b>多阶段流水线（multi-stage pipeline）</b>的抽象进一步打磨干净（钩子重命名、payload 命名空间化、stage worker 重构）；② 继续给各路 <b>TTS / 多模态模型</b>做<b>性能优化</b>（torch.compile、批量音频编解码、异步解码、跨进程 payload 瘦身）；③ 大量 <b>CI / 阈值 / 文档</b>的稳定化工作。下面按主题分类，深度优先讲透与 Omni/多模态/多阶段架构强相关的 8 个 PR，其余 10 个做精简汇总。</p>
+
+  <div class="theme">
+    <h3>架构 / 多阶段流水线</h3>
+    <ul>
+      <li><span class="pill p-arch">架构</span><a href="#pr558">#558</a> Refactor：模型钩子、payload 命名、stage worker 三件套重构</li>
+    </ul>
+  </div>
+  <div class="theme">
+    <h3>多模态 encoder / 模型正确性</h3>
+    <ul>
+      <li><span class="pill p-mm">多模态</span><a href="#pr539">#539</a> Ming 视觉编码器：把 patch_embed 的 Conv3d 换成 F.linear（~400× 提速）</li>
+      <li><span class="pill p-mm">多模态</span><span class="pill p-arch">TP</span><a href="#pr641">#641</a> 修复纯文本 Qwen3-Omni 在张量并行（TP）下跑不起来的问题</li>
+    </ul>
+  </div>
+  <div class="theme">
+    <h3>性能优化（推理基础设施）</h3>
+    <ul>
+      <li><span class="pill p-perf">性能</span><a href="#pr625">#625</a> S2-Pro Fast-AR：在 decode 路径开启 torch.compile</li>
+      <li><span class="pill p-perf">性能</span><span class="pill p-tts">TTS</span><a href="#pr610">#610</a> Higgs：新增批量音频编码器 <code>encode_batch</code></li>
+      <li><span class="pill p-perf">性能</span><span class="pill p-tts">TTS</span><a href="#pr638">#638</a> Higgs：默认开启异步解码（async-decode），并加 <code>--async-decode</code> 三态开关</li>
+    </ul>
+  </div>
+  <div class="theme">
+    <h3>跨阶段数据传输（payload 优化）</h3>
+    <ul>
+      <li><span class="pill p-tts">TTS</span><a href="#pr636">#636</a> Voxtral TTS：把 audio_codes 从 list 改为二进制字节 payload</li>
+      <li><span class="pill p-tts">TTS</span><a href="#pr639">#639</a> Higgs vocoder：音频波形 payload 瘦身、统一成共享 helper</li>
+    </ul>
+  </div>
+  <div class="theme">
+    <h3>CI / 基准 / 文档（精简汇总）</h3>
+    <ul>
+      <li><span class="pill p-ci">CI</span> #635 #634 #633 #632 #630 #629 #623 一系列 CI 流程与阈值整理</li>
+      <li><span class="pill p-perf">基准</span> #587 新增 UTMOS 语音质量评测指标</li>
+      <li><span class="pill p-doc">前端</span> #592 Playground 重构 + Higgs TTS UI</li>
+      <li><span class="pill p-doc">文档</span> #631 使用逐字 Apache-2.0 协议文本</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 0 预备知识 ============ -->
+<details class="card" open id="primer">
+  <summary>
+    <span class="sumnum">基础</span>
+    <span class="sumtitle">
+      <span class="t">先导：读懂本期 PR 必须知道的 SGLang-Omni 架构</span>
+      <span class="m">如果你是完全小白，强烈建议先读这一节，后面所有 PR 都建立在这些概念上</span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <p>SGLang 是一个<b>大模型推理引擎</b>（让训练好的模型对外提供"输入→输出"服务的系统）。SGLang-Omni 是它面向 <b>Omni（全模态）</b>场景的分支：不仅处理文字，还要处理图片、视频、语音输入，并能合成语音输出（TTS）。理解本期 PR，需要先建立下面这张"地图"。</p>
+
+    <h4>① 推理引擎里的核心角色</h4>
+    <div class="kc">
+      <div class="kt">Scheduler（调度器）</div>
+      <div class="seg"><b>它是什么：</b>引擎的"大脑"，决定每一步把哪些请求、哪些 token 喂给 GPU。</div>
+      <div class="seg"><b>为什么需要：</b>很多用户的请求同时到达，GPU 一次能算一大批，调度器负责把它们高效地拼批、排队。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">ModelRunner / TP Worker（模型执行器）</div>
+      <div class="seg"><b>它是什么：</b>真正调用 GPU 跑神经网络前向（forward）的那一层。<code>tp_worker.forward_batch_generation()</code> 就是"把一批数据塞进模型算一遍"。</div>
+      <div class="seg"><b>为什么需要：</b>把"怎么算"和"算什么"解耦——调度器只管排队，ModelRunner 只管算。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">Tokenizer / Detokenizer（分词器 / 反分词器）</div>
+      <div class="seg"><b>它是什么：</b>模型只认数字（token id）。Tokenizer 把"你好"变成一串数字；Detokenizer 把模型吐出的数字变回文字/音频。</div>
+    </div>
+
+    <h4>② 几个反复出现的"性能名词"</h4>
+    <div class="kc">
+      <div class="kt">KV Cache（键值缓存）</div>
+      <div class="seg"><b>它是什么：</b>自回归模型每生成一个新字，都要"回看"前面所有字。KV Cache 把前面字算过的中间结果（Key/Value 向量）存起来，避免每步从头重算。</div>
+      <div class="seg"><b>类比：</b>写作文时把前文的要点记在便利贴上，写下一句时瞄一眼便利贴，而不是把全文重读一遍。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">Continuous Batching（连续批处理）</div>
+      <div class="seg"><b>它是什么：</b>不等一整批请求都结束才换下一批，而是谁先生成完就立刻把它的位置让给新请求，GPU 永远是满的。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">CUDA Graph</div>
+      <div class="seg"><b>它是什么：</b>把一连串固定的 GPU 操作"录制"成一张图，之后一次性回放，省掉 CPU 每步逐条下发指令的开销。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">torch.compile</div>
+      <div class="seg"><b>它是什么：</b>PyTorch 的即时编译器。把 Python 写的模型代码编译成更快的融合算子（kernel），首次编译慢，之后每次都更快。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">Tensor Parallelism（TP，张量并行）</div>
+      <div class="seg"><b>它是什么：</b>一个模型太大单卡放不下，就把每一层的权重矩阵"切片"分到多张 GPU 上，大家各算一部分再拼起来。</div>
+      <div class="seg"><b>类比：</b>一张超大的 Excel 表，4 个人各算 1/4 列，最后合并。</div>
+    </div>
+
+    <h4>③ 本仓库特有的"多阶段流水线（multi-stage pipeline）"</h4>
+    <p>普通 LLM 引擎只有"一个模型"。但 Omni 模型是<b>由好几个模型串起来</b>的：比如 Qwen3-Omni 要先 <b>preprocessing（预处理）→ encoder（把图片/音频编码成向量）→ thinker（理解 + 生成文本）→ talker（把文本变成语音 token）→ vocoder（把语音 token 变成真实波形）</b>。</p>
+    <p>SGLang-Omni 把每一个环节抽象成一个 <b>Stage（阶段）</b>，阶段之间通过传递 <b>StagePayload（阶段载荷，一包数据）</b> 来通信。不同阶段可能跑在<b>不同进程、甚至不同 GPU</b> 上，所以 payload 要能被序列化（用 <code>msgpack</code> 打包成字节流）后在进程间传输。</p>
+    <div class="analogy">把 Omni 推理想象成一条工厂流水线：原料（图片/语音）从第一个工位进去，每个工位（Stage）加工一道工序，加工好的半成品（StagePayload）用传送带送到下一个工位。本期有好几个 PR 就是在优化"传送带上半成品的打包方式"（#636 #639）和"工位本身的代码结构"（#558）。</div>
+    <p>记住这条流水线，下面的 PR 就都有了落脚点。</p>
+  </div>
+</details>
+
+<!-- ============ #558 ============ -->
+<details class="card" open id="pr558">
+  <summary>
+    <span class="sumnum">#558</span>
+    <span class="sumtitle">
+      <span class="t">[Refactor] 模型钩子、payload 命名、stage worker 三件套重构</span>
+      <span class="m">作者 JingwenGu0829 · 已合并 2026-06-01 · 改动 36 个文件 · <a href="https://github.com/sgl-project/sglang-omni/pull/558">PR 链接</a></span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <h4>1. PR 概览</h4>
+    <p>这是一个<b>纯重构（refactor）</b>PR：不改变功能，只让代码结构更清晰。一句话：把"模糊的、一个函数干两件事"的模型钩子拆成职责单一的多个钩子；把太通用的类名（如 <code>PipelineState</code>）加上模型前缀变成 <code>Qwen3OmniPipelineState</code>；把 <code>stage_process.py</code> 重命名整理成 <code>stage_workers.py</code>。</p>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>之前 <code>ModelRunner</code> 有两个钩子：<code>prepare_forward()</code> 和 <code>post_forward()</code>。问题出在 <code>prepare_forward</code> <b>同时干了两件不相关的事</b>：</p>
+    <ul>
+      <li>(a) <b>修改</b>这一批的输入（比如把图片的向量注入进去）；</li>
+      <li>(b) 有时候<b>直接把整个前向算完</b>并返回结果（让标准前向被跳过）。</li>
+    </ul>
+    <p>判断走哪条路的方式是看返回值：<code>return None</code> 就走标准前向，返回一个结果就跳过标准前向。RFC 文档里维护者 Chenyang 的原话是这种写法"<i>misleading（有误导性）</i>"——它把"prefill 阶段顺便做了自定义前向"伪装成了"钩子恰好返回了一个值"。新手很难看懂到底什么时候会走哪条分支。</p>
+    <div class="analogy">就像一个叫"准备食材"的厨房岗位，实际上它有时只是洗菜（准备），有时却把整道菜都炒好端出来了（完成前向）。同事光看岗位名根本不知道这次它到底做到哪一步。重构就是把它拆成"洗菜岗"和"炒菜岗"两个明确的岗位。</div>
+
+    <h4>3. 具体做了什么改动</h4>
+    <h5>改动 A：把 2 个含糊钩子拆成 6 个职责单一的钩子</h5>
+    <p>核心文件 <code>sglang_omni/model_runner/base.py</code>。改动前后的执行主循环对比：</p>
+<pre><code># ❌ 改动前：一个 prepare_forward 既改 batch 又可能返回结果
+batch_result = (
+    self.prepare_prefill(forward_batch, schedule_batch, requests)
+    if is_prefill
+    else self.prepare_decode(forward_batch, schedule_batch, requests, is_lookahead=is_lookahead)
+)
+if batch_result is None:                 # 看返回值猜走哪条路
+    batch_result = self.tp_worker.forward_batch_generation(forward_batch)
+
+# ✅ 改动后：先「改状态」，再「显式判断要不要自定义前向」
+if is_prefill:
+    self.before_prefill(forward_batch, schedule_batch, requests)        # 只负责改输入
+    batch_result = self.custom_prefill_forward(forward_batch, schedule_batch, requests)  # 只负责自定义前向
+else:
+    self.before_decode(forward_batch, schedule_batch, requests, is_lookahead=is_lookahead)
+    batch_result = self.custom_decode_forward(forward_batch, schedule_batch, requests)
+if batch_result is None:                 # 自定义前向没接管，就走标准前向
+    batch_result = self.tp_worker.forward_batch_generation(forward_batch)
+</code></pre>
+    <p>逐块解释：</p>
+    <ul>
+      <li><code>before_prefill / before_decode</code>：返回值是 <code>None</code>，<b>唯一职责是"原地修改" forward_batch</b>（例如注入多模态向量）。读代码的人一看名字就知道它不会改变控制流。</li>
+      <li><code>custom_prefill_forward / custom_decode_forward</code>：<b>唯一职责是"要不要自己接管前向"</b>。返回结果＝我自己算完了；返回 <code>None</code>＝交给标准 <code>tp_worker</code> 算。</li>
+      <li>同时把 <code>post_forward</code> 也按阶段拆成 <code>post_prefill / post_decode</code>。</li>
+    </ul>
+    <p>这样原本"prepare→forward→post"变成了清晰的两段式管线：<code>before_*() → custom_*_forward() 或标准 forward → post_*()</code>。Qwen3/Ming 的 thinker 现在用 <code>custom_prefill_forward</code> 来注入多模态 embedding，语义诚实多了。</p>
+
+    <h5>改动 B：给太通用的类名加模型前缀（命名空间化）</h5>
+    <p>文件 <code>models/qwen3_omni/payload_types.py</code> 等。例如：</p>
+<pre><code># 改动前（名字太通用，跨模型容易撞名、import 时看不出归属）
+class PipelineState: ...
+class OmniEvent: ...
+
+# 改动后（一眼看出这是 Qwen3-Omni 专属的类型）
+class Qwen3OmniPipelineState: ...
+class Qwen3OmniEvent: ...
+</code></pre>
+    <p>为什么重要：仓库里同时有 Qwen3-Omni、Ming-Omni、Higgs、Voxtral、Fish S2-Pro 等多个模型，每个都有自己的"流水线状态"。如果都叫 <code>PipelineState</code>，读 <code>merge.py</code> 时根本分不清是哪个模型的，重构后 <code>from ...qwen3_omni.payload_types import Qwen3OmniPipelineState</code> 自解释。</p>
+
+    <h5>改动 C：stage worker 文件重组</h5>
+    <p>把 <code>pipeline/stage_process.py</code> 重命名为 <code>pipeline/stage_workers.py</code>，并把原来散在 <code>stage_group.py</code> 里的 <code>StageGroup</code> 合并进来；同时把 <code>StageProcessSpec</code> 改名为 <code>StageLaunchConfig</code>（"启动一个 stage 进程需要的配置"，名字更达意）。这是把"进程/工作单元相关的东西"收拢到一个文件里。</p>
+
+    <h4>4. 涉及的知识点</h4>
+    <div class="kc">
+      <div class="kt">Hook（钩子）/ 模板方法模式（Template Method Pattern）</div>
+      <div class="seg"><b>它是什么：</b>父类把"流程骨架"写死（execute 里的 before→forward→post 顺序），把"每步具体做什么"留成空方法（钩子）让子类去填。</div>
+      <div class="seg"><b>为什么需要：</b>所有 Omni 模型共享同一套执行流程，只有少数环节不同。用钩子可以"复用骨架、只改差异点"。</div>
+      <div class="seg"><b>在本 PR 里：</b><code>ModelRunner</code> 是父类定骨架，<code>ThinkerModelRunner</code> 重写 <code>custom_prefill_forward</code> 来注入多模态向量——这正是模板方法模式的教科书用法。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">Prefill vs Decode（预填充 / 解码）</div>
+      <div class="seg"><b>它是什么：</b>自回归生成分两阶段。Prefill：一次性把用户输入的所有 token 并行算完（填满 KV Cache）；Decode：之后每次只算 1 个新 token，循环往复。</div>
+      <div class="seg"><b>在本 PR 里：</b>正因为两阶段的"自定义前向"需求不同（thinker 只在 prefill 注入多模态），所以钩子按阶段拆成 prefill/decode 两套才更合理。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">"关注点分离" Separation of Concerns</div>
+      <div class="seg"><b>核心思想：</b>一个函数只做一件事。把"修改状态（副作用）"和"决定控制流（返回值）"这两个职责分开，是消除 bug 温床的经典手段。</div>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>可复用工程思想：</b>当一个函数"用返回值是不是 None 来暗示走哪条分支"时，往往就是该拆分的信号。把"副作用"和"控制流决策"显式拆开，代码可读性立刻提升。</li>
+      <li><b>命名即文档：</b>给通用类名加领域前缀，是大型多模型仓库里降低认知负担的低成本高收益操作。</li>
+      <li><b>延伸前置知识：</b>设计模式中的模板方法 / 策略模式；Python 抽象基类（ABC）；以及 prefill/decode 在 vLLM、SGLang 等引擎里的标准实现。</li>
+    </ul>
+    <div class="takeaway">✅ <b>一句话记住：</b>把"既改东西又可能返回结果"的万能钩子，拆成"只改东西的 before_* "和"只决定要不要接管的 custom_*_forward"，让控制流诚实可读。</div>
+  </div>
+</details>
+
+<!-- ============ #539 ============ -->
+<details class="card" open id="pr539">
+  <summary>
+    <span class="sumnum">#539</span>
+    <span class="sumtitle">
+      <span class="t">[Bugfix] Ming 视觉编码器：用 F.linear 替换 patch_embed 的 Conv3d（~400× 提速）</span>
+      <span class="m">作者 edwingao28 · 已合并 · 核心改 vision_encoder.py · <a href="https://github.com/sgl-project/sglang-omni/pull/539">PR 链接</a></span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <h4>1. PR 概览</h4>
+    <p>一句话：Ming-Omni 视觉编码器里有个把图片切块、做"patch embedding"的算子用了 <code>nn.Conv3d</code>（3D 卷积），但它在这个特殊形状下走了 cuDNN 一条极慢的路径，单次要 ~3.7 秒。本 PR 用数学上完全等价的 <code>F.linear</code>（矩阵乘）替换它，编码阶段从 ~8 秒/请求降到 ~0.02 秒/请求。</p>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>视觉 Transformer（ViT）处理图片的第一步是 <b>patch embedding</b>：把图片切成一个个小方块（patch），每个方块压成一个向量。这里用的 <code>Qwen3VLVisionPatchEmbed</code> 内部包了一个 <code>Conv3d</code>，它的<b>卷积核大小正好等于输入的空间尺寸</b>，所以每个 patch 卷积后只输出 1×1×1 一个点——这是一种"退化"的卷积。</p>
+    <p>问题：cuDNN（NVIDIA 的卷积加速库）对这种退化形状<b>没有高效算法</b>，会 fallback 到一条慢路径。即使关掉 <code>cudnn.benchmark</code>、即使形状重复也没用，在 H100 bf16 上单次调用要 ~3.7 秒。对典型 MMMU（多模态评测）输入，光这一个算子就占了编码阶段约 8 秒，成为整个请求的瓶颈。</p>
+    <div class="analogy">就像你要把一摞纸每张盖个章，本该用印章"啪"一下（矩阵乘），结果却动用了一台为"连续传送带印刷"设计的大型机器（卷积），机器预热、找算法的时间远超实际盖章时间。换回印章，立刻快了几百倍。</div>
+
+    <h4>3. 具体做了什么改动</h4>
+    <p>关键洞察：这个退化卷积在数学上<b>完全等价于</b>一个线性投影：把每个 patch 的所有像素（通道 C × 时间 Tp × 高 Pp × 宽 Pp）拉平成一个长向量，再乘一个权重矩阵 → 输出 embed_dim 维。这正是 <code>F.linear</code>（底层调 cuBLAS 的 GEMM 矩阵乘）的拿手好戏。新增的辅助函数：</p>
+<pre><code>def _linear_patch_embed(patch_embed, pixel_values):
+    """把 Conv3d 投影当作等价的 Linear 来跑。"""
+    patch_dim = (                                    # 一个 patch 拉平后的长度
+        patch_embed.in_channels
+        * patch_embed.temporal_patch_size
+        * patch_embed.patch_size
+        * patch_embed.patch_size
+    )
+    return F.linear(
+        pixel_values.view(-1, patch_dim),            # 输入: [patch数, patch_dim]
+        patch_embed.proj.weight.view(patch_embed.embed_dim, -1),  # 权重 reshape 成 2D 矩阵
+        patch_embed.proj.bias,                       # 复用原卷积的 bias
+    )
+</code></pre>
+    <p>逐行解释：</p>
+    <ul>
+      <li><code>patch_dim</code>：算出"一个 patch 摊平后有多少个数"。</li>
+      <li><code>pixel_values.view(-1, patch_dim)</code>：把输入重排成"每行是一个 patch"的二维矩阵。</li>
+      <li><code>.proj.weight.view(embed_dim, -1)</code>：卷积核本质上也是一堆权重，reshape 成 <code>[输出维度, patch_dim]</code> 的二维矩阵。</li>
+      <li><code>F.linear(x, W, b)</code> 就是算 <code>x @ W.T + b</code>，一个标准 GEMM，cuBLAS 高度优化。</li>
+    </ul>
+    <p>调用处只改一行：<code>x = self.patch_embed(x)</code> → <code>x = _linear_patch_embed(self.patch_embed, x)</code>。维护者还指出 vLLM 在 <code>Conv3dLayer</code> 里做了同样的替换，属于业界公认做法。</p>
+    <p>正确性验证：单测断言 Conv3d 与 F.linear 输出在 bf16 精度内一致（相对误差 ≤ 2×0.78%）；MMMU 100 样本扫描精度 0.60，与之前 0.62 在噪声范围内——<b>提速但不掉精度</b>。</p>
+
+    <h4>4. 涉及的知识点</h4>
+    <div class="kc">
+      <div class="kt">Patch Embedding（图块嵌入）</div>
+      <div class="seg"><b>它是什么：</b>ViT 把图片切成固定大小的方块，每块用一个可学习的投影压成一个 token 向量，之后就像处理文字 token 一样喂给 Transformer。</div>
+      <div class="seg"><b>在本 PR：</b>这正是被优化的那一步——只是把"投影"的实现方式从卷积换成等价矩阵乘。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">Conv（卷积）vs GEMM（通用矩阵乘）/ cuDNN vs cuBLAS</div>
+      <div class="seg"><b>它是什么：</b>卷积是滑动窗口运算，由 NVIDIA 的 cuDNN 库加速；矩阵乘由 cuBLAS 库加速。卷积在某些退化形状下没有好算法，而矩阵乘几乎永远有最优实现。</div>
+      <div class="seg"><b>为什么需要：</b>当一个卷积"窗口=整个输入"时，它其实就是一次矩阵乘，强行用卷积库反而踩坑。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">cudnn.benchmark</div>
+      <div class="seg"><b>它是什么：</b>一个开关，让 cuDNN 首次遇到某形状时自动测速选最快算法。但若<b>所有候选算法都慢</b>，它也救不了——本例正是如此。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">bf16（bfloat16）</div>
+      <div class="seg"><b>它是什么：</b>一种 16 位浮点格式，比 32 位省一半显存、算得更快，精度足够推理用。验证里"相对误差 ≤ bf16 精度"就是在确认换算子没引入超出数值噪声的偏差。</div>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>性能直觉：</b>遇到"某个算子异常慢"，先问它是不是被塞进了不擅长的库路径。退化卷积→矩阵乘是高频套路。</li>
+      <li><b>等价替换要带证明：</b>本 PR 用单测 + 端到端精度扫描双重验证"等价"，这是改动数值算子时的标准动作，不能只靠"看起来一样"。</li>
+      <li><b>延伸前置知识：</b>ViT 原理、卷积与矩阵乘的等价关系（im2col）、cuDNN/cuBLAS 分工、PyTorch profiler 定位热点算子。</li>
+    </ul>
+    <div class="takeaway">✅ <b>一句话记住：</b>"窗口等于整张输入"的卷积本质就是矩阵乘，用 <code>F.linear</code> 绕开 cuDNN 慢路径，~8s → ~0.02s。</div>
+  </div>
+</details>
+
+<!-- ============ #641 ============ -->
+<details class="card" open id="pr641">
+  <summary>
+    <span class="sumnum">#641</span>
+    <span class="sumtitle">
+      <span class="t">[Fix] 修复纯文本 Qwen3-Omni 在张量并行（TP）下的问题</span>
+      <span class="m">作者 zhaochenyang20 · 已合并 · 改 config.py / hf_config.py · <a href="https://github.com/sgl-project/sglang-omni/pull/641">PR 链接</a></span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <h4>1. PR 概览</h4>
+    <p>一句话：当 Qwen3-Omni 以"纯文本模式 + 张量并行（TP）"运行时会出问题，本 PR 通过 ① 关掉一个"显存够不够才共置"的限制、② 把 RoPE 旋转位置编码的配置归一化处理，让纯文本 TP 路径能正确跑起来。</p>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>两个独立的坑：</p>
+    <ul>
+      <li><b>共置（colocation）限制：</b>多阶段流水线里，不同 stage 可能想挤在同一张 GPU 上（共置以省卡）。原来有个开关 <code>require_memory_fraction_for_colocation</code> 默认要求"必须预留足够显存比例才允许共置"，在纯文本 TP 配置下反而挡住了正常启动。</li>
+      <li><b>RoPE 配置字段不统一：</b>HuggingFace 模型配置里描述旋转位置编码的字段历史上有 <code>type</code> / <code>rope_type</code> 两种写法，还有 mROPE（多模态 RoPE）相关的 <code>mrope_section</code> 等键。老代码只是简单把 <code>type</code> 拷到 <code>rope_type</code>，遇到 mROPE 配置时会判别错误，导致 TP 下加载模型出错。</li>
+    </ul>
+
+    <h4>3. 具体做了什么改动</h4>
+    <h5>改动 A：纯文本 pipeline 关闭共置显存硬性要求</h5>
+<pre><code>class Qwen3OmniPipelineConfig(PipelineConfig):
+    ...
+    placement: PlacementConfig = Field(
+        default_factory=lambda: PlacementConfig(
+            require_memory_fraction_for_colocation=False   # 不再强制显存比例才允许共置
+        )
+    )
+</code></pre>
+    <h5>改动 B：抽出统一的 RoPE 配置归一化函数</h5>
+<pre><code>def _normalize_rope_scaling(rope_scaling):
+    if rope_scaling is None:
+        return None
+    normalized = dict(rope_scaling)
+    # 兼容旧字段：有 type 没 rope_type，就补一个 rope_type
+    if "type" in normalized and "rope_type" not in normalized:
+        normalized["rope_type"] = normalized["type"]
+    # 关键修复：若出现 mrope 相关键且当前类型是 default，则正确标成 "mrope"
+    if _MROPE_ROPE_SCALING_KEYS.intersection(normalized.keys()):
+        rope_type = normalized.get("rope_type", normalized.get("type", "default"))
+        if rope_type == "default":
+            normalized["rope_type"] = "mrope"
+            if "type" in normalized:
+                normalized["type"] = "mrope"
+    return normalized
+</code></pre>
+    <p>然后在文本配置和 talker 配置里，把原来分散、重复的两行 <code>if ... "type" ...</code> 处理统一替换成 <code>self.rope_scaling = _normalize_rope_scaling(rope_scaling)</code>。<code>_MROPE_ROPE_SCALING_KEYS</code> 是一个集合 <code>{"interleaved", "mrope_interleaved", "mrope_section"}</code>，只要配置里出现其中任意一个键，就说明这是 mROPE，需要把类型正确标注出来，否则下游会按普通 RoPE 处理而出错。</p>
+
+    <h4>4. 涉及的知识点</h4>
+    <div class="kc">
+      <div class="kt">RoPE（旋转位置编码）/ mROPE</div>
+      <div class="seg"><b>它是什么：</b>Transformer 需要知道每个 token 的"位置"。RoPE 用旋转的方式把位置信息编码进注意力。mROPE（multimodal RoPE）是 Qwen-VL 系列的扩展，把位置拆成时间/高/宽多个维度，让模型理解图片/视频里 token 的二维/三维空间位置。</div>
+      <div class="seg"><b>为什么需要：</b>多模态模型里，图片 token 不是一条直线排列的，需要 mROPE 表达它们的空间关系。<code>mrope_section</code> 就是描述各维度怎么切分的配置。</div>
+      <div class="seg"><b>在本 PR：</b>归一化函数确保只要配置带 mROPE 特征键，<code>rope_type</code> 就被正确设为 <code>"mrope"</code>，TP 加载时才不会用错位置编码实现。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">Colocation（共置）/ Placement（放置策略）</div>
+      <div class="seg"><b>它是什么：</b>多阶段流水线里决定"哪个 stage 放哪张 GPU、能不能和别的 stage 挤同一张卡"的策略。共置省卡但要小心显存。</div>
+      <div class="seg"><b>在本 PR：</b>纯文本模式下不需要那么严格的显存预留检查，于是把硬性要求关掉，避免误拦截。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">Backward Compatibility（向后兼容，BC）</div>
+      <div class="seg"><b>它是什么：</b>新代码要能读懂老格式的配置文件。<code>type → rope_type</code> 的补丁就是典型 BC 处理，避免老 checkpoint 跑不起来。</div>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>配置归一化要集中：</b>把分散在多处、重复的"字段兼容"逻辑抽成一个纯函数，既消除重复又方便统一修 bug——这是本 PR 最值得学的工程习惯。</li>
+      <li><b>"纯文本路径"也是一等公民：</b>Omni 模型常被当多模态用，但纯文本场景同样要保证 TP 等部署形态可用。</li>
+      <li><b>延伸前置知识：</b>RoPE 数学原理、Qwen-VL 的 mROPE 设计、HuggingFace config 的演进与字段兼容惯例。</li>
+    </ul>
+    <div class="takeaway">✅ <b>一句话记住：</b>把 RoPE 配置兼容逻辑收成一个归一化函数 + 关掉纯文本下多余的共置显存检查，让 Qwen3-Omni 纯文本 TP 能正常起。</div>
+  </div>
+</details>
+
+<!-- ============ #625 ============ -->
+<details class="card" open id="pr625">
+  <summary>
+    <span class="sumnum">#625</span>
+    <span class="sumtitle">
+      <span class="t">[Perf] S2-Pro Fast-AR：在 decode 路径启用 torch.compile</span>
+      <span class="m">作者 SandyLuXY · 已合并 · 改 modeling.py / stages.py / config.py · <a href="https://github.com/sgl-project/sglang-omni/pull/625">PR 链接</a></span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <h4>1. PR 概览</h4>
+    <p>一句话：给 Fish S2-Pro 这个 TTS 模型的"快速自回归（Fast-AR）解码器"开启 <code>torch.compile</code>，只编译解码器的 Transformer 层（计算密集部分），而采样、循环控制等保持 eager（解释执行）不编译，从而在 decode 路径上提速且不破坏控制逻辑。</p>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>S2-Pro 的音频解码器在 decode 阶段每一步都要跑一遍所有 Transformer 层，这是逐 token 循环里最耗时的部分。Python 解释执行（eager mode）下，每一步都有可观的算子调度开销。但是<b>不能简单地把整个 decode 函数都编译</b>——里面还有采样逻辑、循环控制、KV cache 位置更新等动态部分，torch.compile 对这些"控制流"支持差，强行编译会触发频繁重编译（recompile）甚至报错。</p>
+    <div class="analogy">就像给汽车做改装：发动机（Transformer 层，重复且固定的重活）值得换成高性能版；但方向盘和换挡杆（控制逻辑，需要灵活）保持原样最稳妥。本 PR 就是"只换发动机"。</div>
+
+    <h4>3. 具体做了什么改动</h4>
+    <h5>改动 A：模型层支持"可切换的编译版/eager 版层列表"</h5>
+    <p>文件 <code>.../text2semantic/modeling.py</code>。解码器初始化时同时保存"原始 eager 层"和一个待填充的"编译层"槽位：</p>
+<pre><code>self._eager_forward_kvcached_layers = [layer.forward_kvcached for layer in self.layers]
+self._compiled_forward_kvcached_layers = None   # 编译后才填
+self._compiled_forward_kvcached_max_bs = 0      # 编译只对 batch ≤ 此值有效
+
+def _select_forward_kvcached_layers(self, bsz):
+    # 只有 batch size 没超过编译时指定的最大值，才用编译版；否则退回 eager
+    if (self._compiled_forward_kvcached_layers is not None
+            and bsz <= self._compiled_forward_kvcached_max_bs):
+        return self._compiled_forward_kvcached_layers
+    return self._eager_forward_kvcached_layers
+</code></pre>
+    <p>然后前向循环从写死的 <code>self.layers</code> 改成按 batch 动态选层：</p>
+<pre><code># 改动前
+for layer in self.layers:
+    x = layer.forward_kvcached(x, freqs_cis, cache_seqlens)
+# 改动后
+for layer in self._select_forward_kvcached_layers(bsz):
+    x = layer(x, freqs_cis, cache_seqlens)
+</code></pre>
+    <h5>改动 B：在 stage 启动时编译这些层</h5>
+    <p>文件 <code>stages.py</code> 新增 <code>_compile_s2pro_codebook_decoder</code>：</p>
+<pre><code>compile_mode = os.environ.get("SGLANG_TORCH_COMPILE_MODE", "max-autotune-no-cudagraphs")
+compiled = [torch.compile(layer.forward_kvcached, mode=compile_mode)
+            for layer in audio_decoder.layers]      # 逐层编译，只编译层本身
+audio_decoder.set_compiled_forward_kvcached_layers(compiled, max_batch_size=max_batch_size)
+</code></pre>
+    <p>并在 TTS engine executor 的默认参数里打开 <code>enable_torch_compile=True</code>、<code>torch_compile_max_bs=16</code>。注意末尾 <code>server_args.enable_torch_compile = False</code> ——因为编译已由本模块"手工"完成，要关掉 sglang 通用框架那条编译路径，避免重复编译。</p>
+
+    <h4>4. 涉及的知识点</h4>
+    <div class="kc">
+      <div class="kt">torch.compile 的编译 mode</div>
+      <div class="seg"><b>它是什么：</b><code>max-autotune</code> 会花更长时间为当前 GPU 自动搜索最快的 kernel 配置；<code>-no-cudagraphs</code> 后缀表示不叠加 CUDA Graph（因为这里另有 CUDA Graph 机制，避免冲突）。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">为什么"只编译层、不编译循环"</div>
+      <div class="seg"><b>原理：</b>torch.compile 擅长把"纯张量计算"融合成快 kernel，但遇到 Python 控制流（if/采样/动态长度）会打断（graph break）或反复重编译。把编译边界划在"单层前向"这种纯计算上，收益最大、风险最小。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">max_batch_size 守卫 / 形状特化</div>
+      <div class="seg"><b>它是什么：</b>编译产物通常对特定输入形状（这里是 batch 大小）特化。<code>bsz ≤ max_bs 才用编译版</code> 的守卫，避免遇到没编译过的大 batch 时触发昂贵的运行时重编译，而是安全退回 eager。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">Fast-AR（快速自回归）/ Codebook 解码器</div>
+      <div class="seg"><b>它是什么：</b>TTS 里把文本转成离散"音频码（codebook tokens）"的自回归解码器。"Fast"指它做了专门优化（如 KV cache、紧凑循环）以满足语音实时性。</div>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>编译的精髓是"划好边界"：</b>把编译用在重复、形状稳定的纯计算上，把动态控制留给 eager，是用好 torch.compile 的关键。</li>
+      <li><b>可回退设计：</b>保留 eager 版本作为 fallback，让"编译失效/超出范围"时系统仍能正确运行，是稳健工程的体现。</li>
+      <li><b>延伸前置知识：</b>TorchDynamo/Inductor 工作原理、graph break、CUDA Graph 与 torch.compile 的关系、TTS 声学 codebook。</li>
+    </ul>
+    <div class="takeaway">✅ <b>一句话记住：</b>逐层 <code>torch.compile</code> 解码器、用 max_bs 守卫＋eager 兜底，把热点计算编译加速而不碰控制流。</div>
+  </div>
+</details>
+
+<!-- ============ #610 ============ -->
+<details class="card" open id="pr610">
+  <summary>
+    <span class="sumnum">#610</span>
+    <span class="sumtitle">
+      <span class="t">[Higgs] 新增批量音频编码器 encode_batch（并抽出复用骨架）</span>
+      <span class="m">作者 xinlij · 已合并 · 改 audio_codec.py · <a href="https://github.com/sgl-project/sglang-omni/pull/610">PR 链接</a></span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <h4>1. PR 概览</h4>
+    <p>一句话：给 Higgs TTS 的音频 codec 加一个批量编码方法 <code>encode_batch</code>（把多段波形一次性编码成音频码），同时把它和已有的 <code>decode_batch</code> 共有的"按形状分桶批处理"逻辑抽成一个通用骨架 <code>_bucketed_batch</code>，消除重复代码。</p>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>痛点一：之前只有"逐条编码"（<code>encode_reference</code>），离线/批量准备参考音频时要一条条来，慢。痛点二：<code>decode_batch</code> 里已经写了一套"把相同长度的样本拼成一批、不同长度分桶分别处理"的逻辑，新写 <code>encode_batch</code> 会几乎一字不差地复制这套逻辑——典型的重复代码隐患。</p>
+    <p>为什么要"按长度分桶"？因为底层的 DAC 解码器是<b>非因果（non-causal）</b>的：如果把短样本 padding 到和长样本一样长再一起算，padding 会"污染"短样本的结果。所以只能把<b>等长</b>的样本拼成一批，不同长度各成一桶单独处理。</p>
+
+    <h4>3. 具体做了什么改动</h4>
+    <h5>改动 A：抽出通用分桶批处理骨架</h5>
+<pre><code>def _bucketed_batch(self, items, *, bucket_key_fn, single_fn, batch_fn, error_label):
+    """对单元素桶用 single_fn，多元素桶用 batch_fn。"""
+    if not items: return []
+    if len(items) == 1: return [single_fn(items[0])]
+    buckets = {}
+    for i, item in enumerate(items):
+        buckets.setdefault(bucket_key_fn(item), []).append(i)  # 按 key 分桶（这里 key=长度）
+    results = [None] * len(items)
+    for indices in buckets.values():
+        if len(indices) == 1:
+            results[indices[0]] = single_fn(items[indices[0]])      # 桶里只有1个 → 走单条
+        else:
+            for idx, r in zip(indices, batch_fn([items[i] for i in indices])):
+                results[idx] = r                                     # 多个等长 → 拼批
+    ...
+    return out
+</code></pre>
+    <p>这是<b>策略模式 + 模板方法</b>的组合：骨架负责"分桶 + 回填结果 + 保持原顺序"，把"怎么取 key""单条怎么算""一批怎么算"作为函数参数传进来。</p>
+    <h5>改动 B：encode_batch 与 decode_batch 都改成调用骨架</h5>
+<pre><code>@torch.no_grad()
+def encode_batch(self, waveforms):
+    padded = []
+    for w in waveforms:
+        wav = _to_mono_3d(w).to(torch.float32)
+        if wav.shape[-1] < self.SAMPLE_RATE:                 # 不足 1 秒的补零到 1 秒
+            wav = F.pad(wav, (0, self.SAMPLE_RATE - wav.shape[-1]))
+        padded.append(wav)
+    def _batch_fn(batch_items):
+        batch = torch.cat(batch_items).to(device=self.device, dtype=self._dtype)
+        codes_BNT = self.model.encode(batch).audio_codes.to(torch.long).cpu()
+        return [codes_BNT[j].transpose(0, 1) for j in range(len(batch_items))]
+    return self._bucketed_batch(padded, bucket_key_fn=lambda w: w.shape[-1],
+                                single_fn=self.encode_reference, batch_fn=_batch_fn,
+                                error_label="encode_batch")
+</code></pre>
+    <p><code>decode_batch</code> 同样被改写成只提供自己的 <code>_batch_fn</code> 后调用骨架，原来三十多行的分桶逻辑直接删掉。<b>净效果：新增功能的同时减少了重复代码。</b></p>
+
+    <h4>4. 涉及的知识点</h4>
+    <div class="kc">
+      <div class="kt">音频 Codec / 音频码（audio codes）/ DAC</div>
+      <div class="seg"><b>它是什么：</b>神经音频编解码器（如 DAC, Descript Audio Codec）把连续的音频波形压成一串离散整数 token（音频码），再能从这些 token 还原出波形。TTS 模型其实在"预测音频码"，再交给 codec 解码成声音。</div>
+      <div class="seg"><b>在本 PR：</b><code>encode</code>＝波形→音频码（给参考音/克隆音色用），<code>decode</code>＝音频码→波形（最终发声）。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">因果 vs 非因果模型（causal / non-causal）</div>
+      <div class="seg"><b>它是什么：</b>因果模型每个位置只看左边；非因果模型能看整段。DAC 解码器是非因果的，所以 padding 会从两侧泄漏影响。</div>
+      <div class="seg"><b>为什么重要：</b>这正是"必须按长度分桶、不能无脑 padding 一起算"的根本原因。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">分桶批处理（bucketing）</div>
+      <div class="seg"><b>它是什么：</b>把长度相近/相同的样本归到一组再批量计算，兼顾"批处理加速"和"避免 padding 污染/浪费"。是处理变长序列的通用手段。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">高阶函数 / 策略模式（把函数当参数传）</div>
+      <div class="seg"><b>它是什么：</b><code>_bucketed_batch</code> 接收 <code>single_fn / batch_fn / bucket_key_fn</code> 三个函数作参数，把"可变的算法"注入"固定的流程"。这是消除重复、提高复用的经典 Python 写法。</div>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>"加功能顺便降重复"：</b>当你发现新代码会复制一段已有逻辑时，先把公共骨架抽出来，再让新旧两处都调用它——这是 DRY 原则的实战。</li>
+      <li><b>领域约束驱动设计：</b>"非因果 → 必须等长分桶"说明工程实现必须尊重底层模型的数学性质，不能想当然 padding。</li>
+      <li><b>延伸前置知识：</b>神经音频编解码（DAC/Encodec）、张量的 <code>transpose/cat/pad</code> 操作、<code>@torch.no_grad()</code> 的作用（推理时不建梯度图，省显存）。</li>
+    </ul>
+    <div class="takeaway">✅ <b>一句话记住：</b>新增 <code>encode_batch</code> 的同时，把编/解码共有的"按长度分桶批处理"抽成 <code>_bucketed_batch</code> 骨架，功能更多、代码更少。</div>
+  </div>
+</details>
+
+<!-- ============ #638 ============ -->
+<details class="card" open id="pr638">
+  <summary>
+    <span class="sumnum">#638</span>
+    <span class="sumtitle">
+      <span class="t">[Feature] Higgs TTS 默认开启异步解码（async-decode）+ 三态 CLI 开关</span>
+      <span class="m">作者 Hayden727 · 已合并 · 改 cli/serve.py / config.py · <a href="https://github.com/sgl-project/sglang-omni/pull/638">PR 链接</a></span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <h4>1. PR 概览</h4>
+    <p>一句话：把 Higgs TTS 的"一步前瞻异步解码（one-step-lookahead async decode）"从"默认关、需手动开"改为"默认开"，并把原来的布尔开关 <code>--enable-async-decode</code> 升级成三态开关 <code>--async-decode default|on|off</code>，同时保留旧 flag 作为兼容别名。</p>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>异步解码是一种已经验证有效的性能优化（见 #590），但之前默认关闭，用户得知道并手动加 flag 才能享受到——不合理。本 PR 把它设为 Higgs 的默认行为。但直接默认开会带来一个 CLI 设计问题：原来的布尔 flag 只能表达"开"，无法表达"我就是要明确关掉默认值"。于是引入<b>三态</b>：<code>default</code>（听配置默认）/ <code>on</code>（强制开）/ <code>off</code>（强制关）。</p>
+
+    <h4>3. 具体做了什么改动</h4>
+    <h5>改动 A：配置默认值打开</h5>
+<pre><code># higgs_tts/config.py，tts_engine 这个 stage 的工厂参数
+factory_args={"device": "cuda", "max_new_tokens": 2048,
+              "enable_async_decode": True},   # ← 新增，默认开
+</code></pre>
+    <h5>改动 B：新增三态 CLI flag，旧 flag 变隐藏别名</h5>
+<pre><code>async_decode: str = "default"      # 新主开关：default | on | off
+enable_async_decode: bool = False  # 旧 flag，hidden=True，仅作兼容别名
+
+def _resolve_async_decode_flag(async_decode, enable_async_decode):
+    """把旧布尔 flag 映射到新的三态。旧 flag 只能表达 'on'，
+    所以若同时显式 --async-decode off 就报错（语义冲突）。"""
+    if not enable_async_decode:
+        return async_decode
+    if async_decode == "off":
+        raise typer.BadParameter("--enable-async-decode cannot be combined with --async-decode off")
+    logger.warning("--enable-async-decode is deprecated; use --async-decode on.")
+    return "on"
+</code></pre>
+    <p>应用 override 时：只有当用户显式给了 <code>on</code> 或 <code>off</code>（即 <code>mode != "default"</code>）才覆盖配置；保持 <code>default</code> 时则尊重 pipeline config 里的默认值（Higgs 现在是 True）。这套设计让"配置默认"和"命令行显式意图"互不打架。</p>
+
+    <h4>4. 涉及的知识点</h4>
+    <div class="kc">
+      <div class="kt">异步解码 / 一步前瞻（one-step-lookahead async decode）</div>
+      <div class="seg"><b>它是什么：</b>自回归 decode 每步要 ①GPU 算出本步结果 ②CPU 把结果收集/处理。普通做法是串行：算完→收集→再算下一步。异步解码让"本步的 CPU 收集"和"下一步的 GPU 前向"<b>重叠</b>进行（GPU 不必等 CPU）。</div>
+      <div class="seg"><b>类比：</b>洗碗时，一边把上一个盘子擦干（CPU 收集），一边让下一个盘子在水里冲（GPU 前向），而不是冲完一个、擦完一个、再冲下一个。</div>
+      <div class="seg"><b>在本 PR：</b>它本身在 #590 已实现，这里只是把它<b>设为默认</b>并完善开关。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">三态开关 vs 布尔开关 / 弃用别名（deprecated alias）</div>
+      <div class="seg"><b>它是什么：</b>当一个特性从"默认关"变"默认开"，布尔 flag 就不够用了（无法表达"显式关"）。三态 <code>default/on/off</code> 把"未指定"和"显式开/关"区分开。旧 flag 不删除、设为 hidden 别名并给弃用警告，是平滑迁移用户的标准做法。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">Stage Factory / factory_args</div>
+      <div class="seg"><b>它是什么：</b>多阶段流水线里每个 stage 由一个"工厂函数"创建，<code>factory_args</code> 是传给它的配置字典。把 <code>enable_async_decode: True</code> 放进 tts_engine 的 factory_args，就等于"这个阶段默认开异步解码"。</div>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>好特性要变成默认：</b>验证有效的优化应尽快设为默认值，降低用户的认知与配置成本。</li>
+      <li><b>改默认值要配套改 CLI 语义：</b>从布尔升级到三态、保留弃用别名、检测语义冲突并报错——这是对用户负责的 API 演进范式。</li>
+      <li><b>延伸前置知识：</b>#590 异步解码实现细节、CUDA stream 与 host/device 重叠、Typer/argparse 的 CLI 设计、特性开关（feature flag）的生命周期管理。</li>
+    </ul>
+    <div class="takeaway">✅ <b>一句话记住：</b>把已验证的异步解码设为 Higgs 默认开，并用 <code>--async-decode default/on/off</code> 三态开关 + 弃用旧 flag，平滑且语义清晰。</div>
+  </div>
+</details>
+
+<!-- ============ #636 + #639 合并讲 ============ -->
+<details class="card" open id="pr636">
+  <summary>
+    <span class="sumnum">#636 / #639</span>
+    <span class="sumtitle">
+      <span class="t">[TTS] 跨阶段 payload 瘦身：Voxtral audio_codes 二进制化 & Higgs vocoder 波形统一 helper</span>
+      <span class="m">作者 BBuf · 已合并 · 改 voxtral_tts/io.py、higgs_tts/vocoder_scheduler.py · <a href="https://github.com/sgl-project/sglang-omni/pull/636">#636</a> · <a href="https://github.com/sgl-project/sglang-omni/pull/639">#639</a></span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <p class="muted">这两个 PR 主题高度相关，都是优化"阶段之间传数据的打包方式"，放一起讲透。</p>
+
+    <h4>1. PR 概览</h4>
+    <ul>
+      <li><b>#636：</b>Voxtral TTS 在阶段间传递的 <code>audio_codes</code>（音频码）原来被转成 Python <code>list</code> 再序列化，体积大、慢。本 PR 改成打包成<b>紧凑的二进制字节</b>（numpy <code>tobytes</code>），并智能选 uint16/int32 类型。</li>
+      <li><b>#639：</b>Higgs vocoder 把最终音频波形 payload 从 <code>.tolist()</code> 改成调用共享 helper <code>audio_waveform_payload</code>，同样走二进制字节，并统一了字段命名。</li>
+    </ul>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>回忆先导知识：多阶段流水线里，stage 之间的数据要被序列化（msgpack）后跨进程传。如果把一个有几万个整数的张量先 <code>.tolist()</code> 成 Python 列表，会发生两件坏事：① Python list 里每个数字都是一个臃肿的 Python 对象，内存放大好几倍；② msgpack 要逐个元素编码，慢。对音频这种动辄上万个码点的数据，这部分开销很可观，直接拖慢流水线吞吐。</p>
+    <div class="analogy">把一车货物（数组）寄快递：原方案是把每件商品单独装一个大箱子再贴标签（list of Python objects），又占地方又费时间；新方案是把所有商品紧密码进一个集装箱、外面只写"内容物规格"（dtype+shape+原始字节），又小又快。</div>
+
+    <h4>3. 具体做了什么改动</h4>
+    <h5>#636：audio_codes 的二进制编/解码</h5>
+<pre><code>def _encode_audio_codes(codes):
+    if isinstance(codes, torch.Tensor):
+        codes = codes.detach().cpu().numpy()
+    array = np.asarray(codes)
+    # 智能选类型：值都在 uint16 范围就用 uint16（每个数只占2字节），否则 int32
+    if array.size == 0 or (0 <= array.min() and array.max() <= 65535):
+        array = array.astype(np.uint16, copy=False)
+    else:
+        array = array.astype(np.int32, copy=False)
+    contiguous = np.ascontiguousarray(array)         # 保证内存连续才能 tobytes
+    return {"audio_codes_bytes": contiguous.tobytes(),       # 原始字节
+            "audio_codes_shape": list(contiguous.shape),     # 形状，解码时还原
+            "audio_codes_dtype": str(contiguous.dtype)}      # 类型，解码时还原
+
+def _decode_audio_codes(data):
+    legacy = data.get("audio_codes")                  # 兼容旧 payload（list 格式）
+    if legacy is not None:
+        return torch.tensor(legacy) if isinstance(legacy, list) else legacy
+    raw, shape = data.get("audio_codes_bytes"), data.get("audio_codes_shape")
+    if raw is None or shape is None: return None
+    dtype = np.dtype(data.get("audio_codes_dtype", "uint16"))
+    array = np.frombuffer(raw, dtype=dtype).reshape(shape).astype(np.int64)  # 字节还原成数组
+    return torch.from_numpy(array)
+</code></pre>
+    <p>序列化时 <code>data.update(_encode_audio_codes(...))</code> 替换掉原来的 <code>data["audio_codes"] = self._tensor_to_list(...)</code>。注意 <code>_decode_audio_codes</code> 里保留了对旧 <code>audio_codes</code> 字段的兼容——这样新旧 payload 都能解析，是平滑升级的细节。</p>
+    <h5>#639：复用共享波形 helper</h5>
+<pre><code># 改动前：手写 tolist + 散落地设字段
+payload.data["audio_data"] = waveform.detach().to(torch.float32).cpu().numpy().tolist()
+payload.data["sample_rate"] = self._sample_rate
+payload.data["modality"] = "audio"
+# 改动后：统一调用共享 helper（内部走 tobytes 二进制）
+data = audio_waveform_payload(waveform if waveform is not None else [],
+        sample_rate=self._sample_rate, modality="audio", source_hint="Higgs TTS vocoder")
+</code></pre>
+    <p>这个 <code>audio_waveform_payload</code>（在 <code>utils/audio_payload.py</code>）把波形转成 float32 字节，统一输出 <code>audio_waveform / audio_waveform_shape / audio_waveform_dtype</code> 三个字段。多个模型共用它，既减体积又统一了"音频 payload 的契约（contract）"。</p>
+
+    <h4>4. 涉及的知识点</h4>
+    <div class="kc">
+      <div class="kt">序列化（serialization）/ msgpack</div>
+      <div class="seg"><b>它是什么：</b>把内存里的对象变成可在进程间/网络上传输的字节流。msgpack 是一种比 JSON 更紧凑快速的二进制序列化格式。</div>
+      <div class="seg"><b>在本 PR：</b>跨 stage 传数据走 msgpack，所以"喂给它的东西"越紧凑（字节 vs list），整体越快。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">tobytes / frombuffer / 内存连续（contiguous）</div>
+      <div class="seg"><b>它是什么：</b><code>tobytes()</code> 把 numpy 数组的底层内存直接导出为原始字节；<code>frombuffer()</code> 反向还原。前提是数组内存<b>连续</b>，所以先 <code>ascontiguousarray</code>。配合保存 shape+dtype，就能无损还原。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">dtype 选择（uint16 vs int32）省带宽</div>
+      <div class="seg"><b>它是什么：</b>音频码通常是较小的非负整数，用 uint16（2 字节）足够；只有超范围时才退回 int32（4 字节）。按需选最小类型＝传输体积再砍一半。</div>
+    </div>
+    <div class="kc">
+      <div class="kt">向后兼容的 payload 演进 / 数据契约（contract）</div>
+      <div class="seg"><b>它是什么：</b>新解码器仍能读旧字段（<code>legacy = data.get("audio_codes")</code>），保证升级期间新旧 stage 混跑不崩。把字段格式抽成共享 helper，则统一了所有模型对"音频 payload 长什么样"的约定。</div>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>大数组别用 Python list 传：</b>跨进程传张量时，<b>原始字节 + shape + dtype</b> 几乎总是优于 <code>.tolist()</code>，这是推理系统里的高频优化点。</li>
+      <li><b>共享 helper 统一契约：</b>多个模型重复造"打包音频"的轮子时，抽一个 <code>audio_waveform_payload</code> 既降体积又防止字段名不一致的隐性 bug。</li>
+      <li><b>兼容旧格式：</b>演进数据格式时务必保留旧字段读取路径，让滚动升级无缝。</li>
+      <li><b>延伸前置知识：</b>msgpack/protobuf 序列化、numpy 内存布局（C-order/contiguous）、zero-copy 传输、共享内存/IPC。</li>
+    </ul>
+    <div class="takeaway">✅ <b>一句话记住：</b>跨阶段传音频用"二进制字节 + shape + dtype"取代 Python list，按需选最小 dtype，并抽共享 helper 统一契约——体积更小、序列化更快。</div>
+  </div>
+</details>
+
+<!-- ============ 精简汇总 ============ -->
+<details class="card" open id="brief">
+  <summary>
+    <span class="sumnum">汇总</span>
+    <span class="sumtitle">
+      <span class="t">其余 10 个 PR：CI / 基准 / 前端 / 文档（精简版）</span>
+      <span class="m">这些与核心架构关系较弱，按"做了什么 + 知识点"快速过</span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <h4>CI / 测试基础设施（仓库稳定性）</h4>
+    <ul class="ci-list">
+      <li><b>#635 [CI] hot fix whisper CI</b>：紧急修复 Whisper（语音识别 ASR）相关 CI。<i>知识点：</i>CI（持续集成）＝每次提交自动跑测试，hotfix＝先止血让流水线变绿。</li>
+      <li><b>#634 [CI] Move ASR CI to Stage 1</b>：把语音识别测试挪到 CI 的第一阶段，让关键测试更早跑、更快暴露问题。<i>知识点：</i>ASR=Automatic Speech Recognition，语音转文字。</li>
+      <li><b>#633 [CI] Release Max Failure of TTS WER</b>：放宽 TTS 的 WER 指标允许的最大失败/波动阈值，减少误报（flaky）。<i>知识点：</i>WER=Word Error Rate 词错误率，衡量识别/合成质量，越低越好。</li>
+      <li><b>#632 [CI] Fix tracked CI venv symlinks</b>：修复被 git 误跟踪的虚拟环境软链接，避免污染仓库。<i>知识点：</i>venv＝Python 虚拟环境，不应入库。</li>
+      <li><b>#630 Fix Qwen3-Omni MMMU CI text-output config</b>：修正多模态评测 MMMU 的纯文本输出配置。<i>知识点：</i>MMMU＝大规模多学科多模态理解基准。</li>
+      <li><b>#629 [CI] Higgs into CI thresholds</b> & <b>#623 [CI] Set up Higgs into CI</b>：把 Higgs TTS 正式纳入 CI 并设定质量阈值，保证后续改动不悄悄回退它的质量。</li>
+    </ul>
+
+    <h4>基准 / 评测</h4>
+    <ul>
+      <li><b>#587 [Benchmark] Add UTMOS speech quality evaluation metric</b>：新增 UTMOS 语音质量自动评分。<i>知识点：</i>UTMOS 是一个用神经网络预测人类对语音自然度打分（MOS, Mean Opinion Score）的指标，免去人工听测，可在 CI 里自动跑 TTS 质量回归。</li>
+    </ul>
+
+    <h4>前端 / Playground</h4>
+    <ul>
+      <li><b>#592 [Playground] 重构为 qwen-omni / s2pro / higgs 三个目录并新增 Higgs TTS UI</b>：把演示用的 Web Playground 按模型拆分目录，并给 Higgs TTS 加交互界面。<i>知识点：</i>Playground＝给人快速试用模型的网页 demo，重构便于多模型并存维护。</li>
+    </ul>
+
+    <h4>文档 / 合规</h4>
+    <ul>
+      <li><b>#631 [Docs] Use verbatim Apache-2.0 license text</b>：使用逐字、未改动的 Apache-2.0 协议原文。<i>知识点：</i>开源协议必须用官方原文，自行改写会引发法律歧义；这是开源合规的基本动作。</li>
+    </ul>
+
+    <hr class="soft">
+    <p class="muted">说明：以上 10 个 PR 多为工程稳定性与配套设施，对理解 Omni 推理架构帮助有限，故只做要点速览；当日的"硬核知识"集中在前面 8 个深度卡片里。</p>
+  </div>
+</details>
+
+<details class="card" id="map">
+  <summary>
+    <span class="sumnum">索引</span>
+    <span class="sumtitle">
+      <span class="t">本期知识点速查表（按概念找 PR）</span>
+      <span class="m">复习用：想巩固某个概念时，直接跳到对应 PR</span>
+    </span>
+    <span class="arrow">▶</span>
+  </summary>
+  <div class="body">
+    <table>
+      <tr><th>概念</th><th>一句话</th><th>出现在</th></tr>
+      <tr><td>多阶段流水线 / Stage / StagePayload</td><td>Omni 推理＝串起多个模型的工厂流水线</td><td>先导, #558, #636/#639</td></tr>
+      <tr><td>模型钩子 / 模板方法模式</td><td>父类定骨架、子类填差异</td><td>#558</td></tr>
+      <tr><td>Prefill / Decode 两阶段</td><td>先并行填 KV cache，再逐 token 生成</td><td>#558, #625, #638</td></tr>
+      <tr><td>Patch Embedding / Conv vs GEMM</td><td>退化卷积＝矩阵乘，别走 cuDNN 慢路</td><td>#539</td></tr>
+      <tr><td>RoPE / mROPE</td><td>旋转位置编码，多模态版表达空间位置</td><td>#641</td></tr>
+      <tr><td>张量并行 TP / 共置 Colocation</td><td>大模型切片多卡 / stage 挤同卡省卡</td><td>#641</td></tr>
+      <tr><td>torch.compile / 编译边界</td><td>编译热点计算、控制流留 eager</td><td>#625, #638</td></tr>
+      <tr><td>音频 Codec / DAC / 非因果</td><td>波形↔离散音频码，非因果需分桶</td><td>#610, #636</td></tr>
+      <tr><td>分桶批处理 / 高阶函数</td><td>等长拼批，函数当参数复用骨架</td><td>#610</td></tr>
+      <tr><td>异步解码 / 一步前瞻</td><td>CPU 收集与 GPU 前向重叠</td><td>#638</td></tr>
+      <tr><td>序列化 / msgpack / tobytes</td><td>跨进程传张量用二进制字节</td><td>#636, #639</td></tr>
+      <tr><td>向后兼容 / 弃用别名</td><td>读旧格式、平滑迁移用户</td><td>#641, #636, #638</td></tr>
+      <tr><td>ASR / WER / UTMOS / MMMU</td><td>语音与多模态评测指标</td><td>#587, #630, #633, #634</td></tr>
+    </table>
+  </div>
+</details>
+
+<footer>
+  SGLang-Omni 每日 PR 学习日报 · 自动生成于 2026-06-01 · 数据源：
+  <a href="https://github.com/sgl-project/sglang-omni/pulls?q=is%3Apr+is%3Amerged">sgl-project/sglang-omni merged PRs</a><br>
+  本报告"深度优先于覆盖广度"：8 个核心 PR 深讲，10 个配套 PR 速览。代码片段为讲解目的做了精简，完整 diff 请点各 PR 链接。
+</footer>
+
+</div>
+</body>
+</html>
