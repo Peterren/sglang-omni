@@ -141,12 +141,18 @@ class Client:
         Audio data is base64-encoded before yielding so that callers never
         need to touch numpy / raw bytes.
         """
+        from sglang_omni.client.audio import AudioStreamEncoder
+        import base64
+
+        encoder = AudioStreamEncoder(response_format=audio_format)
+        await encoder.start()
+
         async for chunk in self.generate(request, request_id=request_id):
             audio_b64: str | None = None
             if chunk.modality == "audio" and chunk.audio_data is not None:
-                audio_b64 = audio_to_base64(
-                    chunk.audio_data, output_format=audio_format
-                )
+                encoded_bytes = await encoder.encode_chunk(chunk.audio_data)
+                if encoded_bytes:
+                    audio_b64 = base64.b64encode(encoded_bytes).decode("ascii")
 
             yield CompletionStreamChunk(
                 request_id=request_id,
@@ -156,6 +162,18 @@ class Client:
                 finish_reason=chunk.finish_reason,
                 usage=chunk.usage,
                 stage_name=chunk.stage_name,
+            )
+
+        final_bytes = await encoder.finish()
+        if final_bytes:
+            yield CompletionStreamChunk(
+                request_id=request_id,
+                text=None,
+                modality="audio",
+                audio_b64=base64.b64encode(final_bytes).decode("ascii"),
+                finish_reason=None,
+                usage=None,
+                stage_name=None,
             )
 
     # ------------------------------------------------------------------

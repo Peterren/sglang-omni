@@ -7,10 +7,12 @@ various output formats (WAV, MP3, FLAC, etc.) for API responses.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import logging
 import struct
+import subprocess
 from typing import Any
 
 import numpy as np
@@ -224,3 +226,176 @@ def audio_to_base64(
         audio, response_format=output_format, sample_rate=sample_rate
     )
     return base64.b64encode(audio_bytes).decode("ascii")
+
+
+class AudioStreamEncoder:
+    """Stateful streaming audio encoder supporting WAV (header-first), PCM, and stateful FFmpeg outputs."""
+
+    def __init__(
+        self,
+        response_format: str = "wav",
+        sample_rate: int = DEFAULT_SAMPLE_RATE,
+        speed: float = 1.0,
+    ):
+        self.response_format = response_format.lower().strip()
+        self.sample_rate = sample_rate
+        self.speed = speed
+        self.header_sent = False
+        self.ffmpeg_process = None
+        self.mime_type = FORMAT_MIME_TYPES.get(
+            self.response_format, "application/octet-stream"
+        )
+
+    async def start(self) -> None:
+        if self.response_format in ("mp3", "flac", "opus", "aac"):
+            # Start ffmpeg subprocess for encoding
+            # We'll input raw float32 mono PCM
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "f32le",
+                "-ar",
+                str(self.sample_rate),
+                "-ac",
+                "1",
+                "-i",
+                "pipe:0",
+                "-f",
+                self.response_format,
+                "pipe:1",
+            ]
+            try:
+                self.ffmpeg_process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to start ffmpeg subprocess: %s. Falling back to WAV stream.",
+                    exc,
+                )
+                self.ffmpeg_process = None
+                self.response_format = "wav"
+                self.mime_type = FORMAT_MIME_TYPES["wav"]
+
+    async def encode_chunk(self, audio_data: Any) -> bytes:
+        arr = to_numpy(audio_data)
+        if arr.ndim > 1:
+            arr = arr.squeeze()
+        if arr.ndim > 1:
+            if arr.shape[0] < arr.shape[-1]:
+                arr = arr[0]
+            else:
+                arr = arr[:, 0]
+
+        if self.speed != 1.0:
+            arr, self.sample_rate = apply_speed(
+                arr, self.speed, self.sample_rate
+            )
+
+        if self.ffmpeg_process is not None and self.ffmpeg_process.stdin is not None:
+            try:
+                # Write float32 raw PCM to ffmpeg stdin
+                self.ffmpeg_process.stdin.write(arr.tobytes())
+                await self.ffmpeg_process.stdin.drain()
+
+                # Give ffmpeg a microsecond to process and flush stdout
+                await asyncio.sleep(0.001)
+
+                # Read any available buffered bytes from stdout non-blockingly
+                if self.ffmpeg_process.stdout.at_eof():
+                    return b""
+
+                # Check private buffer for safe, non-blocking read, with wait_for as fallback
+                try:
+                    if hasattr(self.ffmpeg_process.stdout, "_buffer"):
+                        buffer = self.ffmpeg_process.stdout._buffer
+                        if isinstance(buffer, bytearray):
+                            if buffer:
+                                data = bytes(buffer)
+                                buffer.clear()
+                                return data
+                            return b""
+                    # Safe async fallback read
+                    return await asyncio.wait_for(
+                        self.ffmpeg_process.stdout.read(4096), timeout=0.005
+                    )
+                except asyncio.TimeoutError:
+                    return b""
+            except Exception as exc:
+                logger.exception("Error encoding chunk via ffmpeg: %s", exc)
+                return b""
+
+        # Fallback / Native WAV or PCM streaming
+        if self.response_format == "pcm":
+            return encode_pcm(arr, self.sample_rate)
+
+        # For WAV, write header ONLY on the first chunk
+        if self.response_format == "wav":
+            if not self.header_sent:
+                self.header_sent = True
+                # Generate a header with a large placeholder size so players can stream it cleanly
+                return self._encode_wav_with_placeholder_header(
+                    arr, self.sample_rate
+                )
+            else:
+                # Subsequent chunks are pure 16-bit PCM bytes (concatenation is perfectly clean)
+                return encode_pcm(arr, self.sample_rate)
+
+        # Unknown format -> fall back to WAV
+        if not self.header_sent:
+            self.header_sent = True
+            return self._encode_wav_with_placeholder_header(
+                arr, self.sample_rate
+            )
+        return encode_pcm(arr, self.sample_rate)
+
+    def _encode_wav_with_placeholder_header(
+        self, arr: np.ndarray, sample_rate: int
+    ) -> bytes:
+        # Standard wav format but with chunk sizes set to a large placeholder (0xFFFFFFFF)
+        # so that the client can concatenate subsequent PCM bytes continuously.
+        pcm_bytes = encode_pcm(arr, sample_rate)
+        num_channels = 1
+        bits_per_sample = 16
+        byte_rate = sample_rate * num_channels * bits_per_sample // 8
+        block_align = num_channels * bits_per_sample // 8
+
+        buf = io.BytesIO()
+        # RIFF header
+        buf.write(b"RIFF")
+        buf.write(struct.pack("<I", 0xFFFFFFFF))  # Placeholder total size
+        buf.write(b"WAVE")
+        # fmt chunk
+        buf.write(b"fmt ")
+        buf.write(struct.pack("<I", 16))  # Chunk size
+        buf.write(
+            struct.pack(
+                "<HHIIHH",
+                1,
+                num_channels,
+                sample_rate,
+                byte_rate,
+                block_align,
+                bits_per_sample,
+            )
+        )
+        # data chunk
+        buf.write(b"data")
+        buf.write(struct.pack("<I", 0xFFFFFFFF - 44))  # Placeholder data size
+        buf.write(pcm_bytes)
+        return buf.getvalue()
+
+    async def finish(self) -> bytes:
+        if self.ffmpeg_process is not None and self.ffmpeg_process.stdin is not None:
+            try:
+                self.ffmpeg_process.stdin.close()
+                await self.ffmpeg_process.wait()
+                return await self.ffmpeg_process.stdout.read()
+            except Exception as exc:
+                logger.exception("Error finalizing ffmpeg stream: %s", exc)
+                return b""
+        return b""

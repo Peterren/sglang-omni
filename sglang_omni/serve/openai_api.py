@@ -555,6 +555,14 @@ async def _speech_stream(
     speed: float,
 ):
     """Streaming speech generator (yields SSE events with audio chunks)."""
+    from sglang_omni.client.audio import AudioStreamEncoder
+
+    encoder = AudioStreamEncoder(
+        response_format=response_format,
+        speed=speed,
+    )
+    await encoder.start()
+
     chunk_index = 0
     emitted_samples = 0
     finish_reason: str | None = None
@@ -570,6 +578,8 @@ async def _speech_stream(
             continue
 
         sample_rate = chunk.sample_rate or DEFAULT_SAMPLE_RATE
+        encoder.sample_rate = sample_rate
+
         audio_data, emitted_samples = _select_speech_audio_delta(
             chunk.audio_data,
             emitted_samples=emitted_samples,
@@ -578,22 +588,37 @@ async def _speech_stream(
         if audio_data is None:
             continue
 
-        audio_bytes, mime_type = encode_audio(
-            audio_data,
-            response_format=response_format,
-            sample_rate=sample_rate,
-            speed=speed,
-        )
-        actual_format = MIME_TO_FORMAT.get(mime_type, response_format)
+        encoded_bytes = await encoder.encode_chunk(audio_data)
+        if not encoded_bytes:
+            continue
+
         payload = {
             "id": f"speech-{request_id}",
             "object": "audio.speech.chunk",
             "index": chunk_index,
             "audio": {
-                "data": base64.b64encode(audio_bytes).decode("ascii"),
-                "format": actual_format,
-                "mime_type": mime_type,
+                "data": base64.b64encode(encoded_bytes).decode("ascii"),
+                "format": encoder.response_format,
+                "mime_type": encoder.mime_type,
                 "sample_rate": sample_rate,
+            },
+            "finish_reason": None,
+        }
+        yield f"data: {json.dumps(payload)}\n\n"
+        chunk_index += 1
+
+    # Flush remaining bytes
+    final_bytes = await encoder.finish()
+    if final_bytes:
+        payload = {
+            "id": f"speech-{request_id}",
+            "object": "audio.speech.chunk",
+            "index": chunk_index,
+            "audio": {
+                "data": base64.b64encode(final_bytes).decode("ascii"),
+                "format": encoder.response_format,
+                "mime_type": encoder.mime_type,
+                "sample_rate": encoder.sample_rate,
             },
             "finish_reason": None,
         }
