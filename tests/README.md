@@ -5,8 +5,6 @@ tests/
 ├── __init__.py
 ├── utils.py
 ├── data/
-├── docs/
-│   └── s2pro/
 ├── test_model/
 │   ├── conftest.py
 │   ├── test_qwen3_omni_*_ci.py
@@ -108,8 +106,6 @@ Tag each test with the marker that matches its lane and use it to filter runs.
 - `benchmark`: GPU performance / parity tests in `test_model/`. May require a
   populated HF cache and tens of GB of GPU memory; per-test docstrings call
   out hardware needs.
-- `docs`: documented-example tests in `docs/`. Verify documented request
-  shapes and CLI snippets still work.
 - `tts_stage(name)`: in-file CI stage selector for TTS benchmarks.
   Combined with `--tts-stage` (see `test_model/conftest.py`).
 
@@ -118,33 +114,13 @@ Tag each test with the marker that matches its lane and use it to filter runs.
 
 - `README.md`: This file. It explains test ownership and where new tests belong.
 - `__init__.py`: Keeps `tests` importable as a package.
-- `utils.py`: Shared helpers used by docs and model CI tests.
+- `utils.py`: Shared helpers used by model CI tests.
 
 ## `data/`
 
 Small static fixtures shared by tests, such as images, audio, and short videos.
 Keep these files small and deterministic. Large model artifacts, generated
 outputs, and benchmark datasets should live outside the unit test tree.
-
-## `docs/`
-
-Documentation/example tests. These verify that documented user-facing examples
-still work.
-
-Use this lane when the test protects:
-
-- install/docs snippets,
-- client examples,
-- documented request/response shapes,
-- examples that may need optional docs dependencies.
-
-These tests are not the default fast unit lane.
-
-Expected command:
-
-```bash
-pytest tests/docs -m docs -v
-```
 
 ## `test_model/`
 
