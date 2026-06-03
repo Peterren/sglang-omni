@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang-Omni 每日 PR 学习日报 · 2026-06-03</title>
+<style>
+  :root{
+    --bg:#0f1117; --card:#171a21; --card2:#1d212b; --ink:#e6e9ef; --muted:#9aa4b2;
+    --accent:#7c8cff; --accent2:#43d692; --warn:#ffad47; --line:#2a2f3a;
+    --code-bg:#0b0e14; --kw:#c792ea; --str:#c3e88d; --num:#f78c6c; --com:#5c6773;
+    --fn:#82aaff; --cls:#ffcb6b;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+       line-height:1.75;font-size:16px}
+  .wrap{max-width:980px;margin:0 auto;padding:36px 22px 80px}
+  header.top{border-bottom:2px solid var(--line);padding-bottom:22px;margin-bottom:28px}
+  header.top h1{font-size:30px;margin:0 0 6px;letter-spacing:.5px}
+  header.top .sub{color:var(--muted);font-size:15px}
+  .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;
+          font-weight:600;margin-right:6px;border:1px solid var(--line)}
+  .b-core{background:rgba(124,140,255,.16);color:#aab4ff;border-color:#3a3f78}
+  .b-doc{background:rgba(67,214,146,.14);color:#76e3b0;border-color:#2c5c45}
+  .b-ci{background:rgba(255,173,71,.14);color:#ffc77d;border-color:#5c4626}
+  .overview{background:var(--card);border:1px solid var(--line);border-radius:14px;
+            padding:22px 24px;margin-bottom:30px}
+  .overview h2{margin:0 0 14px;font-size:20px}
+  .stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .stat{flex:1;min-width:150px;background:var(--card2);border:1px solid var(--line);
+        border-radius:10px;padding:14px 16px}
+  .stat .n{font-size:26px;font-weight:700;color:var(--accent)}
+  .stat .l{color:var(--muted);font-size:13px}
+  table.toc{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px}
+  table.toc th,table.toc td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.toc th{color:var(--muted);font-weight:600}
+  table.toc a{color:var(--accent);text-decoration:none}
+  details.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+               margin-bottom:22px;overflow:hidden}
+  details.card[open]{box-shadow:0 0 0 1px rgba(124,140,255,.12)}
+  summary{cursor:pointer;list-style:none;padding:18px 22px;font-size:18px;font-weight:600;
+          display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#1b1f29,#171a21)}
+  summary::-webkit-details-marker{display:none}
+  summary .num{color:var(--accent);font-variant-numeric:tabular-nums}
+  summary .arrow{margin-left:auto;color:var(--muted);font-size:13px;transition:transform .2s}
+  details[open] summary .arrow{transform:rotate(90deg)}
+  .body{padding:6px 24px 26px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--muted);font-size:13.5px;
+        padding:14px 0;border-bottom:1px dashed var(--line);margin-bottom:8px}
+  .meta a{color:var(--accent);text-decoration:none}
+  h3.sec{font-size:17px;margin:26px 0 8px;padding-left:12px;border-left:4px solid var(--accent)}
+  h4{font-size:15px;margin:18px 0 6px;color:#cdd5e3}
+  p{margin:10px 0}
+  .tldr{background:rgba(124,140,255,.10);border:1px solid #33375f;border-radius:10px;
+        padding:12px 16px;margin:14px 0;font-size:15px}
+  .note{background:rgba(255,173,71,.09);border-left:4px solid var(--warn);
+        padding:10px 14px;border-radius:6px;margin:14px 0;font-size:14.5px}
+  .concept{background:var(--card2);border:1px solid var(--line);border-radius:10px;
+           padding:14px 18px;margin:14px 0}
+  .concept .t{font-weight:700;color:var(--accent2);font-size:15.5px}
+  .concept .seg{margin-top:8px}
+  .concept .seg b{color:#cdd5e3}
+  code.inline{background:#222734;color:#e6c07b;padding:1px 6px;border-radius:5px;
+              font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13.5px}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+      padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.6;margin:12px 0}
+  pre code{font-family:"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;color:#c9d1d9;white-space:pre}
+  .filelist{font-size:13.5px;border-collapse:collapse;width:100%;margin:10px 0}
+  .filelist td{padding:5px 8px;border-bottom:1px solid var(--line);font-family:"SF Mono",Menlo,monospace}
+  .filelist td.add{color:var(--accent2);text-align:right;width:64px}
+  .filelist td.del{color:#ff7a7a;text-align:right;width:54px}
+  .kw{color:var(--kw)} .str{color:var(--str)} .num{color:var(--num)}
+  .com{color:var(--com);font-style:italic} .fn{color:var(--fn)} .cls{color:var(--cls)}
+  ul{margin:8px 0 8px 4px;padding-left:22px} li{margin:5px 0}
+  .analogy{border-left:3px solid var(--accent2);padding-left:14px;color:#bfe9d2;margin:12px 0;font-size:14.5px}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center}
+  @media print{
+    body{font-size:12px} .wrap{max-width:none;padding:0 8px}
+    details.card{break-inside:avoid;page-break-inside:avoid;border-color:#888}
+    summary{background:#eee !important}
+    pre{break-inside:avoid}
+    a{color:#1a4ed8 !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>🧭 SGLang-Omni 每日 PR 学习日报</h1>
+  <div class="sub">日期：2026-06-03 ｜ 仓库：<a href="https://github.com/sgl-project/sglang-omni" style="color:#7c8cff">sgl-project/sglang-omni</a> ｜ 统计窗口：过去 24 小时内已合并（merged）的 PR</div>
+</header>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="overview">
+  <h2>📊 当日概览</h2>
+  <div class="stats">
+    <div class="stat"><div class="n">5</div><div class="l">合并 PR 总数</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">核心架构 PR（重点精讲）</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">文档 / Logo / License</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">CI / 测试清理</div></div>
+  </div>
+
+  <p style="color:var(--muted);font-size:14px;margin-top:0">
+  主题分类：今天唯一一个“硬核”改动是 <span class="badge b-core">核心架构</span>
+  <b>#609 — Add MOSS-TTS（OpenMOSS）support</b>：把一个全新的<strong>多阶段（multi-stage）流式 TTS 模型</strong>原生接入 SGLang-Omni 的
+  <code class="inline">OmniScheduler</code> 三段式流水线。其余四个是文档 / Logo / License / 测试清理类小改动。
+  按照「深度优先于广度」的要求，本日报把 90% 的篇幅用于<strong>把 #609 讲透</strong>，其余 PR 一笔带过。</p>
+
+  <table class="toc">
+    <tr><th>#</th><th>标题</th><th>作者</th><th>分类</th><th>讲解深度</th></tr>
+    <tr><td><a href="#pr609">#609</a></td><td>Add MOSS-TTS (OpenMOSS) support</td><td>GaokaiZhang</td><td><span class="badge b-core">核心架构</span></td><td>🔬 深度精讲</td></tr>
+    <tr><td><a href="#pr669">#669</a></td><td>[Doc] Add MOSS-TTS in SGLang-Omni docs</td><td>gaoyang07</td><td><span class="badge b-doc">文档</span></td><td>简述</td></tr>
+    <tr><td><a href="#pr668">#668</a></td><td>Remove stale S2-Pro docs test</td><td>xinlij</td><td><span class="badge b-ci">CI/测试</span></td><td>简述</td></tr>
+    <tr><td><a href="#pr671">#671</a></td><td>Docs/svg logo（暗色模式适配）</td><td>0xjeffro</td><td><span class="badge b-doc">文档</span></td><td>简述</td></tr>
+    <tr><td><a href="#pr650">#650</a></td><td>Docs/license</td><td>xinlij</td><td><span class="badge b-doc">文档</span></td><td>简述</td></tr>
+  </table>
+</section>
+
+<!-- ============ PR 609 ============ -->
+<details class="card" id="pr609" open>
+<summary><span class="num">#609</span>&nbsp;Add MOSS-TTS (OpenMOSS) support <span class="badge b-core" style="margin-left:8px">核心架构</span><span class="arrow">▶</span></summary>
+<div class="body">
+
+  <div class="meta">
+    <span>👤 作者：<b>GaokaiZhang</b></span>
+    <span>✅ 状态：<b style="color:var(--accent2)">merged</b>（2026-06-02 由 zhaochenyang20 合并）</span>
+    <span>🔗 <a href="https://github.com/sgl-project/sglang-omni/pull/609">PR #609</a></span>
+    <span>📦 +3617 / −46，24 个文件，23 次提交</span>
+  </div>
+
+  <div class="tldr">
+  <b>一句话概括：</b>把开源语音合成模型 <b>MOSS-TTS（OpenMOSS 出品）</b>原生接入 SGLang-Omni，
+  实现成一条 <code class="inline">预处理 → SGLang 自回归引擎 → MOSS 声码器</code> 的三阶段流水线；
+  核心难点是让一个「<b>一步要同时吐出 1 个文本 token + N 个音频码本 token、而且各码本之间有时间错位（delay pattern）</b>」的多头模型，
+  跑在原本为「一步一个 token」设计的 SGLang 高性能推理引擎上。
+  </div>
+
+  <!-- ===== 1. 概览 ===== -->
+  <h3 class="sec">1. PR 概览</h3>
+  <ul>
+    <li><b>标题：</b>Add MOSS-TTS (OpenMOSS) support</li>
+    <li><b>编号 / 作者：</b>#609 / GaokaiZhang（贡献者）</li>
+    <li><b>状态：</b>已合并（merged into <code class="inline">main</code>）</li>
+    <li><b>链接：</b><a href="https://github.com/sgl-project/sglang-omni/pull/609">https://github.com/sgl-project/sglang-omni/pull/609</a></li>
+  </ul>
+  <p>这是一个典型的「<b>接入一个新模型</b>」型 PR，但 MOSS-TTS 的结构特殊，所以它实际上是在
+  SGLang-Omni 的多阶段框架里搭了一整条新流水线，并对 SGLang 的采样 / 解码循环做了不少“魔改”。</p>
+
+  <!-- ===== 2. 解决什么问题 ===== -->
+  <h3 class="sec">2. 它解决了什么问题</h3>
+  <p>先理解背景：<b>TTS（Text-To-Speech，文本转语音）</b>就是“输入一段文字，输出一段说话的音频”。
+  现代 TTS 大多走「<b>语言模型 + 声码器</b>」的两段式套路：</p>
+  <ul>
+    <li>第一段：一个像 GPT 一样的<b>自回归语言模型</b>，不过它预测的不是文字，而是一串<b>“音频 token”</b>（离散化的声音编码，下面会解释 RVQ）。</li>
+    <li>第二段：一个<b>声码器 / 解码器（vocoder）</b>，把这串音频 token 还原成真正能听的波形（24kHz 的 wav）。</li>
+  </ul>
+  <p><b>痛点在哪？</b>普通的文本大模型，自回归生成时是“一个时间步预测一个 token”。
+  但 MOSS-TTS 这类高质量 TTS 用了一种叫 <b>RVQ（残差矢量量化）</b>的音频编码：每一帧声音不是 1 个 token，
+  而是 <b>N 个码本（codebook）token 叠在一起</b>（这里 N 可达 32）。也就是说模型每一步要<b>同时</b>输出
+  「1 个文本通道 + N 个音频码本通道」共 33 个 token。更麻烦的是，它用了 <b>delay pattern（延迟错位）</b>：
+  第 k 个码本要比第 0 个码本晚 k 步才开始生成。</p>
+  <p>而 SGLang（SGLang-Omni 底层的高性能推理引擎）从设计上就假设“<b>每个请求每一步只产出 1 个 token</b>”，
+  它的 CUDA Graph、KV cache、radix cache、连续批处理全都围绕这个假设构建。
+  <b>所以问题就是：怎么把“一步 33 个 token + 通道间错位”的怪模型，塞进“一步 1 个 token”的高性能引擎里，
+  还要享受到引擎的批处理 / CUDA Graph / 缓存加速？</b>这正是本 PR 要解决的核心矛盾。</p>
+
+  <!-- ===== 3. 具体改动 ===== -->
+  <h3 class="sec">3. 具体做了什么改动</h3>
+
+  <h4>3.1 涉及的核心文件</h4>
+  <table class="filelist">
+    <tr><td>sglang_omni/models/moss_tts/stages.py</td><td class="add">+394</td><td class="del"></td></tr>
+    <tr><td>sglang_omni/models/moss_tts/model_runner.py</td><td class="add">+558</td><td class="del"></td></tr>
+    <tr><td>sglang_omni/models/moss_tts/sglang_model.py</td><td class="add">+478</td><td class="del"></td></tr>
+    <tr><td>sglang_omni/models/moss_tts/request_builders.py</td><td class="add">+689</td><td class="del"></td></tr>
+    <tr><td>sglang_omni/models/moss_tts/codec.py</td><td class="add">+70</td><td class="del"></td></tr>
+    <tr><td>sglang_omni/models/moss_tts/config.py / payload_types.py</td><td class="add">+169</td><td class="del"></td></tr>
+    <tr><td>tests/unit_test/moss_tts/test_pipeline.py</td><td class="add">+908</td><td class="del"></td></tr>
+    <tr><td>docs/cookbook/moss_tts.md + benchmarks + 配置/接线</td><td class="add">+~350</td><td class="del">−46</td></tr>
+  </table>
+
+  <h4>3.2 三阶段流水线是怎么定义的（config.py）</h4>
+  <p>整条流水线在 <code class="inline">config.py</code> 里被声明成三个 <code class="inline">StageConfig</code>，
+  这就是 SGLang-Omni「多阶段架构」的体现——<b>一个模型不是一个黑盒，而是一串可独立调度的 stage</b>：</p>
+<pre><code><span class="kw">class</span> <span class="cls">MossTTSPipelineConfig</span>(<span class="cls">PipelineConfig</span>):
+    <span class="com"># 流水线: 预处理 -> AR引擎 -> 声码器</span>
+    stages = [
+        <span class="fn">StageConfig</span>(name=<span class="str">"preprocessing"</span>,  <span class="com"># 阶段1: CPU上做分词+编码参考音频</span>
+                    factory=<span class="str">"...stages.create_preprocessing_executor"</span>,
+                    next=<span class="str">"tts_engine"</span>),
+        <span class="fn">StageConfig</span>(name=<span class="str">"tts_engine"</span>,     <span class="com"># 阶段2: GPU上跑SGLang自回归引擎</span>
+                    factory=<span class="str">"...stages.create_sglang_tts_engine_executor"</span>,
+                    gpu=<span class="num">0</span>, next=<span class="str">"vocoder"</span>),
+        <span class="fn">StageConfig</span>(name=<span class="str">"vocoder"</span>,        <span class="com"># 阶段3: GPU上把音频码还原成波形</span>
+                    factory=<span class="str">"...stages.create_vocoder_executor"</span>,
+                    gpu=<span class="num">0</span>, terminal=<span class="kw">True</span>),  <span class="com"># terminal=最后一段</span>
+    ]</code></pre>
+  <p>每个 stage 有自己的 <code class="inline">factory</code>（工厂函数，负责创建这个阶段的执行器）和
+  <code class="inline">next</code>（下一阶段名字），数据以 <code class="inline">StagePayload</code> 的形式在阶段间流动。
+  这种设计的好处：<b>三段可以各自用最合适的并发策略、跑在不同设备上、独立扩缩容</b>。</p>
+
+  <h4>3.3 阶段一：预处理（为什么要多并发）</h4>
+  <p>预处理做两件 CPU 重活：把文字分词、把“参考音频”（用于音色克隆）编码成音频 token。
+  这里有个很值得学的工程决策（<code class="inline">stages.py</code>）：</p>
+<pre><code><span class="kw">def</span> <span class="fn">create_preprocessing_executor</span>(model_path, *, max_concurrency=<span class="num">8</span>):
+    processor = <span class="fn">_load_moss_processor</span>(model_path, device=<span class="str">"cpu"</span>, ...)
+    <span class="com"># 预处理是CPU密集型: 每个请求都要给参考音频跑一遍codec编码。</span>
+    <span class="com"># 如果串行(并发=1), codec编码会霸占时间, 把下游AR引擎饿到batch=1,</span>
+    <span class="com"># 而batch=1正是实时率(RTF)最差的情况。所以并行跑多个——</span>
+    <span class="com"># torch在codec前向时会释放GIL, 让AR引擎收到稳定可批处理的请求流。</span>
+    <span class="kw">return</span> <span class="fn">SimpleScheduler</span>(preprocess_moss_tts_payload, max_concurrency=max_concurrency)</code></pre>
+  <p>翻译：<b>慢的预处理如果排队串行做，会让快的 GPU 引擎没活干（batch 掉到 1）</b>。
+  所以让预处理开 8 路并发，喂给 GPU 一条“稳定、可成批”的请求流，从而把 GPU 利用率拉满。</p>
+
+  <h4>3.4 阶段二的模型：33 个通道的嵌入与 33 个输出头（sglang_model.py）</h4>
+  <p>核心模型类 <code class="inline">MossTTSDelaySGLangModel</code> = <b>Qwen3 主干 + 多通道嵌入 + 多通道输出头</b>。
+  与普通 LLM 只有 1 个 embedding 表和 1 个 lm_head 不同，它有 <code class="inline">channels</code>（=N+1=33）份：</p>
+<pre><code><span class="com"># 33个独立的嵌入表(1个文本通道 + 32个音频码本通道)</span>
+self.embedding_list = ModuleList([VocabParallelEmbedding(vocab_size_list[i], hidden)
+                                   <span class="kw">for</span> i <span class="kw">in</span> range(channels)])
+self.model = <span class="fn">Qwen3Model</span>(config.language_config)   <span class="com"># 共享的Transformer主干</span>
+<span class="com"># 33个独立的输出头, 每个头的词表大小不同(文本15万 vs 音频1025)</span>
+self.lm_heads = ModuleList([ParallelLMHead(vocab_size_list[i], hidden)
+                             <span class="kw">for</span> i <span class="kw">in</span> range(channels)])</code></pre>
+  <p><b>关键技巧 1：33 个通道如何合成一个输入向量？</b>把每个通道的 token 各自查表，再<b>逐元素相加</b>，
+  得到一个 hidden 向量喂给共享的 Transformer：</p>
+<pre><code><span class="kw">def</span> <span class="fn">_prepare_multi_modal_inputs</span>(self, input_ids):
+    <span class="com"># input_ids_2d 形状 [序列长, 33]: 每行是同一时刻的33个通道token</span>
+    embeds = torch.<span class="fn">zeros</span>(seq_len, hidden)
+    <span class="kw">for</span> idx, embed_layer <span class="kw">in</span> enumerate(self.embedding_list):
+        embeds = embeds + <span class="fn">embed_layer</span>(input_ids_2d[:, idx])  <span class="com"># 33个嵌入相加</span>
+    <span class="kw">return</span> embeds</code></pre>
+  <p class="analogy">类比：普通 LLM 是“一个人说一句话”；MOSS-TTS 是“33 个人（1 个念字幕 + 32 个分别哼不同声部）
+  同时开口，把 33 个声部混音成 1 路信号”送进大脑（Transformer），大脑再分头给出 33 个声部下一拍该怎么唱。</p>
+
+  <p><b>关键技巧 2：把 logits 计算移出 <code class="inline">forward</code>。</b>
+  SGLang 用 CUDA Graph 把模型 forward “录制”成一张固定的计算图来加速（见知识点）。
+  但 33 个头里音频头词表只有 1025，文本头却有 15 万，硬塞进 CUDA Graph 会因为 buffer 复用而出错。
+  作者的做法是：<code class="inline">forward</code> 只返回 backbone 的 hidden states（套一个 dummy logits 占位），
+  真正的 33 路采样放到图<b>外面</b>由 model runner 做：</p>
+<pre><code><span class="kw">def</span> <span class="fn">forward</span>(self, ...):
+    hidden_states = self.<span class="fn">model</span>(...)              <span class="com"># 只跑被CUDA Graph捕获的主干</span>
+    sample_hidden = self.<span class="fn">_select_sample_hidden_states</span>(hidden_states, fb)
+    <span class="com"># 返回dummy logits + 真正的hidden, 让33路采样在图外做,</span>
+    <span class="com"># 避免图回放(replay)丢掉customized_info, 也避免复用文本词表的logits buffer</span>
+    dummy = sample_hidden.<span class="fn">new_empty</span>((sample_hidden.shape[<span class="num">0</span>], <span class="num">1</span>))
+    <span class="kw">return</span> <span class="fn">LogitsProcessorOutput</span>(next_token_logits=dummy, hidden_states=sample_hidden)</code></pre>
+
+  <p><b>关键技巧 3：每个通道用自己词表大小的 LogitsProcessor。</b>这条注释信息量很大：</p>
+<pre><code><span class="com"># sglang的 _get_logits 会把头输出切到 config.vocab_size 来去掉</span>
+<span class="com"># ParallelLMHead的词表padding(1025 -> 1088)。如果音频头复用文本config</span>
+<span class="com"># (词表15万), 那padding列1025..1087不会被切掉, 这些权重≈0的列会在</span>
+<span class="com"># 音频温度下被当成"越界码"采样出来 -> 损坏音频帧 -> 拉高WER(字错率)。</span>
+channel_config.vocab_size = config.vocab_size_list[channel]   <span class="com"># 每通道用自己的词表大小</span></code></pre>
+  <p>这是一个非常实战的 bug 修复思路：<b>张量补齐（padding）本是为了对齐显存，但如果忘了在采样前切掉，
+  补的“垃圾列”会被当成合法 token 采样出来，破坏输出</b>。</p>
+
+  <h4>3.5 阶段二的灵魂：delay-pattern 批量采样（model_runner.py）</h4>
+  <p><code class="inline">MossTTSModelRunner._sample_rows</code> 是整个 PR 最硬核的函数——
+  它把原始 HuggingFace 模型里一个 <code class="inline">for 循环 + if/else</code> 的 <code class="inline">generate</code> 单步，
+  改写成<b>整批请求一次性、纯张量（向量化）</b>的版本。为什么要向量化？因为 SGLang 是连续批处理，
+  一个 batch 里几十个请求各自处于 delay pattern 的不同阶段（有的还在“铺垫”，有的在正式生成，有的快结束），
+  用 Python for 循环逐个处理会成为性能瓶颈。核心状态用一个 <code class="inline">[audio_length, delayed, is_audio]</code> 三元组表示：</p>
+<pre><code><span class="com"># delayed: 这个请求在delay pattern里走到第几步(决定哪些码本该开始生成)</span>
+next_text[delayed &lt; n_vq]  = delay_slot   <span class="com"># 还没铺完: 文本通道填"延迟占位符"</span>
+is_audio_eos = delayed == n_vq            <span class="com"># 刚好铺完: 该收尾</span>
+next_text[is_audio_eos] = audio_end
+
+<span class="com"># 哪些音频码本通道这一步要真正采样? (delay pattern的三角形掩码)</span>
+pre_audio  = audio_lengths.unsqueeze(<span class="num">1</span>) &gt; channel_idx     <span class="com"># 已经"轮到"了</span>
+post_audio = channel_idx &gt; (delayed.unsqueeze(<span class="num">1</span>) - <span class="num">1</span>)     <span class="com"># 还没"过期"</span>
+sampling_audio_mask = pre_audio &amp; post_audio                <span class="com"># 交集=该采样的格子</span></code></pre>
+  <p>这两行 mask 就是 delay pattern 的精髓：<b>用一个布尔矩阵 <code class="inline">[batch, n_vq]</code> 一次性标出
+  “这一拍、这个请求、这个码本要不要出声”，全程没有 Python 循环</b>。可复用且可一眼看懂的还有它的采样函数
+  <code class="inline">_sample_tokens</code>：温度 / top-k / top-p 全部支持<b>逐行不同的参数</b>（每个请求自带采样配置），
+  并用 <code class="inline">multinomial_with_seed</code> 保证<b>无论 batch 怎么拼，每个请求的随机结果都可复现</b>。</p>
+
+  <p><b>反馈回路（feedback loop）——这步生成的 token 怎么变成下步输入？</b>
+  普通 LLM 由引擎自动把上一步 token 喂回去；但这里一步是 33 个 token，引擎的自动机制处理不了。
+  作者用一个“待反馈队列”手动接管：</p>
+<pre><code><span class="com"># 采样完: 把33路token拼成一行, 算出它的混合embedding, 存进队列</span>
+embeds = self.model.<span class="fn">_prepare_multi_modal_inputs</span>(rows)   <span class="com"># 33路->1个向量</span>
+<span class="com"># post_process: 把embedding塞进每个请求的待反馈队列</span>
+sched_req.data.pending_feedback_queue.<span class="fn">append</span>(embeds[row_idx])
+<span class="com"># before_decode: 下一步把队列里的embedding直接当decode输入(绕过查表)</span>
+weight[:batch_size].<span class="fn">copy_</span>(stacked)   <span class="com"># 写进一个临时Embedding表</span></code></pre>
+
+  <h4>3.6 阶段三：声码器与“去延迟”（codec.py）</h4>
+  <p>生成出来的音频码是<b>带延迟错位</b>的，不能直接解码。<code class="inline">apply_de_delay_pattern</code>
+  把这些错位的行“对齐”回正常的 <code class="inline">[时间, n_vq]</code> 矩阵，再交给 MOSS 声码器还原成 24kHz 波形：</p>
+<pre><code><span class="kw">def</span> <span class="fn">apply_de_delay_pattern</span>(delayed_codes):
+    <span class="com"># 第idx个码本整体往前挪idx步, 把"楼梯形"错位拉回"矩形"对齐</span>
+    <span class="kw">for</span> idx <span class="kw">in</span> range(n_vq):
+        tokens[:, idx] = delayed_codes[idx : idx + T, idx]
+    <span class="kw">return</span> tokens</code></pre>
+
+  <h4>3.7 内容哈希做 radix cache key（request_builders.py）</h4>
+  <p>SGLang 的 radix cache（前缀缓存）靠“token id 序列”当 key 来复用 KV cache。
+  但 MOSS 的“token”是 33 维的行，没法直接当 key。作者给每一行算一个 64-bit 哈希当作虚拟 token id：</p>
+<pre><code><span class="kw">def</span> <span class="fn">build_row_cache_key_ids</span>(rows):
+    <span class="kw">for</span> row <span class="kw">in</span> rows:
+        digest = hashlib.<span class="fn">blake2b</span>(row.numpy().tobytes(), digest_size=<span class="num">8</span>).<span class="fn">digest</span>()
+        key_ids.<span class="fn">append</span>(int.<span class="fn">from_bytes</span>(digest, <span class="str">"little"</span>) &amp; ((<span class="num">1</span> &lt;&lt; <span class="num">63</span>) - <span class="num">1</span>))</code></pre>
+  <p>这样<b>内容相同的多通道前缀就会得到相同的虚拟 id</b>，radix cache 照常能命中、复用前缀 KV——
+  这是“让旧机制适配新数据结构”的经典做法。</p>
+
+  <!-- ===== 4. 知识点 ===== -->
+  <h3 class="sec">4. 涉及的知识点（小白友好版）</h3>
+
+  <div class="concept"><div class="t">① 自回归（Autoregressive, AR）生成与 KV Cache</div>
+    <div class="seg"><b>是什么：</b>自回归 = “根据已经生成的内容预测下一个 token，再把它接到后面，循环往复”。
+    KV Cache 是把每个 token 在注意力里算出的 Key / Value 缓存下来，下一步就不用重算前面所有 token。</div>
+    <div class="seg"><b>为什么需要：</b>没有 KV cache 的话，生成第 1000 个字要把前 999 个字重新算一遍注意力，成本是平方级的；有了它就变线性。</div>
+    <div class="seg"><b>本 PR 里：</b>MOSS-TTS 的“音频 token”生成本质也是 AR 的，所以能直接复用 SGLang 的 KV cache 引擎；难点只是“一步多 token”。</div>
+  </div>
+
+  <div class="concept"><div class="t">② RVQ（残差矢量量化）与音频 token / 码本（codebook）</div>
+    <div class="seg"><b>是什么：</b>声音是连续波形，神经网络喜欢离散 token。RVQ 把一帧声音用<b>一摞码本</b>逐层逼近：
+    第 1 个码本给个粗略值，第 2 个码本编码“还差多少（残差）”，第 3 个再补……层层逼近，于是<b>一帧 = N 个码本 token</b>。</div>
+    <div class="seg"><b>为什么需要：</b>单个码本表达力不够（音质差），多码本残差叠加能在有限词表下逼出高保真音频。</div>
+    <div class="seg"><b>本 PR 里：</b><code class="inline">n_vq=32</code> 个码本 + 1 个文本通道 = 33 个通道，这正是“一步 33 个 token”的来源。</div>
+  </div>
+
+  <div class="concept"><div class="t">③ Delay Pattern（延迟错位生成）</div>
+    <div class="seg"><b>是什么：</b>让第 k 个码本比第 0 个码本晚 k 步开始生成，形成一个“楼梯/三角形”错位。</div>
+    <div class="seg"><b>为什么需要：</b>RVQ 里高层码本依赖低层码本的结果（残差关系）。如果同一拍硬要一次预测全部码本，
+    模型还没看到低层就得猜高层，质量差。错位生成让高层码本能“看到”已经定下来的低层码本，更准。
+    （这思路来自 MusicGen / Parler-TTS 等工作。）</div>
+    <div class="seg"><b>本 PR 里：</b><code class="inline">_sample_rows</code> 里那两行 <code class="inline">pre_audio &amp; post_audio</code> 布尔掩码，
+    就是把“楼梯形”采样区域向量化地画出来；<code class="inline">apply_de_delay_pattern</code> 在解码前再把楼梯拉平。</div>
+  </div>
+
+  <div class="concept"><div class="t">④ SGLang 的核心组件（Scheduler / Model Runner / Backbone）</div>
+    <div class="seg"><b>是什么：</b>SGLang 是高性能 LLM 推理引擎。常见角色：
+    <b>Scheduler</b>（决定哪些请求组成一个 batch、何时 prefill/decode）、
+    <b>Model Runner</b>（真正调用模型 forward、做采样）、
+    <b>KV cache 池 / radix cache</b>（显存与前缀复用）、
+    <b>tokenizer manager / detokenizer</b>（文本进出）。</div>
+    <div class="seg"><b>为什么需要：</b>把“调度、显存、模型、采样”解耦，才能做连续批处理这种高吞吐优化。</div>
+    <div class="seg"><b>本 PR 里：</b>作者复用 SGLang 的 backbone（Qwen3Model）+ KV/radix cache，但<b>自定义了 OmniScheduler 接入的
+    <code class="inline">MossTTSModelRunner</code></b>，重写了 <code class="inline">custom_prefill_forward / before_decode / post_decode / post_process_outputs</code>
+    这些钩子，把“33 通道嵌入 + delay 采样 + 反馈队列”插进标准 prefill→decode 循环里。</div>
+  </div>
+
+  <div class="concept"><div class="t">⑤ Continuous Batching（连续批处理）</div>
+    <div class="seg"><b>是什么：</b>传统批处理要等一批请求全做完才换下一批；连续批处理是“谁完成谁就退出、空位立刻补新请求”，
+    GPU 永远不空转。</div>
+    <div class="seg"><b>为什么需要：</b>不同请求长度差别大，静态批会被最长的请求拖死，GPU 利用率低。</div>
+    <div class="seg"><b>本 PR 里：</b>正因为是连续批处理，一个 batch 里各请求的 delay 状态各不相同，所以采样必须<b>向量化</b>地处理
+    每行不同的状态/采样参数，这就是 <code class="inline">_sample_rows</code> 大量用 mask 而非 for 循环的原因。</div>
+  </div>
+
+  <div class="concept"><div class="t">⑥ CUDA Graph 与 torch.compile</div>
+    <div class="seg"><b>是什么：</b>CUDA Graph 把一连串 GPU kernel 调用“录制”成一张静态图，之后“回放（replay）”整张图，
+    省掉每步 Python/CPU 发射 kernel 的开销。torch.compile 则是把模型编译成更快的融合算子。</div>
+    <div class="seg"><b>为什么需要：</b>小 batch decode 时，CPU 发射 kernel 的开销占比很大，CUDA Graph 能显著降低这部分延迟。</div>
+    <div class="seg"><b>本 PR 里：</b>作者预设了 <code class="inline">cuda_graph_bs=[1,2,4,8,16]</code> 并把 logits 计算移出 forward——
+    因为 CUDA Graph 要求图内张量形状固定、且不能丢失 <code class="inline">customized_info</code>，所以让被捕获的图只含 backbone，
+    33 路变长的采样放到图外。（PR 说明里提到 CUDA Graph + torch.compile 这次先做 eager 基线，后续提交再上。）</div>
+  </div>
+
+  <div class="concept"><div class="t">⑦ Radix Attention / Radix Cache（前缀缓存）</div>
+    <div class="seg"><b>是什么：</b>SGLang 的招牌特性。把所有请求的 token 前缀组织成一棵基数树（radix tree），
+    <b>相同前缀的 KV cache 只算一次、大家共享</b>。</div>
+    <div class="seg"><b>为什么需要：</b>很多请求开头相同（系统提示、相同参考音频），共享前缀能省大量重复计算与显存。</div>
+    <div class="seg"><b>本 PR 里：</b>因为“token”变成了 33 维行，作者用 blake2b 哈希把每行压成一个 64-bit 虚拟 token id（见 3.7），
+    让 radix cache 这套机制无缝适配多通道数据。</div>
+  </div>
+
+  <div class="concept"><div class="t">⑧ 声码器（Vocoder） / 音色克隆 / RTF / WER</div>
+    <div class="seg"><b>声码器：</b>把离散音频 token 还原成可听波形的模型（这里是 MOSS-Audio-Tokenizer，24kHz）。</div>
+    <div class="seg"><b>音色克隆：</b>给一段“参考音频”，让合成语音模仿它的音色——本 PR 支持文件路径或 base64 data URI 两种传法，
+    预处理阶段先把参考音频编码成音频 token 当条件。</div>
+    <div class="seg"><b>RTF（Real-Time Factor，实时率）：</b>生成 1 秒音频要花多少秒，越小越好（&lt;1 才算实时）。
+    PR 里强调 batch=1 是 RTF 最差的情况，所以预处理要多并发把 batch 喂大。</div>
+    <div class="seg"><b>WER（Word Error Rate，字错率）：</b>合成语音再用 ASR 转回文字，和原文比错了多少。3.4 的 padding bug 会拉高 WER。</div>
+  </div>
+
+  <div class="concept"><div class="t">⑨ Monkey-patch / API drift 兼容（一个实用工程技巧）</div>
+    <div class="seg"><b>是什么：</b>MOSS 的自定义 Transformers 代码依赖了某些已被改名/删除的 API（如 <code class="inline">PreTrainedConfig</code>）。
+    作者用一个 <code class="inline">@contextmanager</code> <b>临时</b>给 transformers 打补丁，加载完再<b>原样恢复</b>，不污染其他模型。</div>
+    <div class="seg"><b>启示：</b>当你必须兼容“别人写死的旧 API”又不想影响全局时，<b>作用域受限的临时 monkey-patch + 严格回滚</b>是很干净的解法。</div>
+  </div>
+
+  <!-- ===== 5. 学到什么 ===== -->
+  <h3 class="sec">5. 我能学到什么 / 延伸思考</h3>
+  <h4>可复用的工程思想</h4>
+  <ul>
+    <li><b>“适配而非重写”：</b>不去改 SGLang 引擎本身，而是通过 model runner 钩子 + 虚拟 token id 哈希，让特殊模型“假装”成普通模型，复用全部基础设施。这是接入异构模型的高性价比路径。</li>
+    <li><b>把热路径向量化：</b>凡是 batch 里逐请求不同的逻辑（delay 状态、每行采样参数），都用布尔 mask / 张量索引一次算完，避免 Python 循环成为瓶颈。冷路径（如 repetition penalty）才允许 per-request 循环。</li>
+    <li><b>关注点分离 + 流水线并发：</b>把慢的 CPU 预处理与快的 GPU 生成拆成独立 stage，各自调并发，避免互相拖累。</li>
+    <li><b>边界值即 bug 温床：</b>padding 列没切掉就被采样、delay 三角形的 off-by-one——这些都是“形状对齐”留下的隐患，写注释解释“为什么这么切”非常重要。</li>
+    <li><b>可复现的随机性：</b>用 (seed, position) 决定每行采样，使结果与 batch 组成无关——这是分布式/批处理推理里调试和测试的刚需。</li>
+  </ul>
+  <h4>想深入应该补的前置知识</h4>
+  <ul>
+    <li>音频离散化：EnCodec / SoundStream / RVQ 原理；MusicGen 的 delay pattern 论文。</li>
+    <li>SGLang 内部：ForwardBatch / ForwardMode（prefill vs decode）、radix attention 论文、PagedAttention / KV pool。</li>
+    <li>CUDA Graph 在推理框架里的使用约束（静态形状、捕获/回放）。</li>
+    <li>Qwen3 架构与 SGLang 的权重加载映射（<code class="inline">load_weights</code> 里的 stacked/packed mapping）。</li>
+  </ul>
+
+</div>
+</details>
+
+<!-- ============ PR 669 ============ -->
+<details class="card" id="pr669">
+<summary><span class="num">#669</span>&nbsp;[Doc] Add MOSS-TTS in SGLang-Omni docs <span class="badge b-doc" style="margin-left:8px">文档</span><span class="arrow">▶</span></summary>
+<div class="body">
+  <div class="meta"><span>👤 gaoyang07</span><span>✅ merged 2026-06-03</span><span>🔗 <a href="https://github.com/sgl-project/sglang-omni/pull/669">PR #669</a></span></div>
+  <p><b>做了什么：</b>#609 把 MOSS-TTS 的<b>代码</b>合进来后，本 PR 补上对应的<b>用户文档</b>（cookbook / 索引页），
+  告诉用户如何用 <code class="inline">sgl-omni serve --model-path OpenMOSS-Team/MOSS-TTS-... --config examples/configs/moss_tts.yaml</code> 启动服务、如何传参考音频做音色克隆、如何用 <code class="inline">${token:N}</code> 控制时长等。</p>
+  <p><b>价值：</b>典型的“代码先行、文档跟进”。新功能没有文档等于没上线——这是开源协作里很标准的配套动作，和 #609 是同一主题的延续。</p>
+</div>
+</details>
+
+<!-- ============ PR 668 ============ -->
+<details class="card" id="pr668">
+<summary><span class="num">#668</span>&nbsp;Remove stale S2-Pro docs test <span class="badge b-ci" style="margin-left:8px">CI/测试</span><span class="arrow">▶</span></summary>
+<div class="body">
+  <div class="meta"><span>👤 xinlij</span><span>✅ merged 2026-06-03</span><span>🔗 <a href="https://github.com/sgl-project/sglang-omni/pull/668">PR #668</a></span></div>
+  <p><b>做了什么：</b>删除一个已经过时的文档测试文件 <code class="inline">tests/docs/s2pro/test_docs_tts_s2pro.py</code> 及其空目录。</p>
+  <p><b>价值：</b>维护性清理。过时的测试会在 CI 里“假报警”或浪费 GPU 资源，及时删掉能让 CI 信号更干净。属于健康的代码库卫生习惯。</p>
+</div>
+</details>
+
+<!-- ============ PR 671 ============ -->
+<details class="card" id="pr671">
+<summary><span class="num">#671</span>&nbsp;Docs/svg logo（暗色模式适配）<span class="badge b-doc" style="margin-left:8px">文档</span><span class="arrow">▶</span></summary>
+<div class="body">
+  <div class="meta"><span>👤 0xjeffro</span><span>✅ merged 2026-06-03</span><span>🔗 <a href="https://github.com/sgl-project/sglang-omni/pull/671">PR #671</a></span></div>
+  <p><b>做了什么：</b>更新文档站的 SVG Logo，使其在<b>暗色模式（dark mode）</b>下也能正常显示。</p>
+  <p><b>价值：</b>纯前端/品牌呈现的小修复，与推理架构无关，但体现了项目对文档站体验的打磨。</p>
+</div>
+</details>
+
+<!-- ============ PR 650 ============ -->
+<details class="card" id="pr650">
+<summary><span class="num">#650</span>&nbsp;Docs/license <span class="badge b-doc" style="margin-left:8px">文档</span><span class="arrow">▶</span></summary>
+<div class="body">
+  <div class="meta"><span>👤 xinlij</span><span>✅ merged 2026-06-02</span><span>🔗 <a href="https://github.com/sgl-project/sglang-omni/pull/650">PR #650</a></span></div>
+  <p><b>做了什么：</b>补充 / 更新 License 相关文档。</p>
+  <p><b>价值：</b>合规性内容，开源项目必备，不涉及代码逻辑。</p>
+</div>
+</details>
+
+<footer>
+  本日报由自动化流程生成 ｜ 数据源：GitHub API（sgl-project/sglang-omni）｜ 生成时间：2026-06-03<br>
+  讲解深度优先：核心 PR #609 精讲，其余 4 个 PR 简述。代码片段为便于阅读的精简/高亮版，完整代码请见对应 PR。
+</footer>
+
+</div>
+</body>
+</html>
