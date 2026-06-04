@@ -33,10 +33,10 @@ Usage:
 
     python -m benchmarks.eval.benchmark_tts_seedtts \
         --meta zhaochenyang20/seed-tts-eval-arrow \
-        --model boson-sglang/higgs-audio-v3-TTS-4B-grpo05200410999 --port 8000 \
+        --model boson-sglang/higgs-audio-v3-tts-4b --port 8000 \
         --ref-format references \
         --output-dir results/higgs_tts_en \
-        --lang en --max-concurrency 16
+        --lang en --max-concurrency 64
 
     python -m benchmarks.eval.benchmark_tts_seedtts \
         --meta zhaochenyang20/seed-tts-eval-arrow \
@@ -124,6 +124,23 @@ Generation speed (generation.speed)
 | Higgs TTS | EN, stream=False | 1.749       | 2.600         | 0.425    | 9.104          | 112.9                          | PR #534 [H200, full-set, c=16, CUDA Graph on, torch.compile off] |
 | Higgs TTS | ZH, stream=False | 1.629       | 2.110         | 0.282    | 9.792          | 109.9                          | PR #534 [H200, full-set, c=16, CUDA Graph on, torch.compile off] |
 | MOSS-TTS | EN, stream=False | 3.890       | 4.781         | 0.913    | 4.091          | 54.1                           | PR #609 [H100, full-set, c=16, token-count=auto] |
+
+Higgs TTS concurrency sweep (generation.speed)
+
+Full SeedTTS EN set, 1088/1088 successful requests per run, 3 runs per
+concurrency. Scores are mean over the 3 complete runs. Plots and raw
+aggregation are saved under:
+results/higgs_tts_concurrency_sweep_existing_server_20260603/summary/
+
+| concurrency | latency_mean_s | latency_median_s | latency_p95_s | latency_p99_s | rtf_mean | rtf_median | rtf_p95 | rtf_p99 | audio_duration_mean_s | audio_throughput_s_per_s | output_throughput_tok_s | output_tok_per_req_s | throughput_qps | Source |
+| ----------- | -------------- | ---------------- | ------------- | ------------- | -------- | ---------- | ------- | ------- | --------------------- | ------------------------ | ----------------------- | -------------------- | -------------- | ------ |
+| 1           | 0.617          | 0.595            | 0.882         | 1.010         | 0.1473   | 0.1448     | 0.1665  | 0.1927  | 4.251                 | 6.885                    | 183.5                   | 196.2                | 1.620          | Local H100, full-set, n=3 mean, c=1, persistent server |
+| 2           | 0.742          | 0.721            | 1.060         | 1.264         | 0.1801   | 0.1710     | 0.2374  | 0.2931  | 4.218                 | 11.368                   | 303.1                   | 183.4                | 2.695          | Local H100, full-set, n=3 mean, c=2, persistent server |
+| 4           | 0.733          | 0.718            | 1.045         | 1.227         | 0.1774   | 0.1743     | 0.2056  | 0.2436  | 4.189                 | 22.837                   | 609.1                   | 166.0                | 5.452          | Local H100, full-set, n=3 mean, c=4, persistent server |
+| 8           | 0.898          | 0.880            | 1.289         | 1.513         | 0.2171   | 0.2131     | 0.2557  | 0.3096  | 4.198                 | 37.383                   | 996.9                   | 135.1                | 8.905          | Local H100, full-set, n=3 mean, c=8, persistent server |
+| 16          | 1.079          | 1.057            | 1.567         | 1.834         | 0.2616   | 0.2527     | 0.3288  | 0.4096  | 4.195                 | 61.842                   | 1649.3                  | 114.5                | 14.742         | Local H100, full-set, n=3 mean, c=16, persistent server |
+| 32          | 2.106          | 2.085            | 2.675         | 2.966         | 0.5273   | 0.5031     | 0.7190  | 0.9553  | 4.191                 | 63.009                   | 1680.5                  | 56.2                 | 15.034         | Local H100, full-set, n=3 mean, c=32, persistent server |
+| 64          | 4.236          | 4.261            | 4.959         | 5.361         | 1.0784   | 1.0226     | 1.6119  | 2.1907  | 4.214                 | 62.232                   | 1659.2                  | 28.4                 | 14.765         | Local H100, full-set, n=3 mean, c=64, persistent server |
 """
 
 from __future__ import annotations
