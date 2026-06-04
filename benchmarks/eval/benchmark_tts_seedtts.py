@@ -34,7 +34,7 @@ Usage:
         --model boson-sglang/higgs-audio-v3-tts-4b --port 8000 \
         --ref-format references \
         --output-dir results/higgs_tts_en \
-        --lang en --max-concurrency 64
+        --lang en --max-concurrency 16
 
     python -m benchmarks.eval.benchmark_tts_seedtts \
         --meta zhaochenyang20/seed-tts-eval-arrow \
