@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang-Omni 每日 PR 学习日报 · 2026-06-05</title>
+<style>
+  :root{
+    --bg:#0f1220; --card:#171a2b; --card2:#1d2138; --ink:#e7e9f3; --muted:#a7adc6;
+    --accent:#7c8cff; --accent2:#41d6a0; --line:#2a2f4a; --code:#11142220;
+    --add-bg:#0f2e1f; --add-ink:#7ee2b8; --del-bg:#3a1620; --del-ink:#ff9bb0;
+    --kw:#c792ea; --str:#a5e26b; --com:#6b7394; --fn:#82aaff; --num:#f7b267;
+    --tag-perf:#ff7597; --tag-attn:#7c8cff; --tag-sched:#41d6a0; --tag-audio:#f7b267; --tag-ci:#56ccf2; --tag-doc:#9aa3c0;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:linear-gradient(180deg,#0c0f1c,#0f1220 240px); color:var(--ink);
+    font-family:"Segoe UI","Helvetica Neue","PingFang SC","Microsoft YaHei","Noto Sans CJK SC","WenQuanYi Zen Hei",sans-serif;
+    line-height:1.7; font-size:16px;
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:40px 26px 80px}
+  header.hero{
+    background:radial-gradient(1200px 400px at 20% -10%,#2a2f6a55,transparent),var(--card);
+    border:1px solid var(--line); border-radius:20px; padding:34px 32px; margin-bottom:30px;
+  }
+  .hero h1{margin:0 0 6px; font-size:30px; letter-spacing:.3px}
+  .hero .sub{color:var(--muted); font-size:15px}
+  .hero .date{display:inline-block; margin-top:14px; padding:5px 14px; border:1px solid var(--accent);
+    color:var(--accent); border-radius:999px; font-size:13px; font-weight:600}
+  .grid{display:flex; flex-wrap:wrap; gap:14px; margin-top:24px}
+  .stat{flex:1 1 150px; background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:16px 18px}
+  .stat .n{font-size:30px; font-weight:800; color:#fff}
+  .stat .l{color:var(--muted); font-size:13px; margin-top:2px}
+  .themes{margin-top:24px}
+  .themes h3{margin:0 0 12px; font-size:15px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:1px}
+  .chip{display:inline-block; padding:6px 13px; border-radius:999px; font-size:13px; font-weight:600;
+    margin:0 8px 8px 0; border:1px solid var(--line)}
+  .chip b{font-weight:800}
+  .tag{display:inline-block; padding:3px 10px; border-radius:7px; font-size:12px; font-weight:700; color:#0c0f1c}
+  .t-perf{background:var(--tag-perf)} .t-attn{background:var(--tag-attn)} .t-sched{background:var(--tag-sched)}
+  .t-audio{background:var(--tag-audio)} .t-ci{background:var(--tag-ci)} .t-doc{background:var(--tag-doc)}
+
+  details.card{background:var(--card); border:1px solid var(--line); border-radius:18px; margin:20px 0; overflow:hidden}
+  details.card[open]{box-shadow:0 8px 40px #0006}
+  summary{list-style:none; cursor:pointer; padding:22px 26px; display:block}
+  summary::-webkit-details-marker{display:none}
+  .sm-top{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .prnum{font-weight:800; color:var(--accent); font-size:14px}
+  .sm-title{font-size:20px; font-weight:750; margin:8px 0 6px; color:#fff}
+  .sm-meta{color:var(--muted); font-size:13.5px}
+  .sm-meta a{color:var(--accent2); text-decoration:none}
+  .sm-one{margin-top:10px; color:var(--ink); font-size:14.5px; background:var(--card2);
+    border-left:3px solid var(--accent); padding:10px 14px; border-radius:0 10px 10px 0}
+  .body{padding:4px 26px 26px}
+  .body h4{margin:26px 0 8px; font-size:16.5px; color:#fff; border-bottom:1px solid var(--line); padding-bottom:7px}
+  .body h4 .em{color:var(--accent2)}
+  .body h5{margin:18px 0 6px; font-size:14.5px; color:var(--accent)}
+  .body p{margin:9px 0}
+  .body ul{margin:8px 0 8px; padding-left:22px}
+  .body li{margin:5px 0}
+  .muted{color:var(--muted)}
+  .kbd{font-family:ui-monospace,Menlo,Consolas,"WenQuanYi Zen Hei",monospace; background:#0c0f1c; border:1px solid var(--line);
+    border-radius:6px; padding:1px 7px; font-size:13px; color:var(--accent2)}
+  .note{background:#16213a; border:1px solid #2b3a63; border-radius:12px; padding:13px 16px; margin:14px 0; font-size:14px}
+  .note b{color:var(--accent)}
+  .analogy{background:#1a1530; border:1px solid #3a2b63; border-radius:12px; padding:13px 16px; margin:14px 0; font-size:14px}
+  .analogy b{color:var(--kw)}
+
+  pre{background:#0b0e1a; border:1px solid var(--line); border-radius:12px; padding:14px 16px; overflow-x:auto;
+    font-family:ui-monospace,Menlo,Consolas,"Liberation Mono","WenQuanYi Zen Hei",monospace; font-size:13px; line-height:1.55; margin:12px 0}
+  code{font-family:ui-monospace,Menlo,Consolas,"WenQuanYi Zen Hei",monospace}
+  pre code{white-space:pre}
+  .kw{color:var(--kw)} .str{color:var(--str)} .com{color:var(--com)} .fn{color:var(--fn)} .num{color:var(--num)}
+  pre.diff .l{display:block; padding:0 6px; border-radius:3px}
+  pre.diff .add{background:var(--add-bg); color:var(--add-ink)}
+  pre.diff .del{background:var(--del-bg); color:var(--del-ink)}
+  pre.diff .ctx{color:#aeb6d6}
+  pre.diff .hdr{color:#6b7394}
+
+  .concept{background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:4px 18px; margin:12px 0}
+  .concept summary{padding:14px 4px; font-weight:700; color:#fff; font-size:15px}
+  .concept .ico{color:var(--accent)}
+  .concept .three{padding:0 2px 14px}
+  .concept .three b{color:var(--accent2)}
+
+  table{border-collapse:collapse; width:100%; margin:14px 0; font-size:13.5px}
+  th,td{border:1px solid var(--line); padding:8px 11px; text-align:left}
+  th{background:var(--card2); color:#fff}
+  td.r,th.r{text-align:right}
+  .pos{color:var(--add-ink); font-weight:700}
+
+  .docs-table td{vertical-align:top}
+  footer{margin-top:40px; color:var(--muted); font-size:13px; text-align:center; border-top:1px solid var(--line); padding-top:20px}
+
+  @media print{
+    body{background:#fff; color:#15182a; font-size:11.5px; line-height:1.55}
+    .wrap{max-width:100%; padding:0}
+    header.hero{background:#f1f3fb; border-color:#d4d9ec}
+    .hero h1{color:#11142b} .hero .sub,.muted,.sm-meta{color:#55607f}
+    .stat,.themes h3,.concept,.note,.analogy,.sm-one{background:#f6f7fc}
+    .stat .n{color:#11142b}
+    details.card{background:#fff; border-color:#d4d9ec; box-shadow:none; break-inside:avoid}
+    .sm-title,.body h4,.stat .n{color:#11142b}
+    .body h4{border-color:#d4d9ec}
+    pre{background:#0d1020; color:#e7e9f3; border-color:#0d1020}
+    pre .ctx,pre.diff .ctx{color:#cdd3ea}
+    a{color:#2a44c0}
+    details.card,.concept{break-inside:avoid}
+    h4,h5{break-after:avoid}
+    .note,.analogy,pre,table{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>SGLang-Omni 每日 PR 学习日报</h1>
+  <div class="sub">仓库 <a style="color:var(--accent2)" href="https://github.com/sgl-project/sglang-omni">sgl-project/sglang-omni</a> · 过去 24 小时已合并 PR · 聚焦 Omni / 多模态 / 多阶段架构</div>
+  <div class="date">📅 报告日期：2026-06-05（统计窗口：2026-06-04 ~ 2026-06-05）</div>
+
+  <div class="grid">
+    <div class="stat"><div class="n">14</div><div class="l">24h 内合并 PR 总数</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">含真实代码改动（精讲）</div></div>
+    <div class="stat"><div class="n">9</div><div class="l">文档 / 基建类（速览）</div></div>
+    <div class="stat"><div class="n">4</div><div class="l">直接触及多阶段/多模态</div></div>
+  </div>
+
+  <div class="themes">
+    <h3>当日主题分类</h3>
+    <span class="chip" style="border-color:var(--tag-perf);color:var(--tag-perf)"><b>性能优化</b> · Higgs 异步解码 (#692)</span>
+    <span class="chip" style="border-color:var(--tag-attn);color:var(--tag-attn)"><b>注意力后端</b> · LLaDA2-Uni FlashInfer (#691)</span>
+    <span class="chip" style="border-color:var(--tag-sched);color:var(--tag-sched)"><b>调度器适配</b> · DLLM Scheduler (#670)</span>
+    <span class="chip" style="border-color:var(--tag-audio);color:var(--tag-audio)"><b>多模态音频输出</b> · PyAV 编码 (#686)</span>
+    <span class="chip" style="border-color:var(--tag-ci);color:var(--tag-ci)"><b>基准/CI</b> · ASR 并发扫描 (#647)</span>
+    <span class="chip" style="border-color:var(--tag-doc);color:var(--tag-doc)"><b>文档 & 基建</b> · ×9</span>
+  </div>
+  <p class="muted" style="margin-top:18px; font-size:13.5px">本报告遵循"讲透优先于覆盖广"：对 5 个含代码的 PR 逐块拆解并补全背景知识；9 个文档/基建类 PR 在文末以表格速览。每张卡片可点击展开/折叠。</p>
+</header>
+
+<!-- ============================ PR #692 ============================ -->
+<details class="card" open>
+  <summary>
+    <div class="sm-top"><span class="prnum">PR #692</span><span class="tag t-perf">性能优化</span><span class="tag t-perf">Higgs TTS</span><span class="tag t-perf">多阶段</span></div>
+    <div class="sm-title">[Higgs] Optimize Higgs async decode resolve output handling</div>
+    <div class="sm-meta">作者 <b>@Ratish1</b> · 状态 <b style="color:var(--add-ink)">merged</b> · <a href="https://github.com/sgl-project/sglang-omni/pull/692">查看 PR ↗</a></div>
+    <div class="sm-one">💡 一句话：在 Higgs TTS 的"异步解码"路径里，把只用于输出处理的那块小张量从 GPU 上构建改为直接在 CPU 上构建，省掉一次无谓的 GPU 操作与隐式同步，端到端吞吐 <b class="pos">+13~15%</b>。</div>
+  </summary>
+  <div class="body">
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>Higgs 是一个 <b>多码本（multi-codebook）自回归 TTS 模型</b>：它每"走一步"不是吐出 1 个 token，而是同时吐出多个 codebook 的离散音频码。为了把 GPU 算得快、又不让 CPU 拖后腿，SGLang-Omni 给它实现了一条 <b>异步解码（async decode）</b> 流水线——GPU 先把这一步算完并"抢跑"下一步，CPU 在后面慢一拍地把结果搬回主机做整理。</p>
+    <p>痛点在于：异步路径里那一步"滞后的整理"（resolve）其实<b>只需要一个 CPU 上的小列表</b>（拿来做输出处理、马上要 <span class="kbd">.tolist()</span> 转成 Python list）。但旧代码不分场景，<b>无论同步还是异步，都把这个结果张量建在 GPU 上</b>。在异步整理阶段这就等于：先在 GPU 上 new 一个张量、再立刻拷回 CPU——做了一趟完全没必要的来回，还可能引入隐式的设备同步，打断 GPU 的"抢跑"节奏。</p>
+    <div class="analogy"><b>类比：</b>厨房里大厨（GPU）已经把下一道菜的料备好抢先开火了；传菜员（CPU）只需要把上一道菜的"小票"念给收银台听。旧做法却让传菜员每次都先跑回厨房、在灶台上重抄一张小票再拿出来念——明明手里那张纸条（CPU 张量）就够用。这个 PR 就是让传菜员直接用手里的纸条。</p></div>
+
+    <h4>3. 具体做了什么改动</h4>
+    <p>核心文件只有一个：<span class="kbd">sglang_omni/models/higgs_tts/model_runner.py</span>。改动的本质是给内部函数 <span class="kbd">_decode_collect_host</span> 增加一个 <b>keyword-only 参数</b> <span class="kbd">next_token_device</span>，用它来决定"输出张量建在哪个设备上"。</p>
+
+    <h5>(a) 给 collect 函数加上"目标设备"开关</h5>
+<pre class="diff"><code><span class="l hdr">def _decode_collect_host(</span>
+<span class="l del">-     self, combined_cpu, result, requests</span>
+<span class="l add">+     self, combined_cpu, result, requests, *, next_token_device: torch.device | None</span>
+<span class="l ctx"> ) -&gt; None:</span>
+<span class="l ctx">     ...</span>
+<span class="l del">-    result.next_token_ids = torch.tensor(</span>
+<span class="l del">-        cb0_per_row, dtype=torch.long,</span>
+<span class="l del">-        device=result.logits_output.next_token_logits.device,   # 永远在 GPU 上建</span>
+<span class="l del">-    )</span>
+<span class="l add">+    if next_token_device is None:                 # 异步 resolve：直接建 CPU 张量</span>
+<span class="l add">+        result.next_token_ids = torch.tensor(cb0_per_row, dtype=torch.long)</span>
+<span class="l add">+    else:                                         # 同步路径：建在 logits 所在的 GPU</span>
+<span class="l add">+        result.next_token_ids = torch.tensor(</span>
+<span class="l add">+            cb0_per_row, dtype=torch.long, device=next_token_device,</span>
+<span class="l add">+        )</span></code></pre>
+    <p class="muted"><span class="kbd">cb0_per_row</span> 是一个普通的 Python <span class="kbd">list[int]</span>——每个请求"第 0 号 codebook"这一步采到的 token。把它喂给 <span class="kbd">torch.tensor(...)</span> 时，<b>不指定 device 就默认建在 CPU</b>，指定了才会触发一次 host→device 拷贝。</p>
+
+    <h5>(b) 两个调用点分别传入不同的设备</h5>
+<pre class="diff"><code><span class="l com"># 同步 / CUDA-Graph 路径（_collect_step_outputs_cg）：结果要喂给"下一步"，必须留在 GPU</span>
+<span class="l add">+    next_token_device=result.logits_output.next_token_logits.device,</span>
+
+<span class="l com"># 异步 resolve 路径（post_decode_resolve）：只做输出处理，传 None → 建在 CPU</span>
+<span class="l add">+    next_token_device=None,</span></code></pre>
+
+    <h5>(c) 为什么异步路径"丢掉 GPU 张量"是安全的？</h5>
+    <p>关键在于异步路径的<b>另一半</b>（<span class="kbd">post_decode_launch</span>，GPU 半边）<u>早就已经</u>把下一步要用的 codebook-0 token 在 GPU 上发布好了。下面是同仓库里 launch 阶段的真实注释（<span class="kbd">model_runner.py</span> 第 84–94 行）：</p>
+<pre><code><span class="com"># Set next_token_ids (cb0) from GPU state now, with NO host sync, so the</span>
+<span class="com"># AR input chain (next step's input_ids = this step's output_ids) is</span>
+<span class="com"># available at launch — the host collect (post_decode_resolve) lags by one step.</span>
+result.next_token_ids = (
+    self.model._cg_codes_BN[:n_real, <span class="num">0</span>].clamp_min(<span class="num">0</span>).to(torch.long).clone()
+)</code></pre>
+    <p>也就是说：在异步模式下，"驱动下一步自回归"的那份 GPU 张量已经在 launch 阶段产出了；滞后一步的 resolve 只负责"把这一步的结果整理成给用户看的输出"，它要的只是一个 CPU 列表。所以把它建在 CPU 上不仅不影响正确性，反而省掉了"建在 GPU 再拷回来"的浪费。PR 描述也明确：采样数学、logits、温度/top-p/top-k、停止条件全部未动，只动了"输出张量落在哪个设备"。</p>
+
+    <h4>4. 涉及的知识点 <span class="em">（重点·小白展开）</span></h4>
+
+    <details class="concept" open><summary><span class="ico">▸</span> 多码本 TTS / RVQ codebook（多个"声音通道"一起预测）</summary>
+    <div class="three">
+      <p><b>它是什么：</b>普通语言模型一步预测 1 个文字 token；而神经音频编解码器（如 RVQ，残差向量量化）会把一帧声音压成 <b>多个并行的离散码</b>（codebook 0、1、2…）。Higgs 这类模型一步要同时预测好几个 codebook 的码，再由声码器还原成波形。</p>
+      <p><b>为什么需要它：</b>单个 codebook 表达力不够（音质差）；用多个 codebook 残差叠加，才能在低比特率下保留细节。代价是模型每步要处理"一摞"码而不是一个 token。</p>
+      <p><b>本 PR 里怎么用：</b><span class="kbd">cb0_per_row</span> 取的就是每个请求"codebook-0"的码，它被用来当作下一步自回归的输入接力（input_ids）。代码里的 <span class="kbd">_cg_codes_BN</span> 形状是 <span class="kbd">[Batch, Num_codebooks]</span>，<span class="kbd">[:, 0]</span> 就是取 0 号码本那一列。</p>
+    </div></details>
+
+    <details class="concept" open><summary><span class="ico">▸</span> Model Runner（模型运行器）与多阶段流水线</summary>
+    <div class="three">
+      <p><b>它是什么：</b>在 SGLang 体系里，<b>Model Runner</b> 是真正"把一个 batch 喂进模型、跑一次前向、收集输出"的执行单元。SGLang-Omni 把 TTS/Omni 拆成 <span class="kbd">preprocessing → AR engine → codec → vocoder</span> 等多个阶段（stage），每个阶段可以跑在不同进程甚至不同 GPU 上。</p>
+      <p><b>为什么需要它：</b>把"取数据 / 前向 / 采样 / 收集结果"封装在 runner 里，调度器（scheduler）只管"谁先跑、跑多大 batch"，职责清晰；多阶段拆分则让 CPU 预处理、GPU 推理、声码器解码能各自并行、互不阻塞。</p>
+      <p><b>本 PR 里怎么用：</b>改的就是 <span class="kbd">HiggsTTSModelRunner</span> 里"收集这一步输出"的逻辑。<span class="kbd">post_decode</span>（同步）、<span class="kbd">post_decode_launch</span> / <span class="kbd">post_decode_resolve</span>（异步两半）都复用同一个 <span class="kbd">_decode_collect_host</span>，所以加一个参数就能让两条路径各取所需。</p>
+    </div></details>
+
+    <details class="concept" open><summary><span class="ico">▸</span> 异步解码 & Host↔Device 拷贝 / 隐式同步</summary>
+    <div class="three">
+      <p><b>它是什么：</b>GPU 计算是异步排队的——CPU 把任务塞进 CUDA stream 就返回了，GPU 在后台慢慢算。"异步解码"利用这一点：GPU 先把下一步算起来（launch），CPU 在后面一步把上一步结果搬回主机（resolve）。<b>Host→Device（H2D）/ Device→Host（D2H）拷贝</b>就是 CPU 内存与显存之间搬数据。</p>
+      <p><b>为什么需要它：</b>如果每一步都"算完→立刻把结果拷回 CPU→等拷完→再算下一步"，GPU 会频繁空等（这种等待叫<b>隐式同步</b>，比如 <span class="kbd">.item()</span>、跨设备建张量都可能触发）。异步流水线把搬运藏到下一步计算的背后，GPU 几乎不停。</p>
+      <p><b>本 PR 里怎么用：</b>旧代码在异步 resolve 里 <span class="kbd">device=GPU</span> 地建张量，相当于在"本该轻量的整理步"又戳了一下 GPU、多搬一趟数据。改成在 CPU 上建，既匹配它"马上要 <span class="kbd">.tolist()</span>"的用途，又避免打断 GPU 抢跑。Benchmark 显示吞吐 +13~15%、RTF 降约 6%，正是这种"去掉一次小同步"在高并发下被放大的效果。</p>
+    </div></details>
+
+    <details class="concept" open><summary><span class="ico">▸</span> CUDA Graph 与 one-step lookahead（抢跑一步）</summary>
+    <div class="three">
+      <p><b>它是什么：</b><b>CUDA Graph</b> 把一串固定的 GPU kernel"录制"成一张图，之后整张图一次性重放，省掉每个 kernel 的启动开销（launch overhead）。代码里 <span class="kbd">_cg_*</span> 前缀（cg = CUDA Graph）的缓冲区就是为重放预分配的固定内存。</p>
+      <p><b>为什么需要它：</b>TTS 解码每步很小、kernel 很多，CPU 逐个发射 kernel 的开销会成为瓶颈。录成图重放后，CPU 只需"按一次播放键"。配合 lookahead（提前一步发起下一步），GPU 利用率进一步拉满。</p>
+      <p><b>本 PR 里怎么用：</b><span class="kbd">post_decode_launch</span> 在重放图后<b>不做 host 同步</b>就直接发布 GPU 上的 cb0，让自回归链条不断；真正的主机整理滞后一步在 <span class="kbd">resolve</span> 完成。本 PR 保证了这个滞后整理只产出 CPU 张量，不再回头碰 GPU。</p>
+    </div></details>
+
+    <h4>性能数据（PR 自带 · Seed-TTS EN，并发 8，async decode 开启）</h4>
+    <table>
+      <tr><th>指标</th><th class="r">Main（旧）</th><th class="r">本 PR</th><th class="r">变化</th></tr>
+      <tr><td>吞吐 Throughput (req/s)</td><td class="r">8.400</td><td class="r">9.645</td><td class="r pos">+14.8%</td></tr>
+      <tr><td>输出 token 吞吐 (tok/s)</td><td class="r">986.3</td><td class="r">1116.6</td><td class="r pos">+13.2%</td></tr>
+      <tr><td>音频吞吐 (s/s)</td><td class="r">37.10</td><td class="r">41.97</td><td class="r pos">+13.1%</td></tr>
+      <tr><td>延迟均值 (s)</td><td class="r">0.891</td><td class="r">0.828</td><td class="r pos">−7.1%</td></tr>
+      <tr><td>RTF 均值（越低越好）</td><td class="r">0.2073</td><td class="r">0.1940</td><td class="r pos">−6.4%</td></tr>
+      <tr><td>WER 语料级（音准）</td><td class="r">1.16%</td><td class="r">1.11%</td><td class="r">≈ 持平</td></tr>
+    </table>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>"为正确性付出的代价应当只付一次"。</b>同一份整理逻辑被同步/异步两条路复用，作者没有复制粘贴，而是用一个参数把"设备归属"这件唯一的差异抽出来——既复用又不牺牲性能。</li>
+      <li><b>性能优化常常藏在"无害但多余"的细节里。</b>这里没有改算法、没有上新 kernel，只是删掉一次"GPU 上建张量再拷回"的来回，就能在高并发下放大成两位数吞吐提升。</li>
+      <li><b>区分"驱动计算的张量"和"给用户看的张量"。</b>前者必须在 GPU、参与下一步；后者只是结果快照，放 CPU 最省。识别清楚数据的"用途"，才知道它该住在哪。</li>
+      <li><b>延伸前置知识：</b>CUDA stream / event 与异步执行模型、<span class="kbd">torch</span> 的 pinned memory 与 <span class="kbd">non_blocking=True</span> 拷贝、RVQ 神经音频编解码器、SGLang 的 scheduler↔model-runner 分工。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============================ PR #691 ============================ -->
+<details class="card" open>
+  <summary>
+    <div class="sm-top"><span class="prnum">PR #691</span><span class="tag t-attn">注意力后端</span><span class="tag t-attn">LLaDA2-Uni</span><span class="tag t-attn">多模态</span></div>
+    <div class="sm-title">[LLaDA2-Uni] Set default attention backend to flashinfer</div>
+    <div class="sm-meta">作者 <b>@btw616</b> · 状态 <b style="color:var(--add-ink)">merged</b> · <a href="https://github.com/sgl-project/sglang-omni/pull/691">查看 PR ↗</a></div>
+    <div class="sm-one">💡 一句话：给多模态扩散语言模型 LLaDA2-Uni 显式钉死注意力后端为 <span class="kbd">flashinfer</span>，修复"关掉 CUDA Graph 后注意力后端被自动选成不支持的那个"的连带 bug。</div>
+  </summary>
+  <div class="body">
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>LLaDA2-Uni 是一个 <b>多模态扩散语言模型（DLLM）</b>，能吃文本+图像、产出文本。它唯一被完整验证支持的注意力后端是 <b>FlashInfer</b>。但之前代码<b>从没显式声明过这件事</b>——它是"顺带"被保证的：早先默认开启 CUDA Graph，而开 CUDA Graph 时框架恰好会把后端选成 FlashInfer。换句话说，正确的后端是<b>靠一个无关设置的副作用</b>蒙对的。</p>
+    <p>最近有个改动<b>默认关掉了 LLaDA2-Uni 的 CUDA Graph</b>（这条实验性 DLLM 路径开图不稳定）。这一关，"顺带保证后端"的隐含链条就断了：框架的<b>自动后端选择</b>逻辑可能挑中一个 LLaDA2-Uni 根本不支持的后端，于是启动/推理直接出问题。本 PR 把这层<b>隐式依赖变成显式声明</b>。</p>
+    <div class="analogy"><b>类比：</b>你家的灯一直亮着，是因为"开空调时顺手也把灯打开了"。某天有人说"空调太吵，默认别开了"，结果灯也黑了——因为灯从来没有自己的开关，一直蹭空调的。这个 PR 就是给灯装上专属开关，不再依赖空调。</p></div>
+
+    <h4>3. 具体做了什么改动</h4>
+    <p>仅一处，文件 <span class="kbd">sglang_omni/models/llada2_uni/stages.py</span>。在构造 thinker 阶段的 server 参数时，把 overrides 字典从"只关 CUDA Graph"扩展为"显式指定 flashinfer + 关 CUDA Graph"：</p>
+<pre class="diff"><code><span class="l del">-    overrides = {"disable_cuda_graph": True}</span>
+<span class="l add">+    overrides: dict[str, Any] = {</span>
+<span class="l add">+        "attention_backend": "flashinfer",</span>
+<span class="l add">+        "disable_cuda_graph": True,</span>
+<span class="l add">+    }</span>
+<span class="l ctx">     overrides.update(server_args_overrides or {})</span></code></pre>
+    <p>逻辑前后对比：</p>
+    <ul>
+      <li><b>改动前：</b>只设 <span class="kbd">disable_cuda_graph=True</span>。<span class="kbd">attention_backend</span> 留空 → 交给框架自动推断 → 在"无 CUDA Graph"语境下可能选到非 FlashInfer 后端 → 崩。</li>
+      <li><b>改动后：</b>显式 <span class="kbd">attention_backend="flashinfer"</span>，不再让框架猜。同时保留 <span class="kbd">overrides.update(...)</span>，意味着用户若在配置里显式传了别的后端，<b>仍可覆盖</b>——默认值安全，但不剥夺高级用户的控制权。</li>
+    </ul>
+    <div class="note"><b>设计细节：</b>注意 <span class="kbd">overrides.update(server_args_overrides or {})</span> 放在最后一行执行，所以这里写的是<b>默认值</b>而非<b>强制值</b>——这是"安全默认 + 可覆盖"（sane default, still overridable）的经典写法。</div>
+
+    <h4>4. 涉及的知识点 <span class="em">（重点·小白展开）</span></h4>
+
+    <details class="concept" open><summary><span class="ico">▸</span> Attention Backend（注意力后端）是什么</summary>
+    <div class="three">
+      <p><b>它是什么：</b>Transformer 的核心计算是"注意力"（attention）。同一个数学公式，可以由不同的高性能实现来算——<b>FlashInfer</b>、FlashAttention、Triton、纯 PyTorch 等，这些可互换的实现就叫"注意力后端"。它们各自对硬件、数据布局、KV-cache 排布、是否支持变长/分页有不同要求。</p>
+      <p><b>为什么需要它：</b>注意力是推理里最吃显存带宽和算力的部分。挑对后端能显著提速、省显存；但不是每个后端都支持每种模型/特性（比如某些采样模式、分页 KV、特定 mask）。所以"模型 ↔ 后端"是有兼容性约束的。</p>
+      <p><b>本 PR 里怎么用：</b>LLaDA2-Uni 这条实验路径只在 FlashInfer 上被验证过。PR 把它钉死为默认后端，避免框架自动选择时挑到不兼容的实现。</p>
+    </div></details>
+
+    <details class="concept" open><summary><span class="ico">▸</span> FlashInfer 简介</summary>
+    <div class="three">
+      <p><b>它是什么：</b>FlashInfer 是一个面向 LLM 推理服务的高性能注意力/采样算子库，提供分页 KV-cache、各种 prefill/decode 注意力核、以及对 SGLang 这类引擎友好的接口。SGLang 把它作为重点支持的后端之一。</p>
+      <p><b>为什么需要它：</b>它针对"服务场景"（变长序列、连续批处理、分页 KV）做了深度优化，比通用实现更适合高并发推理。</p>
+      <p><b>本 PR 里怎么用：</b>就是被显式指定的那个值 <span class="kbd">"flashinfer"</span>。文档配套也补了一句："thinker 在这条实验 DLLM 路径下默认关闭 CUDA graph"。</p>
+    </div></details>
+
+    <details class="concept" open><summary><span class="ico">▸</span> CUDA Graph 为什么会"顺带"决定后端</summary>
+    <div class="three">
+      <p><b>它是什么：</b>前面讲过，CUDA Graph 把固定 kernel 序列录制后整体重放。但要能录制，所有 kernel 形状必须固定、且后端要支持"图捕获（graph capture）"模式。框架在"决定开图"时，往往会连带把注意力后端切到支持图捕获的那个（即 FlashInfer）。</p>
+      <p><b>为什么需要它：</b>这正是<b>隐式耦合</b>的来源——两个本应独立的配置（是否开图、用哪个后端）被框架的自动逻辑绑在了一起。一旦改了其中一个，另一个的取值就跟着变。</p>
+      <p><b>本 PR 里怎么用：</b>作者识别出这条隐式链，主动解耦：无论开不开图，后端都明确是 FlashInfer。这就是"消除隐式依赖、改为显式契约"的工程思想。</p>
+    </div></details>
+
+    <details class="concept"><summary><span class="ico">▸</span> 扩散语言模型 DLLM & thinker 阶段</summary>
+    <div class="three">
+      <p><b>它是什么：</b>主流 LLM 是自回归（一个一个 token 往外吐）；<b>扩散语言模型（Diffusion LLM）</b>则像图像扩散那样，从"全是 mask 的占位"出发，<b>分多轮并行去噪/填空</b>，逐步把整段文本确定下来。LLaDA2 系列就属于这类。"thinker"是 Omni 流水线里负责"理解+生成文本表征"的核心阶段。</p>
+      <p><b>为什么需要它：</b>扩散式生成在某些场景能更好地做全局规划、并行填充，是当前的研究热点。但它的调度/缓存模式和自回归不同，对引擎适配提出新要求（见下一张卡片 #670）。</p>
+      <p><b>本 PR 里怎么用：</b>改的就是 <span class="kbd">create_sglang_dllm_thinker_executor_from_config</span>——给 DLLM thinker 阶段配置后端。它和 #670 修的是同一个模型，一个修后端、一个修调度器，互为补充。</p>
+    </div></details>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>"靠副作用蒙对"是技术债。</b>当一个正确行为依赖于另一个无关配置的副作用时，它随时会因为那个配置的变动而无声崩坏。把隐式依赖写成显式声明，是消除这类脆弱性的标准手法。</li>
+      <li><b>安全默认 + 仍可覆盖。</b>把默认值放进 overrides 字典、再让用户配置 <span class="kbd">update</span> 在其后，是兼顾"开箱即用"和"高级可控"的小而美的写法。</li>
+      <li><b>一行代码的价值取决于它背后的因果链。</b>这个 PR 只加了一行，但价值在于作者讲清了"关图 → 自动选后端 → 选错 → 崩"的完整链路。读 PR 要读因果，不要只读 diff。</li>
+      <li><b>延伸前置知识：</b>FlashInfer/FlashAttention 的差异、注意力后端与 KV-cache 布局的兼容关系、扩散语言模型的采样过程、SGLang server_args 的后端自动选择逻辑。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============================ PR #670 ============================ -->
+<details class="card" open>
+  <summary>
+    <div class="sm-top"><span class="prnum">PR #670</span><span class="tag t-sched">调度器适配</span><span class="tag t-doc">文档</span><span class="tag t-sched">LLaDA2-Uni</span></div>
+    <div class="sm-title">Verify SGLang-Omni cookbook docs（含一处 DLLM 调度器实质修复）</div>
+    <div class="sm-meta">作者 <b>@MelodyyyYin</b> · 状态 <b style="color:var(--add-ink)">merged</b> · <a href="https://github.com/sgl-project/sglang-omni/pull/670">查看 PR ↗</a></div>
+    <div class="sm-one">💡 一句话：表面是"核对/补全各模型 cookbook 文档"，但夹带了一处关键代码修复——让 LLaDA2-Uni 的扩散调度器适配当前 SGLang 已经改过的 <span class="kbd">PrefillAdder</span> API，使 <span class="kbd">/v1/chat/completions</span> 文本输出真正跑通。</div>
+  </summary>
+  <div class="body">
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>SGLang-Omni 把 <b>sglang</b> 作为底层推理引擎依赖。但开发镜像里跑的是 <span class="kbd">sglang 0.0.0.dev1</span>（比锁定的 <span class="kbd">0.5.8</span> 更新），上游把 <b><span class="kbd">PrefillAdder</span> 的接口改了</b>：</p>
+    <ul>
+      <li>它的 <span class="kbd">__init__</span> 不再接受 <span class="kbd">dllm_config</span> 参数；</li>
+      <li>原来的辅助属性 <span class="kbd">PrefillAdder.dllm_staging_reqs</span> 被删除了。</li>
+    </ul>
+    <p>于是 LLaDA2-Uni 旧的扩散调度器路径在"还没碰到模型"时就抛异常——也就是说，<span class="kbd">/v1/chat/completions</span> 对这个模型<b>根本调不通</b>。本 PR 把调度器改写到新 API 上，让文本对话请求能正常返回（已在 dev 镜像上实测：返回连贯文本、<span class="kbd">finish_reason: stop</span>、HTTP 200）。</p>
+    <div class="note"><b>上游漂移（upstream drift）的典型案例：</b>你依赖的库悄悄改了内部 API，你的适配层就断了。这类问题不在你的代码里、却让你的功能挂掉，排查尤其费神。</div>
+
+    <h4>3. 具体做了什么改动（核心：<span class="kbd">scheduling/dllm_scheduler.py</span>）</h4>
+
+    <h5>(a) chunked-prefill 尺寸来源更稳健</h5>
+<pre class="diff"><code><span class="l add">+    self._chunked_prefill_size = (</span>
+<span class="l add">+        getattr(dllm_config, "block_size", None) or server_args.chunked_prefill_size</span>
+<span class="l add">+    )</span></code></pre>
+    <p class="muted">扩散模型按"块（block）"去噪，块大小更贴合它的语义；拿不到就回退到 server 通用值。<span class="kbd">getattr(..., None) or ...</span> 是 Python 里"优先取 A，没有就取 B"的惯用写法。</p>
+
+    <h5>(b) 构造 PrefillAdder 时不再传被删掉的参数</h5>
+<pre class="diff"><code><span class="l ctx">     adder = PrefillAdder(</span>
+<span class="l ctx">         ..., self.server_args.max_prefill_tokens,</span>
+<span class="l del">-        self.server_args.chunked_prefill_size,</span>
+<span class="l del">-        dllm_config=self.dllm_config,        # 新版已不接受这个参数</span>
+<span class="l add">+        self._chunked_prefill_size,</span>
+<span class="l add">+        prefill_max_requests=1,              # 显式限制：本阶段一次只跑 1 个请求</span>
+<span class="l ctx">     )</span></code></pre>
+
+    <h5>(c) 用 <span class="kbd">can_run_list</span> 取代被删的 <span class="kbd">dllm_staging_reqs</span></h5>
+<pre class="diff"><code><span class="l del">-    for req in adder.dllm_staging_reqs:       # 旧 helper，已不存在</span>
+<span class="l add">+    for req in adder.can_run_list:            # 用现有的"可运行列表"自己维护暂存队列</span>
+<span class="l ctx">         if req.rid not in staging_rids:</span>
+<span class="l ctx">             self._staging_queue.append(req)</span></code></pre>
+    <p class="muted">扩散请求要反复调度多轮才结束，所以调度器需要把"正在进行"的请求<b>留在自己的 staging 队列</b>里；既然上游不再帮忙提供这个列表，就用现有的 <span class="kbd">can_run_list</span> 自己维护。</p>
+
+    <h5>(d) 结果回填：兼容"单请求扁平 token 列表"</h5>
+<pre class="diff"><code><span class="l com"># 本阶段一次只跑 1 个请求，模型可能返回"扁平的一串 token id"</span>
+<span class="l com"># 而不是"每请求一份"的嵌套结构，这里做归一化：</span>
+<span class="l add">+    if len(batch.reqs) == 1 and (not token_ids or isinstance(token_ids[0], int)):</span>
+<span class="l add">+        token_ids_per_req = [token_ids]      # 包一层，统一成 [[t0,t1,...]]</span>
+<span class="l add">+    else:</span>
+<span class="l add">+        token_ids_per_req = token_ids</span>
+<span class="l add">+    for req, req_token_ids in zip(batch.reqs, token_ids_per_req):</span>
+<span class="l add">+        for token_id in req_token_ids:</span>
+<span class="l add">+            req.output_ids.append(int(token_id))</span>
+<span class="l add">+            req.check_finished()</span>
+<span class="l add">+            if req.finished():</span>
+<span class="l add">+                break</span></code></pre>
+    <p>作者还贴心地留了一条<b>护栏注释</b>：如果将来把 <span class="kbd">prefill_max_requests</span> 提到 1 以上，这段"扁平列表"分支必须连同调度上限一起重审，否则 <span class="kbd">zip()</span> 会把每个请求错配成单个 int。这是"为未来的自己/同事埋好警示牌"的好习惯。</p>
+
+    <h4>文档侧改了什么（同 PR 一并合入）</h4>
+    <ul>
+      <li>新增 cookbook：<b>Fish Audio S2-Pro、Qwen3-ASR、Whisper ASR</b>（后者标注"实验性、未做正确性验证，优先用 Qwen3-ASR"）。</li>
+      <li>纠正 Higgs 公共语音字段：去掉文档里并不存在的 <span class="kbd">reference_codes</span>/<span class="kbd">reference_text</span>，改为真实暴露的 <span class="kbd">references</span> / <span class="kbd">ref_audio</span> / <span class="kbd">ref_text</span>。</li>
+      <li>给 Qwen3-Omni 补 <span class="kbd">max_completion_tokens</span>（OpenAI 兼容别名）。</li>
+      <li>首页特性表加入 <span class="kbd">/v1/audio/transcriptions</span> 端点与 ASR 模型，明确 LLaDA2-Uni 当前"只支持文本输出，图像/交错生成尚未接通"。</li>
+    </ul>
+
+    <h4>4. 涉及的知识点 <span class="em">（重点·小白展开）</span></h4>
+
+    <details class="concept" open><summary><span class="ico">▸</span> Scheduler（调度器）与 PrefillAdder</summary>
+    <div class="three">
+      <p><b>它是什么：</b><b>调度器</b>是推理引擎的"交通指挥"：决定当前这一拍把哪些请求、组成多大 batch 喂给 GPU。<b>PrefillAdder</b> 是 SGLang 里负责"prefill 阶段往 batch 里塞请求"的组件——它会按显存预算、token 上限、KV-cache 容量来决定能塞几个、塞多少。</p>
+      <p><b>为什么需要它：</b>推理是多请求共享一块 GPU。塞太多会 OOM，塞太少浪费算力。PrefillAdder 就是把"能塞的请求"精确算出来的那段逻辑。</p>
+      <p><b>本 PR 里怎么用：</b>扩散调度器复用 PrefillAdder 来组 batch；上游改了它的签名（去掉 <span class="kbd">dllm_config</span>、删了 <span class="kbd">dllm_staging_reqs</span>），本 PR 把调用方式迁移到新接口，并用 <span class="kbd">prefill_max_requests=1</span> 显式表达"这条实验路径一次只跑一个请求"。</p>
+    </div></details>
+
+    <details class="concept" open><summary><span class="ico">▸</span> Prefill vs Decode / Chunked Prefill</summary>
+    <div class="three">
+      <p><b>它是什么：</b>自回归推理分两段：<b>Prefill</b>（一次性并行处理整段输入 prompt，建好 KV-cache）和 <b>Decode</b>（之后一个一个往外吐 token）。<b>Chunked Prefill</b>：当 prompt 很长时，把 prefill 切成若干小块分批做，避免一次占满显存、也让长 prompt 不至于饿死其他请求。</p>
+      <p><b>为什么需要它：</b>长输入的 prefill 是显存/算力尖峰；分块能平滑这个尖峰，提升整体并发与公平性。</p>
+      <p><b>本 PR 里怎么用：</b>(a) 处优先用扩散模型自己的 <span class="kbd">block_size</span> 作为 chunk 尺寸——因为 DLLM 本来就是按块去噪的，块大小语义最贴合。</p>
+    </div></details>
+
+    <details class="concept"><summary><span class="ico">▸</span> 扩散调度的特殊性：为什么要"反复调度同一请求"</summary>
+    <div class="three">
+      <p><b>它是什么：</b>自回归请求每步产出一个 token、走很多步直到 EOS；扩散请求则是对<b>整个序列</b>做多轮去噪，每一轮都要再进一次模型，直到所有位置都"定稿"。</p>
+      <p><b>为什么需要它：</b>因为同一个请求要被调度器拉起好多轮，调度器必须自己记住"哪些请求还在去噪中"（staging 队列），不能 prefill 一次就丢掉。</p>
+      <p><b>本 PR 里怎么用：</b>(c) 处用 <span class="kbd">can_run_list</span> 重建这个 staging 队列，正是为了在新 API 下继续维持"扩散请求的多轮生命周期"。</p>
+    </div></details>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>适配层（adapter）是依赖漂移的缓冲垫。</b>当你把第三方引擎包进自己的抽象里，对方升级就可能击穿你的假设。把"对外部 API 的调用"集中、并用 <span class="kbd">getattr(..., default)</span> 等防御写法，能降低被上游改动击穿的概率。</li>
+      <li><b>给未来留护栏注释。</b>作者在"扁平列表"分支显式写明"若 <span class="kbd">prefill_max_requests</span> &gt; 1 必须重审"，把一个隐藏假设变成可见警告——这是高质量工程代码的标志。</li>
+      <li><b>文档 PR 也可能"夹带"实质修复。</b>读 PR 别只看标题；这条标题是"verify docs"，真正的金子是调度器迁移。审阅时务必看 diff 全貌。</li>
+      <li><b>延伸前置知识：</b>prefill/decode 两阶段、KV-cache 与显存预算、连续批处理（continuous batching）、扩散语言模型的去噪调度、语义化版本与依赖锁定（dependency pinning）。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============================ PR #686 ============================ -->
+<details class="card" open>
+  <summary>
+    <div class="sm-top"><span class="prnum">PR #686</span><span class="tag t-audio">多模态音频输出</span><span class="tag t-audio">客户端</span></div>
+    <div class="sm-title">Add support for pyAV-based mp3, aac, opus audio encoding</div>
+    <div class="sm-meta">作者 <b>@haojin2</b> · 状态 <b style="color:var(--add-ink)">merged</b> · <a href="https://github.com/sgl-project/sglang-omni/pull/686">查看 PR ↗</a></div>
+    <div class="sm-one">💡 一句话：把 TTS 输出的 mp3/aac/opus 编码从依赖外部 <span class="kbd">ffmpeg</span> 命令行的 <span class="kbd">pydub</span> 切到进程内的 <b>PyAV</b>，并自动处理各编码器对采样率的限制（必要时线性重采样），更稳、更可控、可降级回退。</div>
+  </summary>
+  <div class="body">
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>TTS 模型直接产出的是 24kHz 的浮点波形（PCM）。但用户通过 <span class="kbd">/v1/audio/speech</span> 拿到的常常想要 <b>mp3/aac/opus</b> 这种压缩格式。旧实现用 <span class="kbd">pydub</span> 来压缩，而 pydub 本质是<b>去 shell 调用系统里的 ffmpeg 二进制</b>——这带来两个麻烦：</p>
+    <ul>
+      <li><b>环境脆弱：</b>容器里不一定装了对的 ffmpeg、或版本不匹配，编码就失败。</li>
+      <li><b>采样率坑：</b>不同编码器对采样率有硬性限制（比如 Opus 只接受 8/12/16/24/48kHz）。直接把 24k 之外的采样率喂进去会报错或产出坏文件。</li>
+    </ul>
+    <p>本 PR 改用 <b>PyAV</b>（FFmpeg 的 Python 原生绑定，进程内调用，不依赖外部命令行），并为每种格式预置"合法采样率白名单"，遇到非法采样率就先<b>线性重采样</b>到最近的合法值，再编码。万一 PyAV 也失败，还会优雅降级回 pydub，再不行回退 WAV——三层兜底。</p>
+
+    <h4>3. 具体做了什么改动（核心：<span class="kbd">sglang_omni/client/audio.py</span>）</h4>
+
+    <h5>(a) 预置各编码器的"合法采样率"配置表</h5>
+<pre><code><span class="kw">PYAV_ENCODE_CONFIGS</span> = {
+    <span class="str">"opus"</span>: {<span class="str">"container"</span>: <span class="str">"ogg"</span>,  <span class="str">"codecs"</span>: (<span class="str">"libopus"</span>, <span class="str">"opus"</span>),
+              <span class="str">"valid_rates"</span>: {<span class="num">8000</span>, <span class="num">12000</span>, <span class="num">16000</span>, <span class="num">24000</span>, <span class="num">48000</span>}},
+    <span class="str">"aac"</span>:  {<span class="str">"container"</span>: <span class="str">"adts"</span>, <span class="str">"codecs"</span>: (<span class="str">"aac"</span>,),
+              <span class="str">"valid_rates"</span>: {<span class="num">8000</span>, <span class="num">16000</span>, <span class="num">22050</span>, <span class="num">24000</span>, <span class="num">44100</span>, <span class="num">48000</span>, ...}},
+    <span class="str">"mp3"</span>:  {<span class="str">"container"</span>: <span class="str">"mp3"</span>,  <span class="str">"codecs"</span>: (<span class="str">"libmp3lame"</span>, <span class="str">"mp3"</span>),
+              <span class="str">"valid_rates"</span>: {<span class="num">8000</span>, <span class="num">16000</span>, <span class="num">22050</span>, <span class="num">24000</span>, <span class="num">44100</span>, <span class="num">48000</span>, ...}},
+}</code></pre>
+    <p class="muted">每种格式记录三件事：用哪个<b>容器</b>（封装格式）、优先尝试哪些<b>编码器</b>（codec，给出备选名以适配不同 FFmpeg 构建）、以及该编码器能接受的<b>合法采样率集合</b>。</p>
+
+    <h5>(b) 非法采样率 → 线性重采样到最近合法值</h5>
+<pre><code><span class="kw">def</span> <span class="fn">_encode_with_pyav</span>(audio, sample_rate, container_format, codecs, valid_rates):
+    <span class="kw">if</span> sample_rate <span class="kw">not in</span> valid_rates:
+        nearest_rate = <span class="fn">min</span>(valid_rates, key=<span class="kw">lambda</span> r: <span class="fn">abs</span>(r - sample_rate))
+        audio = <span class="fn">_resample_linear</span>(audio, sample_rate, nearest_rate)  <span class="com"># 重采样</span>
+        sample_rate = nearest_rate
+
+    container = av.<span class="fn">open</span>(buf, mode=<span class="str">"w"</span>, format=container_format)
+    stream = <span class="kw">None</span>
+    <span class="kw">for</span> codec <span class="kw">in</span> codecs:            <span class="com"># 逐个尝试候选 codec，挑第一个本机支持的</span>
+        <span class="kw">try</span>:
+            stream = container.<span class="fn">add_stream</span>(codec, rate=sample_rate); <span class="kw">break</span>
+        <span class="kw">except</span> av.CodecError:
+            <span class="kw">continue</span>
+    ...
+    <span class="com"># FFmpeg 这些 codec 要 float-planar (fltp) 格式、单声道</span>
+    frame = av.AudioFrame.<span class="fn">from_ndarray</span>(audio.<span class="fn">reshape</span>(<span class="num">1</span>, -<span class="num">1</span>), format=<span class="str">"fltp"</span>, layout=<span class="str">"mono"</span>)
+    <span class="kw">for</span> packet <span class="kw">in</span> stream.<span class="fn">encode</span>(frame):  container.<span class="fn">mux</span>(packet)
+    <span class="kw">for</span> packet <span class="kw">in</span> stream.<span class="fn">encode</span>(<span class="kw">None</span>):   container.<span class="fn">mux</span>(packet)   <span class="com"># flush 收尾</span></code></pre>
+    <p>这里有两个值得注意的工程点：<b>① codec 候选回退</b>——先试 <span class="kbd">libopus</span>，不行再试内建 <span class="kbd">opus</span>，因为不同 FFmpeg 编译版本带的编码器名字不同；<b>② <span class="kbd">stream.encode(None)</span></b>——音频编码器内部有缓冲，传 <span class="kbd">None</span> 是"冲刷（flush）"信号，把最后残留的几帧也吐出来，否则文件尾部会丢音。</p>
+
+    <h5>(c) 重采样实现：用 numpy 线性插值，零额外依赖</h5>
+<pre><code><span class="kw">def</span> <span class="fn">_resample_linear</span>(audio, orig_sr, target_sr):
+    <span class="kw">if</span> orig_sr == target_sr: <span class="kw">return</span> audio          <span class="com"># 相等直接返回</span>
+    duration = audio.shape[<span class="num">0</span>] / <span class="fn">float</span>(orig_sr)
+    new_len  = <span class="fn">max</span>(<span class="fn">int</span>(<span class="fn">round</span>(duration * target_sr)), <span class="num">1</span>)  <span class="com"># 按时长换算新样本数</span>
+    new_idx  = np.<span class="fn">linspace</span>(<span class="num">0.0</span>, audio.shape[<span class="num">0</span>] - <span class="num">1</span>, num=new_len)
+    <span class="kw">return</span> np.<span class="fn">interp</span>(new_idx, old_idx, audio).<span class="fn">astype</span>(np.float32)  <span class="com"># 线性插值</span></code></pre>
+    <p class="muted">这是最朴素的重采样：把新采样点位置映射回原信号、做线性插值。音质不如多相滤波，但<b>无需 scipy/librosa</b>、零依赖、足够应付"凑到合法采样率"这种小幅调整。</p>
+
+    <h5>(d) 三层降级的调度逻辑</h5>
+<pre class="diff"><code><span class="l add">+    if fmt in ("opus", "aac", "mp3"):</span>
+<span class="l add">+        try:</span>
+<span class="l add">+            return _encode_with_pyav(arr, sample_rate, ...config...), mime   # ① 首选 PyAV</span>
+<span class="l add">+        except Exception as e:</span>
+<span class="l add">+            logger.warning("PyAV %s encoding failed (%s); falling back to pydub/WAV", ...)</span>
+<span class="l ctx">         try:</span>
+<span class="l ctx">             from pydub import AudioSegment          # ② 退回 pydub</span>
+<span class="l ctx">             ...</span>
+<span class="l ctx">         except ...:</span>
+<span class="l ctx">             return encode_wav(arr, sample_rate), ...  # ③ 最后保底 WAV</span></code></pre>
+    <p>FLAC 仍走 <span class="kbd">soundfile</span> 单独分支。整体策略：<b>能用更好的就用更好的，但永远有兜底，绝不让用户拿到一个空响应。</b></p>
+
+    <h5>新增单测：<span class="kbd">tests/unit_test/client/test_audio.py</span></h5>
+    <p>为 opus/aac/mp3 各加了"正常采样率"和"非法采样率（触发重采样）"两组用例，并用<b>文件魔数</b>校验编码正确：Ogg 文件以 <span class="kbd">b"OggS"</span> 开头、MP3 以 <span class="kbd">b"ID3"</span> 开头、AAC(ADTS) 帧以 <span class="kbd">0xFF 0xFx</span> 开头。这种"按字节签名断言格式"是音频/二进制测试的经典手法。</p>
+
+    <h4>4. 涉及的知识点 <span class="em">（重点·小白展开）</span></h4>
+
+    <details class="concept" open><summary><span class="ico">▸</span> PCM / 波形 / 容器 / 编解码器（codec）四件套</summary>
+    <div class="three">
+      <p><b>它是什么：</b><b>PCM/波形</b>是声音的"原始数字采样"（一串浮点数）；<b>编解码器 codec</b>（mp3/aac/opus…）是把波形压缩成更小字节流的算法；<b>容器</b>（ogg/adts/mp3 文件）是把压缩后的数据流装进一个带头部、能被播放器识别的"盒子"。</p>
+      <p><b>为什么需要它：</b>裸 PCM 体积大、不带元信息；压缩后小很多，但必须装进容器、声明采样率/声道，播放器才认。</p>
+      <p><b>本 PR 里怎么用：</b>配置表里 <span class="kbd">container</span>（盒子）和 <span class="kbd">codecs</span>（压缩算法）是分开指定的——比如 opus 用 <span class="kbd">ogg</span> 容器装 <span class="kbd">libopus</span> 编码的数据。</p>
+    </div></details>
+
+    <details class="concept" open><summary><span class="ico">▸</span> PyAV vs pydub：进程内绑定 vs 外部命令</summary>
+    <div class="three">
+      <p><b>它是什么：</b><b>pydub</b> 是高层封装，运行时<b>去 shell 调系统的 ffmpeg 可执行文件</b>；<b>PyAV</b> 是 FFmpeg 库（libav*）的 Python 原生绑定，<b>在进程内直接调 C 库</b>，不依赖外部命令、不开子进程。</p>
+      <p><b>为什么需要它：</b>外部命令依赖环境装没装、版本对不对、PATH 找不找得到，部署脆弱且报错难定位；进程内绑定可控、可捕获异常、可精确控制采样率/帧格式。</p>
+      <p><b>本 PR 里怎么用：</b>把首选编码路径换成 PyAV，同时保留 pydub 作为降级——既拿到稳定性，又不破坏老环境的兼容。</p>
+    </div></details>
+
+    <details class="concept"><summary><span class="ico">▸</span> 采样率 & 重采样（resampling）</summary>
+    <div class="three">
+      <p><b>它是什么：</b><b>采样率</b>是每秒采多少个声音样本（24000Hz = 每秒 2.4 万点）。<b>重采样</b>是把一段音频从一个采样率换算到另一个（点数随之改变）。</p>
+      <p><b>为什么需要它：</b>每种压缩编码器只支持特定采样率集合。模型输出 24kHz 多半 OK，但若上游给了 44.1k/12345 这种值，就得先换到编码器认的最近值。</p>
+      <p><b>本 PR 里怎么用：</b><span class="kbd">_resample_linear</span> 用线性插值做轻量换算；<span class="kbd">valid_rates</span> 白名单 + <span class="kbd">min(..., key=abs(r-sr))</span> 找最近合法采样率。</p>
+    </div></details>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>"优雅降级"是服务化代码的底线。</b>三层兜底（PyAV → pydub → WAV）保证用户永远拿得到能播的音频，哪怕画质打折也不返回错误——这是面向最终用户接口的健壮性思维。</li>
+      <li><b>把外部进程依赖换成进程内库，是提升可部署性的常见升级。</b>少一个"系统得装某个二进制"的前提，容器就更省心、错误更可捕获。</li>
+      <li><b>用魔数测二进制格式。</b>不解码、只看文件头几个字节，就能稳定地断言"编码确实成功且格式正确"，比"能不能播放"更适合自动化测试。</li>
+      <li><b>延伸前置知识：</b>数字音频基础（采样率/位深/声道）、FFmpeg 的容器与编码器关系、planar vs interleaved 音频帧格式、编码器内部缓冲与 flush、Nyquist 采样定理与重采样滤波。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============================ PR #647 ============================ -->
+<details class="card" open>
+  <summary>
+    <div class="sm-top"><span class="prnum">PR #647</span><span class="tag t-ci">基准 / CI</span><span class="tag t-ci">Qwen3-ASR</span><span class="tag t-ci">并发扫描</span></div>
+    <div class="sm-title">[CI] Align Qwen3-ASR stage-1 gate to concurrency=2 and add ASR concurrency-scaling benchmark</div>
+    <div class="sm-meta">作者 <b>@MelodyyyYin</b> · 状态 <b style="color:var(--add-ink)">merged</b> · <a href="https://github.com/sgl-project/sglang-omni/pull/647">查看 PR ↗</a></div>
+    <div class="sm-one">💡 一句话：CI 的 ASR 关卡<b>实际</b>在并发=2 下跑，但速度基线却还是并发=32 的宽松旧值（2~5 倍太松，挡不住性能退化）；本 PR 把基线对齐到真实并发，并新增一个可复现的 ASR 并发扫描基准脚本。</div>
+  </summary>
+  <div class="body">
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>CI（持续集成）里有个"门禁测试"（gate）：每次提交都跑一遍 Qwen3-ASR 转写 20 条样本，检查 WER（词错率）和速度是否达标。问题是——这个 gate 的<b>速度阈值</b>用的还是早先<b>并发=32</b> 测出来的数字（吞吐 10.3、延迟均值 0.193…），可 gate 实际是按 <b>并发=2</b> 在跑的。</p>
+    <p>并发=2 时真实性能好得多（吞吐 16.3、延迟 0.121…），于是旧阈值比实际宽松了 <b>2~5 倍</b>——这意味着即使引擎性能退化了，gate 也照样放行，<b>形同虚设</b>。本 PR 把阈值重新校准到"gate 真正运行的那个工作负载（并发=2）"上。</p>
+    <div class="analogy"><b>类比：</b>体检设定"100 米跑进 20 秒算合格"，但其实你每次只走 50 米。哪怕你状态明显变差，也永远在 20 秒内"达标"。这个 PR 把标准改成"按你真正跑的 50 米来定"，体检才有意义。</p></div>
+    <p>一个有意思的洞见（PR 描述给出）：在 20 条这种小负载上，<b>并发=2 反而比并发=32 快</b>。因为样本太少时，高并发主要在测"突发排队/尾延迟"，而非稳态吞吐；ASR 的高扇出（fan-out）只有在大负载上才划算。WER 则基本与并发无关。</p>
+
+    <h4>3. 具体做了什么改动</h4>
+    <ul>
+      <li><b><span class="kbd">tests/test_model/test_qwen3_asr_ci.py</span></b>：把 stage-1 速度阈值校准到并发=2 的实测值；把代码内默认并发从 32 改为 2（让本地运行、阈值调优工具和 CI 跑的是同一个工作负载）。WER 阈值不变（与并发无关）。同时把原本散落在测试里的"转写+打分"逻辑<b>抽取并复用</b>新基准脚本里的函数。</li>
+      <li><b><span class="kbd">benchmarks/eval/benchmark_qwen3_asr_concurrency.py</span></b>（新增 494 行）：一个可复现的 ASR 并发扫描器，直接对运行中的 Qwen3-ASR 路由转写 SeedTTS 参考音频，按并发档位（1,2,4,…,64）多次重复，报告语料/逐条 WER、墙钟时间、吞吐、延迟分位、RTF、以及<b>每个 worker 的路由均衡度</b>。</li>
+      <li><b>配置/文档</b>：修正 tune-ci-thresholds 配置里"gate 跑在 32"的过时注释；在 benchmarks/README 记录新脚本与"并发-扩展"结论。</li>
+    </ul>
+
+    <h5>设计亮点：gate 与 benchmark "同源"</h5>
+    <p>最漂亮的一点是<b>去重</b>：测试文件不再自己写一套转写/打分代码，而是直接 <span class="kbd">import</span> 基准脚本里的 <span class="kbd">run_asr_transcription</span> 和 <span class="kbd">build_asr_eval_results</span>。这样"CI 门禁"本质上就等于"跑一遍基准 + 套阈值"，两者永远用同一套度量口径，不会出现"测试和基准算法漂移"的问题。</p>
+<pre class="diff"><code><span class="l del">- # 测试里自己写一套 _transcribe_with_omni / _percentile / 手算 WER...（删掉~150 行）</span>
+<span class="l add">+ from benchmarks.eval.benchmark_qwen3_asr_concurrency import (</span>
+<span class="l add">+     build_asr_eval_results, run_asr_transcription,   # 与 benchmark 共享同一条路径</span>
+<span class="l add">+ )</span>
+<span class="l add">+ outputs, wall_clock_s = asyncio.run(run_asr_transcription(seedtts_en_samples, ...))</span>
+<span class="l add">+ results = build_asr_eval_results(seedtts_en_samples, outputs, wall_clock_s, "en", ...)</span></code></pre>
+    <p class="muted">还有个埋在 send 函数里的实战注释："<b>不要发 temperature=0</b>——Qwen3-ASR 在纯贪心解码下会退化，服务端会把它顶到 0.01"。这种"魔鬼细节"正是基准脚本沉淀经验的价值。</p>
+
+    <h4>4. 涉及的知识点 <span class="em">（重点·小白展开）</span></h4>
+
+    <details class="concept" open><summary><span class="ico">▸</span> 并发 / 扇出（concurrency, fan-out）与连续批处理</summary>
+    <div class="three">
+      <p><b>它是什么：</b><b>并发</b>指同时在途的请求数。推理引擎用<b>连续批处理（continuous batching）</b>把多个在途请求动态拼成一个 batch 喂 GPU——谁完成谁退出、空位立刻补新请求，GPU 始终满载。<b>扇出</b>就是客户端一次性放出多少并发请求。</p>
+      <p><b>为什么需要它：</b>高并发能把 GPU 喂饱、提升<b>稳态吞吐</b>；但在小负载上，高并发主要制造排队和尾延迟，并不提速。所以"最优并发"和工作负载大小强相关。</p>
+      <p><b>本 PR 里怎么用：</b>新脚本就是用来"扫描"不同并发档位、量化它们对吞吐/延迟/WER 的影响，从而为"小门禁用并发 2、大评测用并发 32"提供数据支撑。</p>
+    </div></details>
+
+    <details class="concept" open><summary><span class="ico">▸</span> WER / RTF / 延迟分位（p95/p99）这些指标怎么读</summary>
+    <div class="three">
+      <p><b>它是什么：</b><b>WER</b>（Word Error Rate，词错率）衡量转写质量，越低越好；<b>RTF</b>（Real-Time Factor，实时率）= 处理耗时 / 音频时长，&lt;1 表示比实时还快；<b>p95/p99 延迟</b>是"95%/99% 的请求都比这个值快"，反映尾部体验。</p>
+      <p><b>为什么需要它：</b>只看均值会掩盖长尾。p95/p99 才暴露"最慢的那一小撮"；RTF 让不同时长音频可比；WER 衡量"快了但准不准"。</p>
+      <p><b>本 PR 里怎么用：</b>基准脚本对每个并发档位都报全套指标，并跨多次重复取 mean/min/max，给出可复现、抗噪声的"并发-扩展曲线"。</p>
+    </div></details>
+
+    <details class="concept"><summary><span class="ico">▸</span> CI 门禁 & 阈值校准（threshold calibration）</summary>
+    <div class="three">
+      <p><b>它是什么：</b><b>CI 门禁</b>是合并前自动跑的"红线测试"，不达标就拦下。<b>阈值校准</b>是把这些红线设到"刚好能放过正常波动、又能挡住真实退化"的位置。</p>
+      <p><b>为什么需要它：</b>阈值太松 = 退化漏网；太紧 = 正常抖动也误报。关键是阈值必须基于"门禁真正运行的那个工作负载"来定——这正是本 PR 修的 bug。</p>
+      <p><b>本 PR 里怎么用：</b>把阈值从并发=32 的旧值改到并发=2 的实测值，并让默认并发、本地运行、tune-ci-thresholds 工具三者对齐到同一负载。</p>
+    </div></details>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>"测试要测你真正在跑的东西"。</b>当门禁的阈值和它实际运行的负载脱节，门禁就退化成橡皮图章。校准必须基于真实工作负载。</li>
+      <li><b>让测试与基准同源，消灭"度量漂移"。</b>把转写/打分逻辑抽成共享函数，CI = 跑基准 + 套阈值，从根上避免"两套算法各算各的"。</li>
+      <li><b>性能直觉要用数据验证，而非想当然。</b>"并发越高越快"在小负载上是错的；本 PR 用扫描数据证明了这点，并据此分场景选并发。</li>
+      <li><b>延伸前置知识：</b>continuous batching 与 PagedAttention、吞吐 vs 延迟的权衡、长尾分位统计、ASR 评测流程（归一化 + jiwer 计算 WER）、负载测试方法论。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============================ 文档/基建速览 ============================ -->
+<details class="card" open>
+  <summary>
+    <div class="sm-top"><span class="prnum">速览</span><span class="tag t-doc">文档 & 基建</span><span class="tag t-doc">×9</span></div>
+    <div class="sm-title">其余 9 个文档 / 基建类 PR（无核心逻辑改动）</div>
+    <div class="sm-one">这些 PR 不改推理逻辑，但反映了项目当日的运营重心：Higgs Audio 文档大刷新 + 正式 Docker 发布。</div>
+  </summary>
+  <div class="body">
+    <table class="docs-table">
+      <tr><th>PR</th><th>标题</th><th>作者</th><th>做了什么</th></tr>
+      <tr><td>#694</td><td>[Doc] Revise supported languages</td><td>@SilinMeng0510</td><td>支持语言一节改为给链接、删掉冗长列表。</td></tr>
+      <tr><td>#690</td><td>[Docker] Release Formal Docker</td><td>@zhaochenyang20</td><td>发布正式版 Docker 镜像（基建里程碑：从 dev 镜像走向正式分发）。</td></tr>
+      <tr><td>#688</td><td>[Docs] higgs-tts 语言分级计数订正</td><td>@SilinMeng0510</td><td>修正各 WER/CER 档位语言数（82→83 / 18→17，总数仍 100）。</td></tr>
+      <tr><td>#685</td><td>[Docs] Update Higgs Audio Cookbook</td><td>@zhaochenyang20</td><td>更新 Higgs Audio cookbook。</td></tr>
+      <tr><td>#684</td><td>[Docs] Refresh Higgs TTS cookbook</td><td>@SilinMeng0510</td><td>对齐官方 model card、补实测吞吐数、精简高亮块。</td></tr>
+      <tr><td>#683</td><td>[Docs] Quick Fix Higgs</td><td>@zhaochenyang20</td><td>修 lint。</td></tr>
+      <tr><td>#681</td><td>[Refresh] Higgs Performance</td><td>@zhaochenyang20</td><td>刷新 Higgs 性能数据。</td></tr>
+      <tr><td>#673</td><td>[Docs] Higgs TTS cookbook：voices / control-token / step-599 benchmark</td><td>@SilinMeng0510</td><td>重做语音示例、内联控制 token 用法规则、刷新到最新 checkpoint 评测。</td></tr>
+      <tr><td>#652</td><td>[DOC] benchmark/README 新增 flag 说明</td><td>@haojin2</td><td>给基准脚本新参数补文档。</td></tr>
+    </table>
+    <div class="note">📌 <b>当日观察：</b>9 个文档 PR 里有 6 个围绕 <b>Higgs Audio/TTS</b>，叠加 #692 的 Higgs 性能优化与 #690 的正式 Docker——可见团队正在为 <b>Higgs Audio 的一次正式对外发布</b>做收尾（文档对齐 model card + 性能刷新 + 正式镜像）。同时 ASR（Qwen3-ASR/Whisper）正作为新模态被逐步接入并文档化。</div>
+  </div>
+</details>
+
+<footer>
+  SGLang-Omni 每日 PR 学习日报 · 生成于 2026-06-05 · 数据来源：GitHub <code>sgl-project/sglang-omni</code><br>
+  讲解深度优先于覆盖广度 — 5 个含代码 PR 已逐块拆解，9 个文档/基建 PR 速览。
+</footer>
+
+</div>
+</body>
+</html>
