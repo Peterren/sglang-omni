@@ -34,6 +34,7 @@ class VoxtralTTSPipelineConfig(PipelineConfig):
             factory_args={"gpu_id": 0, "max_new_tokens": 4096},
             gpu=0,
             next=VOCODER_STAGE,
+            stream_to=[VOCODER_STAGE],
         ),
         StageConfig(
             name=VOCODER_STAGE,
@@ -42,6 +43,7 @@ class VoxtralTTSPipelineConfig(PipelineConfig):
             factory_args={"gpu_id": 0},
             gpu=0,
             terminal=True,
+            can_accept_stream_before_payload=True,
         ),
     ]
 

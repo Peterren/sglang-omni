@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import collections
+import queue
 from types import SimpleNamespace
 
 import numpy as np
@@ -10,13 +11,35 @@ import pytest
 import torch
 
 from sglang_omni.models.registry import PIPELINE_CONFIG_REGISTRY
+from sglang_omni.models.tts_streaming import INITIAL_CODEC_CHUNK_FRAMES_PARAM
 from sglang_omni.models.voxtral_tts.config import VoxtralTTSPipelineConfig
 from sglang_omni.models.voxtral_tts.io import VoxtralTTSState
 from sglang_omni.models.voxtral_tts.pipeline import stages
 from sglang_omni.models.voxtral_tts.request_builders import build_sglang_voxtral_request
+from sglang_omni.models.voxtral_tts.streaming_vocoder import (
+    VoxtralStreamingVocoderScheduler,
+)
+from sglang_omni.pipeline.stage.stream_queue import StreamItem
 from sglang_omni.proto import OmniRequest, StagePayload
 from sglang_omni.scheduling.types import RequestOutput
 from sglang_omni.utils.audio_payload import audio_waveform_payload
+
+
+class _FakeVoxtralAudioTokenizer:
+    sampling_rate = 1000
+    downsample_factor = 2
+
+    def decode_helper_batch_async(self, codes_list: list[torch.Tensor]):
+        return [
+            codes[:, 0]
+            .to(dtype=torch.float32)
+            .repeat_interleave(self.downsample_factor)
+            for codes in codes_list
+        ]
+
+
+def _audio_values(payload: dict) -> np.ndarray:
+    return np.frombuffer(payload["audio_waveform"], dtype=np.float32).copy()
 
 
 def test_voxtral_tts_config_uses_current_stage_schema() -> None:
@@ -32,6 +55,8 @@ def test_voxtral_tts_config_uses_current_stage_schema() -> None:
     assert "device" not in config.stages[2].factory_args
     assert config.stages[1].factory_args["gpu_id"] == 0
     assert config.stages[2].factory_args["gpu_id"] == 0
+    assert config.stages[1].stream_to == ["vocoder"]
+    assert config.stages[2].can_accept_stream_before_payload is True
     assert {stage.process for stage in config.stages} == {"pipeline"}
     assert (
         PIPELINE_CONFIG_REGISTRY.get_config("VoxtralTTSForConditionalGeneration")
@@ -162,6 +187,172 @@ def test_voxtral_audio_codes_payload_is_compact() -> None:
     assert "audio_codes_bytes" in data
     assert "audio_codes" not in data
     assert restored.audio_codes.tolist() == [[1, 2], [3, 4]]
+
+
+def test_voxtral_generation_streams_codec_rows_when_requested() -> None:
+    from sglang_omni.models.voxtral_tts.model_runner import VoxtralTTSModelRunner
+
+    runner = VoxtralTTSModelRunner.__new__(VoxtralTTSModelRunner)
+    runner._pending_audio_codes = torch.tensor([[11, 12, 13]], dtype=torch.long)
+    runner._pending_audio_embeds = torch.ones(1, 1, 3)
+    runner._outbox = queue.Queue()
+    runner._vocoder_target = "vocoder"
+
+    payload = StagePayload(
+        request_id="active",
+        request=OmniRequest(
+            inputs="",
+            params={"stream": True, INITIAL_CODEC_CHUNK_FRAMES_PARAM: 1},
+        ),
+        data={},
+    )
+    data = SimpleNamespace(
+        output_codes=[],
+        pending_feedback_queue=[],
+        stage_payload=payload,
+    )
+    request = SimpleNamespace(request_id="active", data=data)
+
+    runner.post_process_outputs(
+        None,
+        SimpleNamespace(requests=[request]),
+        {"active": RequestOutput("active", data=11)},
+    )
+
+    assert [chunk.tolist() for chunk in data.output_codes] == [[11, 12, 13]]
+    assert len(data.pending_feedback_queue) == 1
+    msg = runner._outbox.get_nowait()
+    assert msg.request_id == "active"
+    assert msg.type == "stream"
+    assert msg.target == "vocoder"
+    assert msg.data.tolist() == [11, 12, 13]
+    assert msg.metadata == {
+        "modality": "audio_codes",
+        "stream": True,
+        "num_codebooks": 3,
+        INITIAL_CODEC_CHUNK_FRAMES_PARAM: 1,
+    }
+
+
+def test_voxtral_generation_does_not_stream_without_stream_param() -> None:
+    from sglang_omni.models.voxtral_tts.model_runner import VoxtralTTSModelRunner
+
+    runner = VoxtralTTSModelRunner.__new__(VoxtralTTSModelRunner)
+    runner._pending_audio_codes = torch.tensor([[11, 12, 13]], dtype=torch.long)
+    runner._pending_audio_embeds = torch.ones(1, 1, 3)
+    runner._outbox = queue.Queue()
+
+    payload = StagePayload(
+        request_id="active",
+        request=OmniRequest(inputs="", params={"stream": False}),
+        data={},
+    )
+    data = SimpleNamespace(
+        output_codes=[],
+        pending_feedback_queue=[],
+        stage_payload=payload,
+    )
+    request = SimpleNamespace(request_id="active", data=data)
+
+    runner.post_process_outputs(
+        None,
+        SimpleNamespace(requests=[request]),
+        {"active": RequestOutput("active", data=11)},
+    )
+
+    assert [chunk.tolist() for chunk in data.output_codes] == [[11, 12, 13]]
+    assert runner._outbox.empty()
+
+
+def test_voxtral_streaming_vocoder_decodes_chunks_before_final_payload() -> None:
+    scheduler = VoxtralStreamingVocoderScheduler(
+        _FakeVoxtralAudioTokenizer(),
+        device="cpu",
+        stream_stride=2,
+        stream_followup_stride=2,
+        stream_overlap_frames=1,
+        fade_in_ms=0,
+    )
+    metadata = {"modality": "audio_codes", "stream": True, "num_codebooks": 2}
+
+    scheduler._on_chunk(
+        "req",
+        StreamItem(0, torch.tensor([10, 0]), "tts_generation", metadata),
+    )
+    assert scheduler.outbox.empty()
+
+    scheduler._on_chunk(
+        "req",
+        StreamItem(1, torch.tensor([11, 0]), "tts_generation", metadata),
+    )
+    first = scheduler.outbox.get_nowait()
+    assert first.type == "stream"
+    assert first.metadata == {"modality": "audio"}
+    assert _audio_values(first.data).tolist() == [10.0, 10.0, 11.0, 11.0]
+
+    scheduler._on_chunk(
+        "req",
+        StreamItem(2, torch.tensor([12, 0]), "tts_generation", metadata),
+    )
+    scheduler._on_done("req")
+    assert scheduler.outbox.empty()
+
+    state = VoxtralTTSState(
+        audio_codes=torch.tensor([[10, 0], [11, 0], [12, 0]], dtype=torch.long),
+        prompt_tokens=4,
+        completion_tokens=3,
+    )
+    payload = StagePayload(
+        request_id="req",
+        request=OmniRequest(inputs="", params={"stream": True}),
+        data=state.to_dict(),
+    )
+    scheduler._on_streaming_new_request("req", payload)
+
+    tail = scheduler.outbox.get_nowait()
+    final = scheduler.outbox.get_nowait()
+    assert tail.type == "stream"
+    assert _audio_values(tail.data).tolist() == [12.0, 12.0]
+    assert final.type == "result"
+    assert final.data.data == {
+        "modality": "audio",
+        "sample_rate": 1000,
+        "usage": {
+            "prompt_tokens": 4,
+            "completion_tokens": 3,
+            "total_tokens": 7,
+        },
+    }
+    assert "req" not in scheduler._stream_states
+
+
+def test_voxtral_streaming_vocoder_non_streaming_path_returns_full_audio() -> None:
+    scheduler = VoxtralStreamingVocoderScheduler(
+        _FakeVoxtralAudioTokenizer(),
+        device="cpu",
+        fade_in_ms=0,
+    )
+    state = VoxtralTTSState(
+        audio_codes=torch.tensor([[10, 0], [11, 0]], dtype=torch.long),
+        prompt_tokens=3,
+        completion_tokens=2,
+    )
+    payload = StagePayload(
+        request_id="req",
+        request=OmniRequest(inputs="", params={"stream": False}),
+        data=state.to_dict(),
+    )
+
+    result = scheduler._vocode_payload(payload)
+
+    assert result.data["modality"] == "audio"
+    assert result.data["sample_rate"] == 1000
+    assert _audio_values(result.data).tolist() == [10.0, 10.0, 11.0, 11.0]
+    assert result.data["usage"] == {
+        "prompt_tokens": 3,
+        "completion_tokens": 2,
+        "total_tokens": 5,
+    }
 
 
 def test_voxtral_collect_audio_step_reuses_output_tokens_for_eos_filter() -> None:

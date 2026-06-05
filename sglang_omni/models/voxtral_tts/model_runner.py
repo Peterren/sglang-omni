@@ -8,7 +8,9 @@ from typing import Any
 import torch
 
 from sglang_omni.model_runner.base import ModelRunner
+from sglang_omni.models.tts_streaming import INITIAL_CODEC_CHUNK_FRAMES_PARAM
 from sglang_omni.models.voxtral_tts.acoustic_transformer import AudioSpecialTokens
+from sglang_omni.scheduling.messages import OutgoingMessage
 from sglang_omni.scheduling.types import RequestOutput
 
 
@@ -17,6 +19,11 @@ class VoxtralTTSModelRunner(ModelRunner):
         super().__init__(tp_worker, output_processor)
         self._pending_audio_codes: torch.Tensor | None = None
         self._pending_audio_embeds: torch.Tensor | None = None
+        self._outbox: Any | None = None
+        self._vocoder_target = "vocoder"
+
+    def set_stream_outbox(self, outbox: Any) -> None:
+        self._outbox = outbox
 
     def before_prefill(
         self,
@@ -157,7 +164,38 @@ class VoxtralTTSModelRunner(ModelRunner):
             req_output = outputs[sched_req.request_id]
             if req_output.data is None or int(req_output.data) == eos_id:
                 continue
-            sched_req.data.output_codes.append(codes[row_idx].detach().clone())
+            code_chunk = codes[row_idx].detach().clone()
+            sched_req.data.output_codes.append(code_chunk)
             sched_req.data.pending_feedback_queue.append(
                 embeds[row_idx, 0].detach().clone()
             )
+            self._emit_code_chunk(sched_req, code_chunk)
+
+    def _emit_code_chunk(self, sched_req: Any, code_chunk: torch.Tensor) -> None:
+        outbox = getattr(self, "_outbox", None)
+        if outbox is None:
+            return
+        payload = getattr(sched_req.data, "stage_payload", None)
+        request = getattr(payload, "request", None)
+        params = getattr(request, "params", None)
+        if not isinstance(params, dict) or not params.get("stream", False):
+            return
+
+        metadata: dict[str, Any] = {
+            "modality": "audio_codes",
+            "stream": True,
+            "num_codebooks": int(code_chunk.numel()),
+        }
+        if INITIAL_CODEC_CHUNK_FRAMES_PARAM in params:
+            metadata[INITIAL_CODEC_CHUNK_FRAMES_PARAM] = params[
+                INITIAL_CODEC_CHUNK_FRAMES_PARAM
+            ]
+        outbox.put(
+            OutgoingMessage(
+                request_id=sched_req.request_id,
+                type="stream",
+                target=getattr(self, "_vocoder_target", "vocoder"),
+                data=code_chunk,
+                metadata=metadata,
+            )
+        )

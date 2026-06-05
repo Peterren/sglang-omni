@@ -13,11 +13,11 @@ from typing import Any
 
 import torch
 
+from sglang_omni.models.voxtral_tts import streaming_vocoder
 from sglang_omni.models.voxtral_tts.io import VoxtralTTSState
-from sglang_omni.models.voxtral_tts.pipeline.state_io import load_state, store_state
+from sglang_omni.models.voxtral_tts.pipeline.state_io import store_state
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
-from sglang_omni.utils.audio_payload import audio_waveform_payload
 
 logger = logging.getLogger(__name__)
 
@@ -87,10 +87,7 @@ def _validate_voxtral_speech_params(
 
 
 def _ensure_non_empty_audio_codes(audio_codes: Any) -> None:
-    if audio_codes is None:
-        raise ValueError("Voxtral TTS generated no audio codes")
-    if isinstance(audio_codes, torch.Tensor) and audio_codes.numel() == 0:
-        raise ValueError("Voxtral TTS generated no audio codes")
+    streaming_vocoder._ensure_non_empty_audio_codes(audio_codes)
 
 
 # ---- Preprocessing ----
@@ -226,7 +223,8 @@ def create_generation_executor(
         model=model,
     )
 
-    return OmniScheduler(
+    model_runner = VoxtralTTSModelRunner(model_worker, output_proc)
+    scheduler = OmniScheduler(
         tp_worker=model_worker,
         tree_cache=tree_cache,
         req_to_token_pool=req_to_token_pool,
@@ -235,10 +233,13 @@ def create_generation_executor(
         model_config=model_config,
         prefill_manager=prefill_mgr,
         decode_manager=decode_mgr,
-        model_runner=VoxtralTTSModelRunner(model_worker, output_proc),
+        model_runner=model_runner,
         request_builder=request_builder,
         result_adapter=result_adapter,
     )
+    if hasattr(model_runner, "set_stream_outbox"):
+        model_runner.set_stream_outbox(scheduler.outbox)
+    return scheduler
 
 
 def _write_voxtral_sglang_config(checkpoint_dir: str) -> str:
@@ -350,7 +351,10 @@ def create_vocoder_executor(
     *,
     device: str = "cuda:0",
     gpu_id: int | None = None,
-) -> SimpleScheduler:
+    stream_stride: int = 10,
+    stream_followup_stride: int = 30,
+    stream_overlap_frames: int = 2,
+) -> streaming_vocoder.VoxtralStreamingVocoderScheduler:
     """Factory for the vocoder (audio tokenizer decode) stage."""
     checkpoint_dir = _resolve_checkpoint(model_path)
     if gpu_id is not None:
@@ -358,69 +362,10 @@ def create_vocoder_executor(
 
     logger.info("Loading Voxtral audio tokenizer for vocoding...")
     audio_tokenizer = _load_audio_tokenizer(checkpoint_dir, {}, device)
-
-    def _vocode(payload: StagePayload) -> StagePayload:
-        state = load_state(payload)
-        audio_codes = state.audio_codes
-
-        _ensure_non_empty_audio_codes(audio_codes)
-
-        if not isinstance(audio_codes, torch.Tensor):
-            audio_codes = torch.tensor(audio_codes)
-
-        # Prepend warmup context frames so the causal decoder has initial
-        # context (mitigates boundary artifacts / noise at the start of the
-        # waveform).  After decoding, the samples corresponding to the
-        # warmup frames are trimmed away.
-        n_warmup = 2
-        warmup_samples = 0
-        if audio_codes.shape[0] > 0:
-            first_frame = audio_codes[0:1]
-            warmup = first_frame.repeat(n_warmup, 1)
-            codes_with_warmup = torch.cat([warmup, audio_codes], dim=0)
-            warmup_samples = n_warmup * audio_tokenizer.downsample_factor
-        else:
-            codes_with_warmup = audio_codes
-
-        results = audio_tokenizer.decode_helper_batch_async([codes_with_warmup])
-        audio_np = results[0]
-
-        # Trim warmup samples from the beginning
-        if warmup_samples > 0 and len(audio_np) > warmup_samples:
-            audio_np = audio_np[warmup_samples:]
-
-        # Apply a short fade-in to smooth any residual onset artifacts
-        fade_in_ms = 10  # milliseconds
-        fade_samples = min(
-            int(fade_in_ms * audio_tokenizer.sampling_rate / 1000),
-            len(audio_np),
-        )
-        if fade_samples > 0:
-            fade_in = torch.linspace(
-                0,
-                1,
-                fade_samples,
-                device=audio_np.device,
-                dtype=audio_np.dtype,
-            )
-            audio_np[:fade_samples] = audio_np[:fade_samples] * fade_in
-
-        audio_payload = audio_waveform_payload(audio_np, source_hint="Voxtral TTS")
-        state.audio_samples = None
-        state.sample_rate = audio_tokenizer.sampling_rate
-        payload = store_state(payload, state)
-
-        payload.data.update(audio_payload)
-        payload.data["sample_rate"] = audio_tokenizer.sampling_rate
-        payload.data["modality"] = "audio"
-
-        if state.prompt_tokens or state.completion_tokens:
-            payload.data["usage"] = {
-                "prompt_tokens": state.prompt_tokens,
-                "completion_tokens": state.completion_tokens,
-                "total_tokens": state.prompt_tokens + state.completion_tokens,
-            }
-
-        return payload
-
-    return SimpleScheduler(_vocode)
+    return streaming_vocoder.VoxtralStreamingVocoderScheduler(
+        audio_tokenizer,
+        device=device,
+        stream_stride=stream_stride,
+        stream_followup_stride=stream_followup_stride,
+        stream_overlap_frames=stream_overlap_frames,
+    )
