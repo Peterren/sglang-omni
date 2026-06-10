@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang Omni 每日 PR 学习日报 · 2026-06-10</title>
+<style>
+  :root{
+    --bg:#0f1117; --card:#171a23; --card2:#1d2130; --ink:#e6e9ef; --muted:#9aa3b2;
+    --accent:#6e63da; --accent2:#43d692; --warn:#ffad47; --line:#2a2f3d;
+    --code-bg:#0b0e14; --kw:#c678dd; --str:#98c379; --num:#d19a66; --cmt:#7f8694; --fn:#61afef; --var:#e06c75;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.75;font-size:16px;}
+  .wrap{max-width:980px;margin:0 auto;padding:32px 22px 80px;}
+  header.top{border:1px solid var(--line);border-radius:16px;padding:28px 30px;
+    background:linear-gradient(135deg,#1b1f2e 0%,#171a23 100%);margin-bottom:26px;}
+  header.top h1{margin:0 0 6px;font-size:27px;letter-spacing:.3px;}
+  header.top .date{color:var(--accent2);font-weight:600;}
+  header.top p{color:var(--muted);margin:10px 0 0;}
+  .pillrow{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;}
+  .pill{display:inline-block;padding:4px 12px;border-radius:999px;font-size:13px;
+    background:#23283a;color:#c7cdda;border:1px solid var(--line);}
+  .pill.acc{background:rgba(110,99,218,.16);color:#b9b2ff;border-color:#4338a8;}
+  .pill.grn{background:rgba(67,214,146,.14);color:#8ef0bf;border-color:#1f7a52;}
+  .pill.org{background:rgba(255,173,71,.14);color:#ffce9a;border-color:#9a6a1f;}
+
+  h2.section{font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);
+    margin:34px 0 14px;border-bottom:1px solid var(--line);padding-bottom:8px;}
+
+  .overview{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:8px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;}
+  .stat .n{font-size:30px;font-weight:700;color:var(--accent2);}
+  .stat .l{color:var(--muted);font-size:13px;margin-top:2px;}
+
+  details.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    margin:18px 0;overflow:hidden;}
+  details.card>summary{cursor:pointer;list-style:none;padding:18px 22px;
+    background:var(--card2);display:flex;align-items:flex-start;gap:12px;}
+  details.card>summary::-webkit-details-marker{display:none}
+  summary .tri{color:var(--accent);transition:transform .2s;margin-top:3px;}
+  details[open] summary .tri{transform:rotate(90deg);}
+  summary .stitle{font-size:18px;font-weight:650;}
+  summary .smeta{color:var(--muted);font-size:13px;margin-top:4px;}
+  summary a{color:#8aa9ff;text-decoration:none;}
+  .body{padding:6px 24px 24px;}
+
+  h3{margin:26px 0 8px;font-size:18px;color:#fff;
+     border-left:4px solid var(--accent);padding-left:10px;}
+  h4{margin:18px 0 6px;font-size:15.5px;color:var(--accent2);}
+  p{margin:9px 0;}
+  ul,ol{margin:8px 0;padding-left:24px;}
+  li{margin:5px 0;}
+  code.inline{background:#222738;color:#e7b1ff;padding:1.5px 6px;border-radius:5px;
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:13.5px;}
+  b,strong{color:#fff;}
+
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:15px 16px;overflow-x:auto;font-size:13px;line-height:1.6;margin:12px 0;}
+  pre code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;color:#cdd3df;white-space:pre;}
+  .filelabel{font-size:12px;color:var(--muted);margin:14px 0 -6px;font-family:monospace;}
+  .add{color:var(--str);} .del{color:var(--var);} .cmt{color:var(--cmt);}
+  .kw{color:var(--kw);} .fn{color:var(--fn);} .str{color:var(--str);} .num{color:var(--num);}
+
+  .callout{border-radius:10px;padding:13px 16px;margin:14px 0;border:1px solid;}
+  .concept{background:rgba(110,99,218,.08);border-color:#3b3470;}
+  .concept .tag{display:inline-block;font-size:11px;letter-spacing:1px;color:#b9b2ff;
+    text-transform:uppercase;font-weight:700;margin-bottom:4px;}
+  .tip{background:rgba(67,214,146,.07);border-color:#1f7a52;}
+  .tip .tag{color:#8ef0bf;font-weight:700;}
+  .analogy{background:rgba(255,173,71,.07);border-color:#9a6a1f;}
+  .analogy .tag{color:#ffce9a;font-weight:700;}
+
+  table.cmp{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;}
+  table.cmp th,table.cmp td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;}
+  table.cmp th{background:#23283a;color:#cfd5e2;}
+  table.cmp td.before{color:#f0a9a9;} table.cmp td.after{color:#a9e6c4;}
+
+  footer{margin-top:50px;color:var(--muted);font-size:13px;text-align:center;
+    border-top:1px solid var(--line);padding-top:20px;}
+  a{color:#8aa9ff;}
+  .toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 20px;}
+  .toc a{display:block;padding:3px 0;color:#c7cdda;text-decoration:none;}
+  .toc a:hover{color:#fff;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>📡 SGLang&nbsp;Omni 每日 PR 学习日报</h1>
+    <div class="date">2026 年 6 月 10 日 · 覆盖过去 24 小时内合并（merged）的 PR</div>
+    <p>仓库：<a href="https://github.com/sgl-project/sglang-omni/">sgl-project/sglang-omni</a>　|　统计窗口：2026-06-09 00:00 → 2026-06-10（UTC）</p>
+    <div class="pillrow">
+      <span class="pill acc">多模态 / Multimodal</span>
+      <span class="pill acc">张量并行 / Tensor Parallelism</span>
+      <span class="pill acc">多阶段流水线 / Multi-stage Pipeline</span>
+      <span class="pill org">CI 基础设施 / GitHub Actions</span>
+    </div>
+  </header>
+
+  <h2 class="section">当日概览</h2>
+  <div class="overview">
+    <div class="stat"><div class="n">2</div><div class="l">合并的 PR 总数</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">核心架构 / 多模态相关</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">CI / 工程基础设施</div></div>
+  </div>
+
+  <div class="toc" style="margin-top:16px;">
+    <strong style="color:#fff;">本期目录</strong>
+    <a href="#pr687">#687 · [Feat] 把 Ming-Omni 图像编码器的张量并行（TP）通过 CLI 暴露出来　<span style="color:var(--accent2)">★ 重点精讲</span></a>
+    <a href="#pr714">#714 · [CI] 修复 Omni CI 重跑时的「实时标签门禁」</a>
+    <a href="#glossary">📚 术语速查表（小白友好）</a>
+  </div>
+
+  <p style="color:var(--muted);margin-top:18px;">
+  📝 <b>编排说明：</b>本日报遵循「讲透 &gt; 讲全」原则。#687 直接改动了 Ming-Omni 的多模态/多阶段架构，是今天的主角，会逐行拆解；#714 属于 CI 工程，但它揭示了 GitHub Actions 一个很经典的「重跑用旧 payload」陷阱，对理解工程实践很有价值，也会讲清楚。
+  </p>
+
+  <!-- ============================ PR 687 ============================ -->
+  <details class="card" id="pr687" open>
+    <summary>
+      <span class="tri">▶</span>
+      <span>
+        <span class="stitle">#687 · 让 Ming-Omni 的图像编码器支持张量并行，并能从命令行开启</span>
+        <div class="smeta">
+          作者 <b>@edwingao28</b> · 状态 <span style="color:var(--accent2)">✓ Merged</span>（2026-06-09 11:44 UTC）·
+          <a href="https://github.com/sgl-project/sglang-omni/pull/687">查看 PR →</a>
+        </div>
+      </span>
+    </summary>
+    <div class="body">
+
+      <h3>1. PR 概览</h3>
+      <ul>
+        <li><b>标题：</b>[Feat] Enable Ming-Omni image_encoder tensor parallelism expose via CLI</li>
+        <li><b>编号：</b>#687　<b>作者：</b>@edwingao28（COLLABORATOR）　<b>状态：</b>已合并 merged</li>
+        <li><b>链接：</b><a href="https://github.com/sgl-project/sglang-omni/pull/687">github.com/sgl-project/sglang-omni/pull/687</a></li>
+      </ul>
+      <p><b>一句话概括：</b>图像编码器（image_encoder）这个阶段在底层<i>早就</i>实现了张量并行（把一个大的视觉模型切到多张 GPU 上跑），但之前两个地方挡着用户：配置校验会直接拒绝、命令行也没有对应开关。这个 PR 把这两道「闸门」打开，让用户能用一行 <code class="inline">sgl-omni serve</code> 命令就把视觉编码器分到多卡上。</p>
+
+      <h3>2. 它解决了什么问题</h3>
+      <p>这里有一个非常典型的「<b>能力已经造好，但没接上水管</b>」的矛盾。背景是这样的：</p>
+      <ul>
+        <li><b>底层已经能跑。</b>在更早的 PR <a href="https://github.com/sgl-project/sglang-omni/pull/553">#553</a> 中，<code class="inline">image_encoder.py</code> 里的 <code class="inline">_init_sglang_tp</code> 方法已经实现了把视觉 Transformer（ViT）按张量并行切分到多个 rank（进程/卡）上。也就是说，<i>引擎本身</i>支持图像编码器的 TP。</li>
+        <li><b>痛点 ①：校验环节一刀切地拒绝。</b>在 PR <a href="https://github.com/sgl-project/sglang-omni/pull/513">#513</a> 引入的「阶段 TP 白名单」<code class="inline">validate_stage_tp_support</code> 里，只允许 <code class="inline">thinker</code>（语言模型主干）开 TP。任何人想给 <code class="inline">image_encoder</code> 设 TP&gt;1，都会在配置校验阶段被直接报错：<i>"Stage 'image_encoder' does not support TP in Ming-Omni V1"</i>。这条报错和底层运行时的真实能力<b>自相矛盾</b>——明明跑得动，校验却说不行。</li>
+        <li><b>痛点 ②：命令行根本没有开关。</b><code class="inline">sgl-omni serve</code> 给 thinker 准备了 <code class="inline">--thinker-tp-size</code> / <code class="inline">--thinker-gpus</code>，但视觉编码器一个 flag 都没有。用户要开视觉编码器 TP，唯一的办法是手写一份 YAML pipeline 配置文件——门槛极高、易错。</li>
+      </ul>
+      <div class="callout analogy">
+        <span class="tag">🍔 通俗类比</span>
+        <p style="margin:6px 0 0;">想象一家餐厅后厨已经装好了第二台烤箱（运行时支持 TP），但前台点单系统里既没有「双烤箱」这个选项（CLI 没 flag），而且就算你硬塞一张写着「用两台烤箱」的纸条进去，收银员还会照着一本过期的规则手册告诉你「本店只有一台烤箱，不接受这个要求」（校验白名单拒绝）。这个 PR 干的事就是：① 更新规则手册，② 在点单系统加上「双烤箱」按钮。</p>
+      </div>
+
+      <h3>3. 具体做了什么改动</h3>
+      <p>改动集中在 <b>两个生产代码文件 + 三个测试文件</b>。我们一个一个看。</p>
+
+      <h4>改动 A：放开校验白名单 —— <code class="inline">models/ming_omni/tp_utils.py</code></h4>
+      <p>这是最核心、也最小的一处改动。原来有一个只含 <code class="inline">thinker</code> 的「集合（frozenset）」，校验函数拿用户请求的阶段名去这个集合里查，查不到就报错。</p>
+      <div class="filelabel">sglang_omni/models/ming_omni/tp_utils.py</div>
+<pre><code><span class="del">- _MING_AR_TP_STAGES = frozenset({"thinker"})</span>
+<span class="add">+ _MING_TP_STAGES = frozenset({"thinker", "image_encoder"})</span>
+
+  def validate_stage_tp_support(*, stage_name: str, tp_size: int) -> None:
+      if tp_size &lt; 1:
+          raise ValueError(f"Stage {stage_name!r}: tp_size must be &gt;= 1, got {tp_size}")
+      <span class="kw">if</span> tp_size == <span class="num">1</span>:
+          <span class="kw">return</span>                       <span class="cmt"># TP=1 等于不并行，任何阶段都允许，直接放行</span>
+<span class="del">-     if stage_name not in _MING_AR_TP_STAGES:</span>
+<span class="add">+     if stage_name not in _MING_TP_STAGES:</span>
+          <span class="kw">raise</span> ValueError(
+              f"Stage {stage_name!r} does not support TP in Ming-Omni V1. "
+<span class="del">-             "Only the thinker stage is currently SGLang-TP aware."</span>
+<span class="add">+             f"SGLang-TP is supported for: {', '.join(sorted(_MING_TP_STAGES))}."</span>
+          )</code></pre>
+      <p><b>逐行解释：</b></p>
+      <ul>
+        <li>变量改名 <code class="inline">_MING_AR_TP_STAGES</code> → <code class="inline">_MING_TP_STAGES</code>：原名里的 <code class="inline">AR</code> 是 "AutoRegressive（自回归）" 的缩写，暗示「只有自回归语言模型才支持 TP」。现在视觉编码器（非自回归）也支持了，所以把 <code class="inline">AR</code> 去掉，名字更诚实。<b>这是一个很好的「命名跟着语义走」的习惯。</b></li>
+        <li><code class="inline">if tp_size == 1: return</code>：TP=1 表示「只用一张卡、不切分」，对任何阶段都无意义可言，所以提前放行——这是一条快捷通道（early return），避免把 TP=1 也卡在白名单外。</li>
+        <li>把 <code class="inline">image_encoder</code> 加进集合后，校验就和底层运行时的真实能力对齐了。</li>
+        <li>报错信息也改进了：从写死「只有 thinker」改成动态列出「当前支持哪些阶段」，以后再加阶段不用改文案。</li>
+      </ul>
+
+      <h4>改动 B：新增两个命令行开关 —— <code class="inline">cli/serve.py</code></h4>
+      <p>这里做了两件事：(1) 在 <code class="inline">serve()</code> 函数签名里声明两个新 flag；(2) 在 <code class="inline">apply_parallelism_cli_overrides()</code> 里把这两个 flag 真正应用到配置上。</p>
+      <div class="filelabel">sglang_omni/cli/serve.py —— 新的 CLI 选项声明</div>
+<pre><code>image_encoder_tp_size: Annotated[
+    int | None,
+    typer.Option(
+        <span class="str">"--image-encoder-tp-size"</span>, <span class="str">"--image_encoder_tp_size"</span>,
+        help=<span class="str">"Set tensor parallel size for image_encoder stage."</span>,
+    ),
+] = <span class="kw">None</span>
+image_encoder_gpus: Annotated[
+    str | None,
+    typer.Option(
+        <span class="str">"--image-encoder-gpus"</span>, <span class="str">"--image_encoder_gpus"</span>,
+        help=<span class="str">"GPU ids for image_encoder TP ranks, e.g. '4,5' or '[4, 5]'."</span>,
+    ),
+] = <span class="kw">None</span></code></pre>
+      <div class="callout concept">
+        <span class="tag">概念 · Typer / Annotated 选项</span>
+        <p style="margin:6px 0 0;"><b>它是什么：</b><code class="inline">typer</code> 是一个把 Python 函数自动变成命令行工具的库。函数的每个参数就是一个 CLI flag，<code class="inline">Annotated[类型, typer.Option(...)]</code> 用来描述这个 flag 的名字、别名、帮助文本。<br>
+        <b>为什么需要它：</b>让「加一个命令行参数」=「给函数加一个带注解的形参」，省去手写参数解析。<br>
+        <b>在这个 PR 里：</b>新增的两个 flag 默认值都是 <code class="inline">None</code>——这是关键设计：<i>不传就等于完全不碰原配置</i>（见下方测试 4），保证向后兼容。同时提供了两种写法（<code class="inline">--image-encoder-tp-size</code> 和下划线版 <code class="inline">--image_encoder_tp_size</code>），照顾不同用户习惯。</p>
+      </div>
+
+      <p>真正干活的逻辑在 <code class="inline">apply_parallelism_cli_overrides()</code> 里新增的这一段（它几乎是 thinker 处理逻辑的镜像复制）：</p>
+      <div class="filelabel">sglang_omni/cli/serve.py —— 应用 image_encoder 覆盖</div>
+<pre><code><span class="cmt"># 1) 如果用户传了 --image-encoder-gpus，先把字符串 "4,5" / "[4,5]" 解析成 [4,5]</span>
+image_encoder_gpu_override = (
+    _parse_gpu_placement(<span class="str">"image_encoder_gpus"</span>, image_encoder_gpus)
+    <span class="kw">if</span> image_encoder_gpus <span class="kw">is not None</span> <span class="kw">else</span> <span class="kw">None</span>
+)
+<span class="cmt"># 2) 只要 tp_size 或 gpus 任一被指定，才进入覆盖流程（否则原样不动）</span>
+<span class="kw">if</span> image_encoder_tp_size <span class="kw">is not None</span> <span class="kw">or</span> image_encoder_gpu_override <span class="kw">is not None</span>:
+    image_encoder_stages = _find_matching_stages(           <span class="cmt"># 3) 在流水线里找到名为 image_encoder 的阶段</span>
+        pipeline_config, stage_name=<span class="str">"image_encoder"</span>,
+        reason=<span class="str">"tensor parallel settings"</span>,
+    )
+    <span class="kw">for</span> stage <span class="kw">in</span> image_encoder_stages:
+        <span class="kw">if</span> image_encoder_tp_size <span class="kw">is not None</span>:
+            stage.tp_size = <span class="fn">int</span>(image_encoder_tp_size)  <span class="cmt"># 4) 写入 tp_size</span>
+            stage.parallelism.tp = stage.tp_size            <span class="cmt"># 5) 同步另一处并行配置</span>
+        <span class="kw">if</span> image_encoder_gpu_override <span class="kw">is not None</span>:
+            stage.gpu = image_encoder_gpu_override          <span class="cmt"># 6) 指定这些 rank 落在哪几张卡</span>
+        _validate_stage_parallelism_config(                 <span class="cmt"># 7) 校验：卡数必须== tp_size、不能重复等</span>
+            <span class="str">"image_encoder"</span>, stage.tp_size, stage.gpu
+        )
+        <span class="kw">if</span> stage.tp_size == <span class="num">1</span> <span class="kw">and</span> <span class="fn">isinstance</span>(stage.gpu, <span class="fn">list</span>):
+            stage.gpu = <span class="fn">int</span>(stage.gpu[<span class="num">0</span>])              <span class="cmt"># 8) TP=1 时把 [4] 收敛成标量 4</span></code></pre>
+      <p><b>逐块解释（假设你完全没读过这套代码）：</b></p>
+      <ol>
+        <li><b>解析 GPU 列表：</b><code class="inline">_parse_gpu_placement</code> 把人类友好的输入（<code class="inline">"4,5"</code> 或 <code class="inline">"[4, 5]"</code>）转成 Python 列表 <code class="inline">[4, 5]</code>。如果只有一个数字就返回标量 <code class="inline">4</code>。</li>
+        <li><b>守卫条件：</b>两个 flag 都没传时，整段跳过——这就是「不传 = 不动」的兼容性保证。</li>
+        <li><b>定位阶段：</b>一个 Omni 流水线由很多 stage 组成（image_encoder、audio_encoder、thinker、talker……）。<code class="inline">_find_matching_stages</code> 按名字把 image_encoder 那个找出来；找不到就抛 <code class="inline">BadParameter</code>。</li>
+        <li><b>写 tp_size：</b>告诉引擎「把这个视觉模型切成 N 份」。</li>
+        <li><b>双写 <code class="inline">parallelism.tp</code>：</b>配置里有两个字段都描述 TP（一个是阶段级 <code class="inline">tp_size</code>，一个是嵌套的 <code class="inline">parallelism.tp</code>），必须同步，否则后续校验会发现两处不一致。这是历史配置结构留下的「冗余字段」，作者老老实实地两边都写。</li>
+        <li><b>GPU 落位：</b><code class="inline">stage.gpu = [4, 5]</code> 表示「这两个 TP rank 分别用 4 号、5 号卡」。</li>
+        <li><b>原子校验：</b><code class="inline">_validate_stage_parallelism_config</code> 检查：TP&gt;1 时必须给出列表、列表长度要正好等于 tp_size、不能有重复卡号。所以 <code class="inline">tp=2 gpus=4</code>（只给一张卡）会被拒绝（对应测试 3）。</li>
+        <li><b>标量收敛：</b>当 TP=1 时，<code class="inline">[4]</code> 这种单元素列表会被「拍扁」成裸整数 <code class="inline">4</code>，让下游配置保持一致风格（对应测试 2）。</li>
+      </ol>
+      <div class="callout tip">
+        <span class="tag">🛠 可复用的工程思想：镜像式扩展 + 原子校验</span>
+        <p style="margin:6px 0 0;">注意这段几乎是 thinker 那段的「复制 + 改名」。作者没有去抽象出一个通用的 <code class="inline">_apply_stage_tp(stage_name, ...)</code> 辅助函数，而是直接平铺第二份。这是一个有意识的权衡：<b>当只有 2 个调用点、且逻辑还在演化时，重复往往比过早抽象更安全、更易读</b>（即 WET&lt;DRY 的「三次法则」——出现第三次再抽象）。另外，所有校验都在<b>真正改动配置之前</b>完成，保证「要么全部成功，要么完全不变」，不会留下半残配置进入启动流程。</p>
+      </div>
+
+      <h4>改动 C：测试（3 个文件）</h4>
+      <p>测试是这次改动最能体现「行为契约」的部分。它把抽象的「现在支持了」翻译成可执行的断言：</p>
+      <table class="cmp">
+        <tr><th>测试用例</th><th>验证的行为</th></tr>
+        <tr><td><code class="inline">test_validate_stage_tp_support_allows_image_encoder_tp</code></td><td>image_encoder 开 TP=2 现在<b>不再抛错</b>（原来这个用例是断言「会抛错」，被反转了）</td></tr>
+        <tr><td><code class="inline">test_validate_stage_tp_support_rejects_unsupported_stage_tp</code></td><td>换成 <code class="inline">audio_encoder</code> 开 TP 仍然被拒——证明白名单没被「开太大」</td></tr>
+        <tr><td><code class="inline">test_ming_cli_applies_image_encoder_tp_and_gpus</code></td><td>CLI 传 <code class="inline">tp=2 gpus="4,5"</code> 后，配置里 <code class="inline">tp_size==2</code>、<code class="inline">gpu==[4,5]</code>、<code class="inline">parallelism.tp==2</code></td></tr>
+        <tr><td><code class="inline">test_ming_cli_image_encoder_tp1_collapses_to_scalar_gpu</code></td><td>TP=1 + <code class="inline">gpus="4"</code> → <code class="inline">gpu==4</code>（标量收敛）</td></tr>
+        <tr><td><code class="inline">test_ming_cli_rejects_image_encoder_gpu_count_mismatch</code></td><td>TP=2 但只给一张卡 → 抛 <code class="inline">BadParameter</code></td></tr>
+        <tr><td><code class="inline">test_ming_cli_leaves_image_encoder_untouched_when_flags_omitted</code></td><td>不传 flag → tp_size / gpu 与改动前完全一致（向后兼容）</td></tr>
+      </table>
+      <p>在 <code class="inline">test_tp.py</code> 里，原本一组「应当拒绝 image_encoder TP」的参数化用例被删掉，并新增 <code class="inline">test_ming_text_allows_image_encoder_tp_size_gt_one</code>，验证从顶层配置类构造时，<code class="inline">gpu_placement["image_encoder"]</code> 能正确解析成 <code class="inline">[2, 3]</code>。<b>「删掉一条旧的『拒绝』断言、加上一条新的『允许』断言」</b>——这是行为变更类 PR 的标准动作，让 diff 本身就讲清楚了「契约从禁止变成了允许」。</p>
+
+      <h3>4. 涉及的知识点（重点 · 小白友好）</h3>
+
+      <div class="callout concept">
+        <span class="tag">概念 1 · Tensor Parallelism（张量并行，TP）</span>
+        <p style="margin:6px 0 0;"><b>它是什么：</b>把<i>一个</i>神经网络层（比如一个巨大的矩阵乘法 / 注意力头）按维度切成 N 份，分别放到 N 张 GPU 上同时算，算完再用集合通信（如 all-reduce / all-gather）把结果拼起来。它切的是「一层内部的张量」，所以叫张量并行。<br>
+        <b>为什么需要它：</b>① 当模型太大、单卡显存装不下时，TP 让多卡<i>共同</i>承载一份权重；② 即使装得下，多卡并行计算也能降低单次前向的延迟。<br>
+        <b>在这个 PR 里：</b>视觉编码器（ViT）的注意力和线性层被切到 <code class="inline">tp_size</code> 张卡上。例如 <code class="inline">--image-encoder-tp-size 2 --image-encoder-gpus 5,7</code> 就是把 ViT 切两半，分别跑在 5 号和 7 号 GPU 上。</p>
+        <div class="callout analogy" style="margin:10px 0 0;">
+          <span class="tag">🍕 类比</span>
+          <p style="margin:5px 0 0;">TP 像「两个厨师合做<i>同一张</i>披萨」——一人擀左半边、一人擀右半边，最后合到一起。区别于<b>流水线并行（Pipeline Parallelism）</b>：那是「厨师 A 做饼底 → 传给厨师 B 铺料」，切的是<i>层与层之间</i>。SGLang Omni 的多阶段（encoder→thinker→talker）本质就是一种流水线，而 TP 是在<i>某一个阶段内部</i>再做切分——两种并行可以叠加（PR 描述里 thinker TP4 + image_encoder TP2 同时开就是例子）。</p>
+        </div>
+      </div>
+
+      <div class="callout concept">
+        <span class="tag">概念 2 · 多阶段流水线 / Stage（SGLang Omni 的核心架构）</span>
+        <p style="margin:6px 0 0;"><b>它是什么：</b>一个「全模态（Omni）」模型要处理图像、视频、音频、文本，并能生成文本和语音。SGLang Omni 把它拆成若干独立的 <b>stage（阶段）</b>，每个 stage 是一个可单独配置、单独放卡、单独并行的组件，按数据流串成一条流水线：<br>
+        <code class="inline">image_encoder / audio_encoder</code>（把图/音转成 embedding）→ <code class="inline">thinker</code>（语言主干，做理解与推理）→ <code class="inline">talker</code>（生成语音 token）→ <code class="inline">code2wav</code>（把语音 token 还原成波形）。<br>
+        <b>为什么需要它：</b>不同 stage 的计算特性差异巨大——编码器是「一次性吃完输入」的非自回归计算，thinker/talker 是「一个 token 一个 token 吐」的自回归计算。拆开后可以<b>各自独立放卡、独立调并行度、独立优化显存</b>，资源利用率更高。<br>
+        <b>在这个 PR 里：</b>正因为 image_encoder 是一个<i>独立 stage、跑在独立进程</i>，它才需要自己初始化一套 TP 上下文（见概念 3），也才需要一个专属的 CLI flag。这条 PR 本质是「让流水线里的某一个阶段获得独立的并行度控制权」。</p>
+      </div>
+
+      <div class="callout concept">
+        <span class="tag">概念 3 · 为什么图像编码器要「自己」初始化 TP 上下文</span>
+        <p style="margin:6px 0 0;"><b>背景代码（来自 <code class="inline">image_encoder.py</code> 的 <code class="inline">_init_sglang_tp</code>，本 PR 没改它，但正是它让这次「放开」有意义）：</b></p>
+<pre style="margin-top:8px;"><code><span class="cmt"># 关键注释（原文）：多进程模式下，image encoder 和 thinker</span>
+<span class="cmt"># 跑在不同进程里，所以 image encoder 不能依赖 thinker 的</span>
+<span class="cmt"># tensor-parallel 状态，必须在请求时维持自己这一套 TP 上下文。</span>
+<span class="kw">if not</span> parallel_state.model_parallel_is_initialized():
+    parallel_state.init_distributed_environment(
+        backend=<span class="str">"nccl"</span>, world_size=tp_size, rank=tp_rank, local_rank=<span class="num">0</span>,
+    )
+    parallel_state.initialize_model_parallel(
+        tensor_model_parallel_size=tp_size,    <span class="cmt"># 建立 TP 通信组</span>
+    )
+    cls._did_init_tp = <span class="kw">True</span>
+dp._ATTN_TP_SIZE = tp_size                     <span class="cmt"># 告诉注意力层：你现在被切成了 tp_size 份</span>
+dp._ATTN_TP_RANK = tp_rank</code></pre>
+        <p style="margin:8px 0 0;"><b>它是什么：</b>SGLang 的并行层（如 <code class="inline">VisionAttention</code>、各种 <code class="inline">ParallelLinear</code>）在前向时会去读全局的「我是第几个 rank / 一共几个 rank」状态来决定切哪一片张量。这套状态由 <code class="inline">torch.distributed</code> + SGLang 的 <code class="inline">parallel_state</code> 维护，底层用 <b>NCCL</b>（NVIDIA 的多卡通信库）做 all-reduce 等集合通信。<br>
+        <b>为什么需要它：</b>因为 image_encoder 是<i>独立进程</i>，它启动时进程里还没有任何 TP 状态（thinker 的 TP 状态在另一个进程，跨不过来）。所以它必须自己 <code class="inline">init_distributed_environment</code> + <code class="inline">initialize_model_parallel</code>，否则那些并行层不知道该怎么切。<br>
+        <b>在这个 PR 里：</b>底层这套早就写好了（#553），但校验白名单（#513）把它锁死了。本 PR 做的就是「解锁」——让用户传进来的 <code class="inline">tp_size</code>/<code class="inline">tp_rank</code> 能真正流到这段初始化代码里。</p>
+      </div>
+
+      <div class="callout concept">
+        <span class="tag">概念 4 · 视觉编码器内部：ViT → Projector → L2 归一化</span>
+        <p style="margin:6px 0 0;">看一眼 image_encoder 真正算什么（<code class="inline">_encode</code> 方法）：</p>
+<pre style="margin-top:8px;"><code><span class="kw">with</span> torch.no_grad():
+    embeds = self.visual(pixel_values, grid_thw)   <span class="cmt"># ① ViT：把图像 patch 编码成视觉特征</span>
+    <span class="kw">if</span> self.visual.use_deepstack:                    <span class="cmt"># （可选）多层特征堆叠，只取 base 部分</span>
+        embeds = embeds[:, : self.visual.image_emb_dim]
+    embeds = self.linear_proj(embeds)              <span class="cmt"># ② Projector：把视觉维度映射到 LLM 的隐藏维度</span>
+    embeds = F.normalize(embeds, dim=-1)           <span class="cmt"># ③ L2 归一化：把向量长度统一为 1</span></code></pre>
+        <ul style="margin:8px 0 0;">
+          <li><b>ViT（Vision Transformer）：</b>把图片切成一个个小块（patch），当成「视觉单词」序列喂进 Transformer，输出每个 patch 的特征向量。<code class="inline">grid_thw</code> 记录了 (时间帧 t, 高 h, 宽 w) 三个维度的 patch 网格大小（视频会有 t&gt;1）。</li>
+          <li><b>Projector（投影层）：</b>ViT 输出的维度（<code class="inline">vision_dim</code>）和语言模型的隐藏维度（<code class="inline">llm_dim</code>）通常不一样。Projector 是一个小 MLP，负责「翻译」——把视觉特征对齐到语言模型能直接吃的空间。<b>这是多模态对接最关键的一环</b>：让图像「说同一种语言」后注入 thinker。</li>
+          <li><b>L2 normalize：</b>把每个 embedding 缩放到单位长度，稳定后续注入时的数值尺度。</li>
+          <li><b>token_counts 计算：</b><code class="inline">(t*h*w) // (spatial_merge_size**2)</code>——相邻 patch 会做空间合并（merge）以减少 token 数，这里算出每张图最终占多少个「视觉 token」，thinker 需要据此在序列里给图像留出对应数量的占位符。</li>
+        </ul>
+        <p style="margin:8px 0 0;"><b>和本 PR 的关系：</b>TP 切的就是这里的 <code class="inline">self.visual</code>（ViT 内部的注意力和线性层）。图越大、ViT 越重，TP 带来的「单图编码提速 + 显存分摊」收益就越明显——这正是作者在 H100 上用 thinker TP4 + image_encoder TP2 跑通 <code class="inline">cars.jpg</code> 验证的场景。</p>
+      </div>
+
+      <h3>5. 我能学到什么 / 延伸思考</h3>
+      <ul>
+        <li><b>「运行时能力」和「对外接口」是两层皮。</b>一个功能能跑（runtime）≠ 用户能用（CLI/校验放行）。成熟项目常常分阶段落地：先在底层实现并验证（#553），再单独开 PR 把它「暴露」出来（#687）。这种切分让每个 PR 都小而可审。</li>
+        <li><b>校验白名单是一把双刃剑。</b>它能防止用户踩进未实现的功能（保护性），但一旦底层能力更新而白名单忘了同步，就会出现「明明能跑却被拒」的矛盾。<b>启示：</b>能力清单（白名单）应该尽量和真实实现「单一数据源」，或至少有测试把两者绑在一起（本 PR 的 <code class="inline">test_validate_stage_tp_support_*</code> 就是这个作用）。</li>
+        <li><b>向后兼容靠「默认 None + 守卫跳过」实现。</b>新增参数默认 <code class="inline">None</code>、不传就完全不进入覆盖分支——这个模式值得记住，是给现有 CLI 加功能时最安全的做法。</li>
+        <li><b>测试反转是行为变更的「自证」。</b>把一条「断言会报错」的测试改成「断言成功」，diff 本身就完整记录了契约的变化，比写在 commit message 里更可靠。</li>
+        <li><b>想深入，建议补的前置知识：</b>
+          <ol>
+            <li>分布式基础：<code class="inline">torch.distributed</code>、NCCL、all-reduce / all-gather 这几个集合通信原语在做什么。</li>
+            <li>张量并行 vs 流水线并行 vs 数据并行的区别（Megatron-LM 论文是经典入门）。</li>
+            <li>多模态 LLM 的「encoder → projector → LLM」范式（可看 LLaVA、Qwen-VL 的结构）。</li>
+            <li>SGLang 的 stage / pipeline 配置体系（本仓库的 <code class="inline">PipelineConfig</code> 与各模型的 <code class="inline">*PipelineConfig</code> 子类）。</li>
+          </ol>
+        </li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- ============================ PR 714 ============================ -->
+  <details class="card" id="pr714" open>
+    <summary>
+      <span class="tri">▶</span>
+      <span>
+        <span class="stitle">#714 · 修复 Omni CI 重跑时「实时标签门禁」失效的问题</span>
+        <div class="smeta">
+          作者 <b>@Ratish1</b> · 状态 <span style="color:var(--accent2)">✓ Merged</span>（2026-06-09 17:35 UTC）·
+          <a href="https://github.com/sgl-project/sglang-omni/pull/714">查看 PR →</a>
+        </div>
+      </span>
+    </summary>
+    <div class="body">
+
+      <h3>1. PR 概览</h3>
+      <ul>
+        <li><b>标题：</b>[CI] Fix live label gate for Omni CI reruns</li>
+        <li><b>编号：</b>#714　<b>作者：</b>@Ratish1（COLLABORATOR）　<b>状态：</b>已合并 merged</li>
+        <li><b>链接：</b><a href="https://github.com/sgl-project/sglang-omni/pull/714">github.com/sgl-project/sglang-omni/pull/714</a></li>
+      </ul>
+      <p><b>一句话概括：</b>修复一个 GitHub Actions 的经典陷阱——「重跑（rerun）会复用旧的事件数据」。导致用 <code class="inline">/tag-and-rerun-ci</code> 给 PR 打上 <code class="inline">run-ci</code> 标签后，重跑却仍然看不到这个新标签，于是 Omni CI 被错误地跳过。修法是：在 CI 运行时<b>实时</b>去 GitHub API 查询 PR 的最新标签和草稿状态，而不是读事件里的旧快照。</p>
+
+      <h3>2. 它解决了什么问题</h3>
+      <p>这个 PR 不涉及模型架构，但它揭示的是一个<b>所有用 GitHub Actions 的团队迟早会撞上的坑</b>，很值得理解。</p>
+      <div class="callout concept">
+        <span class="tag">概念 · GitHub Actions 的「事件 payload 快照」陷阱</span>
+        <p style="margin:6px 0 0;"><b>它是什么：</b>当一个 workflow 被某个事件（如 <code class="inline">pull_request</code>）触发时，GitHub 会把当时 PR 的状态<b>冻结成一份 JSON 快照</b>（叫 event payload），workflow 里写的 <code class="inline">github.event.pull_request.labels</code> 读的就是这份<i>触发那一刻</i>的快照。<br>
+        <b>关键陷阱：</b>当你点「Re-run（重跑）」时，GitHub <b>不会</b>重新生成快照，而是<b>复用最初那一份</b>。所以如果你在首次触发之后才加了标签，重跑时读到的还是「没有标签」的旧快照。</p>
+      </div>
+      <p><b>具体的痛点链条是这样的：</b></p>
+      <ol>
+        <li>开发者开了一个 PR，此时还没有 <code class="inline">run-ci</code> 标签 → Omni CI 的 <code class="inline">if</code> 条件判断「没标签」→ 跳过所有昂贵的自托管 GPU 任务（合理）。</li>
+        <li>维护者用 <code class="inline">/tag-and-rerun-ci</code> 命令：它<b>加上</b> <code class="inline">run-ci</code> 标签，<b>并触发重跑</b>。</li>
+        <li>但重跑复用了第 1 步的旧 payload——里面 <code class="inline">labels</code> 还是空的！于是 <code class="inline">contains(github.event.pull_request.labels.*.name, 'run-ci')</code> 仍然为 false → CI <b>又一次被跳过</b>。</li>
+        <li>结果非常诡异：<b>PR 上明明挂着 <code class="inline">run-ci</code> 标签，CI 却死活不跑</b>。维护者一脸问号。</li>
+      </ol>
+
+      <h3>3. 具体做了什么改动</h3>
+      <p>核心思路：<b>不再相信事件 payload 里的标签快照，而是在 job 运行时主动调用 GitHub API 去拿「此刻」的真实状态。</b>所有改动都在 <code class="inline">.github/workflows/</code> 下的 YAML 里。</p>
+
+      <h4>改动 A：新增 <code class="inline">opened</code> 触发 + 把门禁挪进 preflight job</h4>
+      <div class="filelabel">.github/workflows/omni-ci.yaml</div>
+<pre><code>on:
+  pull_request:
+    branches: [main]
+<span class="del">-   types: [labeled, synchronize, reopened, ready_for_review]</span>
+<span class="add">+   types: [opened, labeled, synchronize, reopened, ready_for_review]</span></code></pre>
+      <p><b>为什么加 <code class="inline">opened</code>：</b>必须保证 PR 一开就有一次 workflow 运行存在，<code class="inline">/tag-and-rerun-ci</code> 才有东西可「重跑」。没有这次初始运行，就没有 run 可以 rerun。</p>
+
+      <p>然后把原来散落在每个 job 顶部的 <code class="inline">if</code> 标签检查，集中改写成 preflight job 里的几个步骤，用 <code class="inline">actions/github-script</code> 实时查询：</p>
+      <div class="filelabel">.github/workflows/omni-ci.yaml —— preflight 实时查询</div>
+<pre><code>- name: Fetch latest PR gate state
+  if: ${{ github.event_name == 'pull_request' }}
+  id: pr
+  uses: actions/github-script@v7
+  with:
+    script: |
+      <span class="cmt">// 重跑会复用原始 payload，所以这里主动调 API 拿“现在”的标签/草稿状态</span>
+      const pr = await github.rest.pulls.get({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: context.issue.number,
+      });
+      core.setOutput("labels", JSON.stringify(pr.data.labels.map((l) =&gt; l.name)));
+      core.setOutput("draft", pr.data.draft ? "true" : "false");
+
+- name: Block draft PR
+  if: ${{ github.event_name == 'pull_request' &amp;&amp; fromJson(steps.pr.outputs.draft) }}
+  run: echo "PR is draft. Blocking Omni CI." &amp;&amp; exit 1
+
+- name: Require run-ci label
+  if: ${{ github.event_name == 'pull_request' }}
+  run: |
+    if [[ "${{ contains(fromJson(steps.pr.outputs.labels), 'run-ci') }}" == "false" ]]; then
+      echo "Missing required label 'run-ci'. ..." &amp;&amp; exit 1
+    fi</code></pre>
+      <p><b>逐块解释：</b></p>
+      <ul>
+        <li><code class="inline">actions/github-script@v7</code> 是 GitHub 官方动作，让你直接在 workflow 里写一段 JS 调用 GitHub REST API。这里用 <code class="inline">pulls.get</code> 拿到<b>实时</b>的 PR 对象。</li>
+        <li><code class="inline">core.setOutput("labels", ...)</code> 把实时标签列表存成步骤输出，后续步骤用 <code class="inline">steps.pr.outputs.labels</code> 读取。</li>
+        <li><b>「Block draft PR」</b>：草稿 PR 直接 <code class="inline">exit 1</code> 让 preflight 失败——草稿不该烧 GPU。</li>
+        <li><b>「Require run-ci label」</b>：实时标签里若不含 <code class="inline">run-ci</code> 就失败。这次读的是<i>真·此刻</i>的标签，重跑也准。</li>
+      </ul>
+
+      <h4>改动 B：下游 job 改成「依赖 preflight 成功」而非各自重复检查</h4>
+      <table class="cmp">
+        <tr><th>改动前（每个 job 各自判断旧 payload）</th><th>改动后（统一信任 preflight 结果）</th></tr>
+        <tr>
+          <td class="before"><pre style="margin:0;background:transparent;border:none;"><code>if: &gt;-
+  github.event_name == 'workflow_dispatch' ||
+  (!github.event.pull_request.draft &amp;&amp;
+   contains(github.event.pull_request
+     .labels.*.name, 'run-ci'))</code></pre></td>
+          <td class="after"><pre style="margin:0;background:transparent;border:none;"><code>if: needs.preflight.result == 'success'</code></pre></td>
+        </tr>
+      </table>
+      <p><b>这一步是整个 PR 的「优雅」所在：</b>原来每个昂贵的 GPU job（setup、tts-ci、qwen3-omni-ci、pr-test……）都重复粘贴同一段读旧 payload 的标签检查——既冗余又全都带着同一个 bug。改后它们只问一句：「<b>preflight 这道门过了吗？</b>」门禁逻辑收敛到<b>唯一一处</b>（single source of truth）。</p>
+      <p>同时，PR 还从 Qwen3 的可复用 workflow（<code class="inline">test-qwen3-omni-ci.yaml</code>）里删掉了 11 个 stage（stage-1 ~ stage-11）各自重复的那段「冻结标签」检查——因为这个可复用 workflow 只会被顶层 Omni CI 调用，门禁已经在上游 preflight 把过了，下游再查纯属冗余且有 bug。</p>
+
+      <h3>4. 涉及的知识点（重点 · 小白友好）</h3>
+      <div class="callout concept">
+        <span class="tag">概念 1 · CI / 自托管 Runner / 标签门禁</span>
+        <p style="margin:6px 0 0;"><b>它是什么：</b>CI（持续集成）是「每次代码改动自动跑测试」的机制。这个仓库的 CI 跑在<b>自托管 GPU runner</b>（自己的 GPU 机器）上，因为要真跑大模型推理，<b>每次都很烧钱烧卡</b>。<br>
+        <b>为什么需要标签门禁：</b>正因为贵，团队不希望每个 PR 的每次提交都自动触发整套 GPU 测试。于是用一个 <code class="inline">run-ci</code> 标签当「开关」：只有维护者确认值得跑、打上标签，CI 才会真正启动。这是<b>成本控制</b>手段。<br>
+        <b>在这个 PR 里：</b>问题就出在这个「开关」的读取方式上——读快照 vs 读实时。</p>
+      </div>
+      <div class="callout concept">
+        <span class="tag">概念 2 · job 依赖 / needs / 门禁收敛</span>
+        <p style="margin:6px 0 0;"><b>它是什么：</b>GitHub Actions 里 <code class="inline">needs: preflight</code> 表示「我要等 preflight 跑完才开始」，而 <code class="inline">needs.preflight.result == 'success'</code> 表示「只有 preflight 成功我才运行」。<br>
+        <b>为什么这样设计更好：</b>把「该不该跑」的判断只写在<b>一个地方</b>（preflight），其他 job 只是顺着依赖链信任它。这避免了「同一段逻辑复制十几遍、改的时候漏改某一处」的维护灾难。<br>
+        <b>在这个 PR 里：</b>11+ 个 stage 的重复 <code class="inline">if</code> 被一句 <code class="inline">needs.xxx.result == 'success'</code> 取代。</p>
+      </div>
+      <div class="callout analogy">
+        <span class="tag">🎫 类比</span>
+        <p style="margin:6px 0 0;">旧设计像「演唱会每个入口的保安都各自拿着一份<i>开场前打印的</i>嘉宾名单查票」——你中途补办了 VIP（加标签），但保安手里的名单是旧的，照样拦你。新设计是「门口设一个总验票口（preflight），现场连后台系统实时核验（调 API），通过了发一个手环；里面所有区域的保安只认手环（<code class="inline">needs.result == success</code>），不再各自查名单」。又快又不会出错。</p>
+      </div>
+
+      <h3>5. 我能学到什么 / 延伸思考</h3>
+      <ul>
+        <li><b>分布式系统的「读快照 vs 读实时」是个永恒主题。</b>事件驱动系统里，事件携带的数据是「那一刻的快照」，一旦你的逻辑依赖「最新状态」，就必须主动去权威数据源重新拉取。这个教训在消息队列、Webhook、缓存失效等场景反复出现。</li>
+        <li><b>消除重复 = 消除 bug 的藏身之处。</b>同一段门禁逻辑被复制十几份时，bug 也被复制了十几份。把它收敛到单一 preflight，不仅好维护，更是从结构上让 bug 无处可藏。</li>
+        <li><b>CI 成本治理是真实工程问题。</b>GPU CI 很贵，「标签 + 重跑」这种人工闸门是常见的省钱模式；理解它能帮你设计自己项目的 CI 触发策略。</li>
+        <li><b>想深入，建议补的前置知识：</b>GitHub Actions 的事件类型与 payload 结构、<code class="inline">actions/github-script</code> 与 REST API、workflow 的 <code class="inline">needs</code> / <code class="inline">if</code> / 表达式语法（<code class="inline">fromJson</code>、<code class="inline">contains</code>）、可复用 workflow（reusable workflow）的调用机制。</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- ============================ Glossary ============================ -->
+  <details class="card" id="glossary" open>
+    <summary>
+      <span class="tri">▶</span>
+      <span>
+        <span class="stitle">📚 术语速查表（小白友好）</span>
+        <div class="smeta">把今天出现的高频概念集中收口，方便长期回查</div>
+      </span>
+    </summary>
+    <div class="body">
+      <table class="cmp">
+        <tr><th>术语</th><th>一句话解释</th></tr>
+        <tr><td>Stage（阶段）</td><td>Omni 流水线里一个可独立配置/放卡/并行的组件，如 image_encoder、thinker、talker。</td></tr>
+        <tr><td>Thinker</td><td>语言模型主干，负责理解多模态输入并做推理（自回归生成文本）。</td></tr>
+        <tr><td>Talker</td><td>把 thinker 的文本转成语音 token 的阶段（语音生成）。</td></tr>
+        <tr><td>image_encoder / audio_encoder</td><td>把图像/音频转成 embedding 的编码阶段，非自回归、一次性吃完输入。</td></tr>
+        <tr><td>Tensor Parallelism (TP)</td><td>把一层的张量切到多卡并行计算；切的是「层内部」。</td></tr>
+        <tr><td>Pipeline Parallelism</td><td>把不同层/阶段分到不同卡，按数据流串联；切的是「层与层之间」。</td></tr>
+        <tr><td>tp_size / tp_rank</td><td>切成几份 / 当前进程是第几份。</td></tr>
+        <tr><td>NCCL</td><td>NVIDIA 多卡通信库，TP 的 all-reduce 等集合通信靠它。</td></tr>
+        <tr><td>ViT (Vision Transformer)</td><td>把图片切 patch 当序列喂 Transformer 的视觉编码器。</td></tr>
+        <tr><td>Projector</td><td>小 MLP，把视觉特征维度对齐到语言模型隐藏维度，是多模态对接的关键。</td></tr>
+        <tr><td>CUDA Graph</td><td>把一串 GPU kernel 录制成图、整体重放，减少逐 kernel 启动开销（本仓库 thinker/talker 支持）。</td></tr>
+        <tr><td>mem_fraction_static</td><td>SGLang 预留给 KV cache 等的静态显存比例。</td></tr>
+        <tr><td>event payload（事件快照）</td><td>GitHub Actions 触发时冻结的 PR 状态 JSON；重跑会复用旧的。</td></tr>
+        <tr><td>self-hosted runner</td><td>自托管的 CI 执行机（这里是 GPU 机器，跑一次很贵）。</td></tr>
+        <tr><td>needs.&lt;job&gt;.result</td><td>workflow 里表示「依赖的某个 job 的最终结果」，用于门禁收敛。</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <footer>
+    SGLang Omni 每日 PR 学习日报 · 自动生成于 2026-06-10　|　数据来源：GitHub API（sgl-project/sglang-omni）<br>
+    本期共精讲 2 个合并 PR：#687（多模态/张量并行/多阶段）、#714（CI 基础设施）。讲透优先于覆盖广度。
+  </footer>
+
+</div>
+</body>
+</html>
