@@ -28,11 +28,11 @@ from sglang.srt.model_executor.forward_batch_info import ForwardBatch, PPProxyTe
 from sglang.srt.model_loader.weight_utils import default_weight_loader
 from sglang.srt.utils import add_prefix
 
-from sglang_omni.models.moss_tts_local.moss_qwen3_backbone import MossLocalQwen3Model
 from sglang_omni.models.moss_tts_local.local_transformer import (
     MossTTSLocalTransformer,
     sample_seeded_branchless,
 )
+from sglang_omni.models.moss_tts_local.moss_qwen3_backbone import MossLocalQwen3Model
 from sglang_omni.models.moss_tts_local.payload_types import (
     moss_tts_local_special_token_defaults,
 )
