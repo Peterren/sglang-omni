@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
+import os
 import queue
 import threading
 from typing import Any
@@ -256,6 +257,60 @@ def create_preprocessing_executor(
     )
 
 
+def _env_flag(name: str, default: bool) -> bool:
+    """Read a boolean toggle from the environment (A/B perf knobs)."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _compile_moss_local_backbone(model: Any) -> None:
+    """Per-layer ``torch.compile`` the AR backbone for the decode path.
+
+    Populates ``inner._compiled_decode_layers`` consumed by
+    ``MossLocalQwen3Model.forward``. Prefill keeps eager ``self.layers``.
+    """
+    inner = getattr(model, "model", None)
+    layers = getattr(inner, "layers", None) if inner is not None else None
+    if layers is None:
+        logger.warning("MOSS-TTS-Local torch.compile: no backbone layers found")
+        return
+    from sglang.srt.model_executor.cuda_graph_runner import set_torch_compile_config
+
+    set_torch_compile_config()
+    compile_mode = os.environ.get(
+        "SGLANG_TORCH_COMPILE_MODE", "max-autotune-no-cudagraphs"
+    )
+    inner._compiled_decode_layers = [
+        torch.compile(layer, mode=compile_mode) for layer in layers
+    ]
+    inner._compiled_max_decode_bs = 16
+    logger.info(
+        "MOSS-TTS-Local torch.compile: compiled %d backbone layers (mode=%s)",
+        len(layers),
+        compile_mode,
+    )
+
+
+def _warmup_eager_pre_cg(model_runner: Any) -> None:
+    """One eager bs=1 forward before CUDA-graph capture (#565 CG-corruption fix).
+
+    Lazy CUDA init from the compiled layers must not land inside the first
+    captured graph, so we hide the compiled layers and run one eager decode.
+    """
+    inner = getattr(model_runner.model, "model", None)
+    saved = getattr(inner, "_compiled_decode_layers", None)
+    if saved is None:
+        return
+    inner._compiled_decode_layers = None
+    try:
+        model_runner._dummy_run(batch_size=1)
+        torch.cuda.synchronize()
+    finally:
+        inner._compiled_decode_layers = saved
+
+
 def create_sglang_tts_engine_executor(
     model_path: str,
     *,
@@ -281,9 +336,12 @@ def create_sglang_tts_engine_executor(
         "dtype": dtype,
         "cuda_graph_bs": [1, 2, 4, 8, 16],
         "cuda_graph_max_bs": 16,
-        "disable_cuda_graph": False,
+        # A/B perf knobs (env-gated, default behaves exactly like main):
+        #   MOSS_TTS_DISABLE_CUDA_GRAPH=1  -> skip backbone CUDA graphs
+        #   MOSS_TTS_ENABLE_TORCH_COMPILE=1 -> compile the AR backbone decode path
+        "disable_cuda_graph": _env_flag("MOSS_TTS_DISABLE_CUDA_GRAPH", False),
         "disable_overlap_schedule": True,
-        "enable_torch_compile": False,
+        "enable_torch_compile": _env_flag("MOSS_TTS_ENABLE_TORCH_COMPILE", False),
         "max_prefill_tokens": 8192,
         "max_running_requests": 16,
         # Leave headroom for the two ~4.3 GB bf16 codec instances plus their
@@ -326,6 +384,16 @@ def create_sglang_tts_engine_executor(
         server_args.disable_cuda_graph = False
 
     model = model_worker.model_runner.model
+
+    # torch.compile the AR backbone decode path before any CUDA-graph capture.
+    # We do the per-layer compile manually (and then disable sglang's own
+    # auto-compile) so prefill stays eager and only decode uses compiled layers.
+    if bool(getattr(server_args, "enable_torch_compile", False)):
+        _compile_moss_local_backbone(model)
+        server_args.enable_torch_compile = False
+        if want_cuda_graph:
+            _warmup_eager_pre_cg(model_worker.model_runner)
+
     if want_cuda_graph:
         model_worker.model_runner.init_device_graphs()
         # Also graph the per-frame local-transformer decode (1 + n_vq

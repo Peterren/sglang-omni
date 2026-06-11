@@ -26,9 +26,9 @@ from sglang.srt.layers.utils import PPMissingLayer, get_layer_id
 from sglang.srt.layers.vocab_parallel_embedding import VocabParallelEmbedding
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch, PPProxyTensors
 from sglang.srt.model_loader.weight_utils import default_weight_loader
-from sglang.srt.models.qwen3 import Qwen3Model
 from sglang.srt.utils import add_prefix
 
+from sglang_omni.models.moss_tts_local.moss_qwen3_backbone import MossLocalQwen3Model
 from sglang_omni.models.moss_tts_local.local_transformer import (
     MossTTSLocalTransformer,
     sample_seeded_branchless,
@@ -91,7 +91,7 @@ class MossTTSLocalSGLangModel(torch.nn.Module):
             for _ in range(self.config.channels):
                 self.embedding_list.append(PPMissingLayer())
 
-        self.model = Qwen3Model(
+        self.model = MossLocalQwen3Model(
             config=self.config.language_config,
             quant_config=quant_config,
             prefix=add_prefix("model", prefix),
