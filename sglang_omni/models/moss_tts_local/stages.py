@@ -257,6 +257,14 @@ def create_preprocessing_executor(
     )
 
 
+def _env_flag(name: str, default: bool) -> bool:
+    """Read a boolean toggle from the environment (perf A/B knobs)."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
 def _compile_moss_local_backbone(model: Any) -> None:
     """Per-layer ``torch.compile`` the AR backbone for the decode path.
 
@@ -328,12 +336,13 @@ def create_sglang_tts_engine_executor(
         "dtype": dtype,
         "cuda_graph_bs": [1, 2, 4, 8, 16],
         "cuda_graph_max_bs": 16,
-        "disable_cuda_graph": False,
+        # Perf A/B knobs for the 2x2 cross-validation matrix (compile x CG).
+        # Default = compile ON, CG ON (the headline config of this branch).
+        #   MOSS_TTS_DISABLE_CUDA_GRAPH=1   -> skip backbone CUDA graphs
+        #   MOSS_TTS_ENABLE_TORCH_COMPILE=0 -> skip AR-backbone torch.compile
+        "disable_cuda_graph": _env_flag("MOSS_TTS_DISABLE_CUDA_GRAPH", False),
         "disable_overlap_schedule": True,
-        # Compile the AR backbone decode path (manual per-layer, see
-        # _compile_moss_local_backbone). This branch exists to A/B compile vs
-        # main, so it is always on here; check out main for the baseline.
-        "enable_torch_compile": True,
+        "enable_torch_compile": _env_flag("MOSS_TTS_ENABLE_TORCH_COMPILE", True),
         "max_prefill_tokens": 8192,
         "max_running_requests": 16,
         # Leave headroom for the two ~4.3 GB bf16 codec instances plus their
