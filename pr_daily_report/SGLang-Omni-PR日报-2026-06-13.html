@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SGLang-Omni 每日 PR 学习日报 · 2026-06-13</title>
+<style>
+:root{
+  --bg:#0f1117; --card:#171a23; --ink:#e6e8ee; --muted:#9aa3b2; --line:#272b36;
+  --accent:#7c9cff; --accent2:#52d1b2; --warn:#ffc16b; --pink:#ff8fb3;
+  --codebg:#0b0d13;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","WenQuanYi Zen Hei",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.75; font-size:15.5px;
+}
+.wrap{max-width:980px; margin:0 auto; padding:34px 24px 80px}
+header.top{
+  border:1px solid var(--line); border-radius:18px; padding:30px 32px;
+  background:linear-gradient(135deg,#1b2030,#141722); margin-bottom:26px;
+}
+header.top h1{margin:0 0 6px; font-size:27px; letter-spacing:.3px}
+header.top .sub{color:var(--muted); font-size:14px}
+.badges{margin-top:16px; display:flex; flex-wrap:wrap; gap:10px}
+.badge{
+  background:#10141f; border:1px solid var(--line); border-radius:999px;
+  padding:5px 13px; font-size:12.5px; color:var(--muted);
+}
+.badge b{color:var(--accent)}
+.stat-grid{display:flex; flex-wrap:wrap; gap:14px; margin:22px 0 8px}
+.stat{
+  flex:1 1 150px; background:var(--card); border:1px solid var(--line);
+  border-radius:14px; padding:16px 18px;
+}
+.stat .num{font-size:26px; font-weight:700; color:var(--accent2)}
+.stat .lab{font-size:12.5px; color:var(--muted); margin-top:2px}
+h2.section{font-size:20px; margin:34px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--line)}
+.theme-table{width:100%; border-collapse:collapse; font-size:13.6px; margin:8px 0 6px}
+.theme-table th,.theme-table td{border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top}
+.theme-table th{background:#10141f; color:var(--muted); font-weight:600}
+.theme-table td a{color:var(--accent); text-decoration:none}
+.tag{display:inline-block; font-size:11.5px; padding:2px 9px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
+.tag.arch{color:#9db4ff; border-color:#33406b}
+.tag.perf{color:#52d1b2; border-color:#2c5b4f}
+.tag.infra{color:#ffc16b; border-color:#5e4d2a}
+.tag.tts{color:#ff8fb3; border-color:#5e2f42}
+
+details.pr{
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  margin:18px 0; overflow:hidden;
+}
+details.pr>summary{
+  cursor:pointer; list-style:none; padding:18px 22px; display:block;
+  background:#141824;
+}
+details.pr>summary::-webkit-details-marker{display:none}
+.pr-id{font-size:12.5px; color:var(--accent); font-weight:700; letter-spacing:.4px}
+.pr-title{font-size:17.5px; font-weight:650; margin:3px 0 6px}
+.pr-meta{font-size:12.5px; color:var(--muted)}
+.pr-meta a{color:var(--accent); text-decoration:none}
+.pr-body{padding:6px 24px 26px}
+.pr-body h3{
+  font-size:15.5px; margin:24px 0 8px; color:#fff;
+  display:flex; align-items:center; gap:9px;
+}
+.pr-body h3 .ic{
+  font-size:12px; background:#10141f; border:1px solid var(--line);
+  color:var(--accent2); border-radius:8px; width:26px; height:26px;
+  display:inline-flex; align-items:center; justify-content:center; flex:none;
+}
+.pr-body h4{font-size:14px; margin:18px 0 6px; color:#cdd4e3}
+.pr-body p{margin:8px 0}
+.pr-body ul{margin:8px 0 8px; padding-left:22px}
+.pr-body li{margin:5px 0}
+.lead{color:var(--accent2); font-weight:600}
+code.inl{
+  background:#0b0d13; border:1px solid var(--line); border-radius:6px;
+  padding:1px 6px; font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  font-size:12.8px; color:#e9c08a;
+}
+pre.code{
+  background:var(--codebg); border:1px solid var(--line); border-radius:12px;
+  padding:14px 16px; overflow-x:auto; margin:12px 0;
+  font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  font-size:12.7px; line-height:1.6; color:#d7dce8; white-space:pre;
+}
+pre.code .k{color:#ff8fb3}
+pre.code .b{color:#7c9cff}
+pre.code .s{color:#9ad27d}
+pre.code .c{color:#6b7384; font-style:italic}
+pre.code .m{color:#e9c08a}
+.note{
+  border-left:3px solid var(--accent); background:#121622; border-radius:0 10px 10px 0;
+  padding:11px 16px; margin:13px 0; font-size:14px;
+}
+.concept{
+  border:1px solid var(--line); border-radius:12px; background:#10141f;
+  padding:6px 18px 12px; margin:14px 0;
+}
+.concept>.h{
+  font-size:13.5px; font-weight:700; color:var(--warn); margin:12px 0 4px;
+  display:flex; gap:8px; align-items:center;
+}
+.concept .seg{margin:6px 0}
+.concept .seg b{color:#cdd4e3}
+.analogy{color:var(--accent2)}
+.takeaway{
+  border:1px dashed #33406b; border-radius:12px; background:#10141c;
+  padding:8px 18px 14px; margin:14px 0;
+}
+.takeaway .h{color:#9db4ff; font-weight:700; font-size:13.5px; margin:10px 0 4px}
+footer{margin-top:46px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:12.5px}
+a{color:var(--accent)}
+@media print{
+  body{background:#fff; color:#1a1d26; font-size:11.5px; line-height:1.6}
+  .wrap{max-width:100%; padding:0 6px}
+  header.top{background:#f4f6fb; border-color:#d6dbe6}
+  header.top h1,.pr-title,.pr-body h3,.pr-body h3 .ic{color:#11141c}
+  .stat,.concept,.theme-table th,details.pr,details.pr>summary{background:#f7f8fc}
+  details.pr,.stat,.concept,.theme-table td,.theme-table th,pre.code,.takeaway,.note{border-color:#d6dbe6}
+  .pr-body h4{color:#2a2f3d}
+  pre.code{background:#0b0d13; color:#d7dce8}            /* keep code dark for contrast */
+  .badge,.pr-meta,.stat .lab,.muted,header.top .sub{color:#555}
+  details.pr{break-inside:avoid; page-break-inside:avoid}
+  .concept,pre.code,.takeaway{break-inside:avoid}
+  h2.section{break-after:avoid}
+  a{color:#1a4fd6}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>SGLang-Omni 每日 PR 学习日报</h1>
+    <div class="sub">报告日期：2026-06-13 · 仓库：sgl-project/sglang-omni · 范围：过去 24 小时合并（merged）的 PR · 讲解深度优先</div>
+    <div class="badges">
+      <span class="badge">主线主题：<b>MOSS-TTS-Local 状态池三部曲</b></span>
+      <span class="badge">共 <b>8</b> 个 merged PR</span>
+      <span class="badge">深讲 <b>4</b> · 简述 <b>4</b></span>
+      <span class="badge">面向：推理基础设施零基础读者</span>
+    </div>
+  </header>
+
+  <h2 class="section">📊 当日概览</h2>
+  
+<div class="stat-grid">
+  <div class="stat"><div class="num">8</div><div class="lab">过去 24h 合并 PR</div></div>
+  <div class="stat"><div class="num">3</div><div class="lab">核心架构 / 状态池化</div></div>
+  <div class="stat"><div class="num">2</div><div class="lab">Higgs TTS 优化</div></div>
+  <div class="stat"><div class="num">3</div><div class="lab">硬件 / 后端 / CI</div></div>
+</div>
+<p>今天合并的 8 个 PR 里，<b>真正的主线是 MOSS-TTS-Local v1.5 这条多阶段语音合成（TTS）推理路径的“状态池化（state-pool）”重构三部曲</b>
+（#745 → #759 → #758）。它们把“每一步都要用 Python 对象临时拼出来”的解码状态，搬进常驻 GPU 的、按行（per-row）索引的张量缓冲区里，
+为 CUDA Graph 捕获和 async 解码（一步前瞻）铺路。其余的是 Higgs TTS 的缓存 / CLI 打磨（#713、#700）和基础设施
+（Blackwell 适配 #763、后端升级 #698、CI 镜像 #764）。</p>
+<p>下面按“讲透优先于覆盖广”的原则：前 4 个 PR 逐块拆代码 + 补全所有背景概念；后 4 个简明说明动机与改动。</p>
+
+<table class="theme-table">
+  <tr><th>#</th><th>标题</th><th>主题</th><th>一句话</th></tr>
+  <tr><td><a href="https://github.com/sgl-project/sglang-omni/pull/745">745</a></td><td>MOSS-TTS-Local v1.5 解码状态池</td><td><span class="tag arch">架构</span></td><td>把每请求解码状态搬进常驻 GPU 行索引缓冲区，输出改走“日志（journal）”，行为零变化</td></tr>
+  <tr><td><a href="https://github.com/sgl-project/sglang-omni/pull/759">759</a></td><td>池化 frame 启动状态</td><td><span class="tag perf">性能</span></td><td>把 generation_steps、重复惩罚历史也搬进池子，一次向量化 gather；无惩罚路径保持可图化</td></tr>
+  <tr><td><a href="https://github.com/sgl-project/sglang-omni/pull/758">758</a></td><td>async 解码（一步前瞻）</td><td><span class="tag perf">性能</span> <span class="tag arch">架构</span></td><td>在 Local 路径打开“发射/收尾”分离的一步前瞻，含 bs=1 停止符的设备快照修复</td></tr>
+  <tr><td><a href="https://github.com/sgl-project/sglang-omni/pull/713">713</a></td><td>Higgs 参考音频缓存键</td><td><span class="tag tts">TTS</span></td><td>用解码后的波形内容做参考码缓存键，让相同音频的不同 URL 也能命中缓存</td></tr>
+  <tr><td><a href="https://github.com/sgl-project/sglang-omni/pull/700">700</a></td><td>Higgs decode-mode CLI</td><td><span class="tag tts">TTS</span></td><td>把 --async-decode 换成更清晰的 --decode-mode async|sync</td></tr>
+  <tr><td><a href="https://github.com/sgl-project/sglang-omni/pull/763">763</a></td><td>Blackwell GPU 适配</td><td><span class="tag infra">基础设施</span></td><td>按 SM 版本自动为 Blackwell(SM100+) 设置 FlashInfer/注意力后端兜底</td></tr>
+  <tr><td><a href="https://github.com/sgl-project/sglang-omni/pull/698">698</a></td><td>升级钉死的 SGLang 后端</td><td><span class="tag infra">基础设施</span></td><td>升级 SGLang 依赖并适配多模型组件到新 API</td></tr>
+  <tr><td><a href="https://github.com/sgl-project/sglang-omni/pull/764">764</a></td><td>CI PyPI 镜像换阿里云</td><td><span class="tag infra">基础设施</span></td><td>清华镜像缺 CUDA13 包导致 CI 失败，切到阿里云镜像</td></tr>
+</table>
+
+
+  <h2 class="section">🧩 PR 详解（卡片可折叠）</h2>
+  <p style="color:#9aa3b2;font-size:13px;margin-top:-4px">提示：网页中点击每张卡片标题可折叠/展开；PDF 版默认全部展开以便长期保存阅读。</p>
+  
+    <details class="pr" open>
+      <summary>
+        <div class="pr-id">PR #745 · 架构主线</div>
+        <div class="pr-title">MOSS-TTS-Local v1.5 解码状态池（state-pool）</div>
+        <div class="pr-meta">作者 <b>JiaxinD</b> · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/745">#745</a> · 15 文件 · 核心：state_pool.py / model_runner.py / radix_hash.py</div>
+      </summary>
+      <div class="pr-body">
+    <div class="concept">
+      <div class="h">📚 概念：SGLang 推理引擎的几个核心组件</div>
+      <div class="seg"><b>它是什么 →</b> SGLang 是一个高性能大模型推理引擎。一条请求进来，会流过几个分工明确的组件：<b>Tokenizer Manager</b>（把文字切成 token id）→ <b>Scheduler 调度器</b>（决定哪些请求这一步一起跑、组成一个 batch）→ <b>Model Runner 模型执行器</b>（真正在 GPU 上前向计算、采样出下一个 token）→ <b>Detokenizer</b>（把 token 还原成文字/音频）。其中还有 <b>Attention Backend</b>（注意力算子的具体实现，如 FlashInfer、Triton）。</div>
+      <div class="seg"><b>为什么需要它 →</b> 推理服务要同时服务很多用户、还要榨干 GPU。把“切词、排队、算、还原”拆成流水线组件，每个组件可以独立优化、独立扩展，才能做到高吞吐。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> sglang-omni 是 SGLang 的“多模态/全能（Omni）”分支，在这套组件之上加了语音、图像等模态。今天的 PR 几乎都在改 <b>Model Runner</b> 这一层（具体是 MOSS-TTS-Local 这个 TTS 模型的 runner）和 <b>Scheduler</b>。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>把它想成一条餐厅后厨流水线：点单员(tokenizer)→ 排菜的(scheduler)→ 炒菜的(model runner)→ 装盘的(detokenizer)。</div>
+    </div>
+    <div class="concept">
+      <div class="h">📚 概念：Continuous Batching（连续批处理）</div>
+      <div class="seg"><b>它是什么 →</b> 一种调度策略：不等一整批请求都到齐/都结束，而是“谁好了就让谁加入这一步的计算、谁完成了就立刻让出位置”，每一步动态重组 batch。</div>
+      <div class="seg"><b>为什么需要它 →</b> 传统静态批处理要等最慢的请求跑完才换下一批，GPU 大量时间在空转。连续批处理让 GPU 几乎一直满载。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 正因为 batch 每步都在变（请求随时进/出/被回收），“每请求的解码状态”必须能稳定地跟着请求走——这正是 #745 状态池要解决的根本问题。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像公交车不等满员发车，而是到站就上下客、一直在跑。</div>
+    </div>
+    <div class="concept">
+      <div class="h">📚 概念：KV Cache 与 Radix Attention</div>
+      <div class="seg"><b>它是什么 →</b> <b>KV Cache</b>：Transformer 每生成一个 token，都要用到前面所有 token 的 Key/Value 向量。把它们缓存起来避免重算，就是 KV cache，它占用大量显存。<b>Radix Attention</b> 是 SGLang 的招牌：用一棵基数树（radix tree）按 token 前缀共享 KV cache，相同前缀的请求复用同一份缓存。</div>
+      <div class="seg"><b>为什么需要它 →</b> 重算 KV 极其昂贵；不同请求/同一请求的不同步常有公共前缀，能共享就能省显存、提吞吐。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> #745 把每帧的“radix 缓存键”从 CPU 端 blake2b 哈希换成了可被 CUDA Graph 捕获的 GPU 多项式哈希，去掉了每帧一次 GPU→CPU 同步（见该 PR 第 3 节）。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像图书馆把相同开头的书号归到同一书架，省地方也好找。</div>
+    </div>
+    <div class="concept">
+      <div class="h">📚 概念：CUDA Graph（CUDA 图）</div>
+      <div class="seg"><b>它是什么 →</b> 把一串固定的 GPU 操作“录制”成一张图，之后整张图一次性重放（replay），省掉 CPU 一条条发指令（kernel launch）的开销。</div>
+      <div class="seg"><b>为什么需要它 →</b> 解码阶段每步的 GPU 计算量很小，CPU 发指令的固定开销反而成了瓶颈。录成图重放能把这部分开销几乎清零。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 但 CUDA Graph 有个硬约束：<b>被捕获的操作必须形状固定、地址固定、不能有依赖数据的分支、不能有 GPU↔CPU 同步</b>。今天三个 MOSS PR 的所有设计（常驻缓冲区、行索引、GPU 哈希、无惩罚路径保持图化）都是在迁就这条约束。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像把一段固定舞步预先编排好，演出时一键播放，而不是每次现场喊口令。</div>
+    </div><h3><span class="ic">①</span>PR 概览</h3>
+<ul>
+  <li><b>标题：</b>[Refactor] MOSS-TTS-Local v1.5 decode-state pool (#735)</li>
+  <li><b>编号 / 作者 / 状态：</b>#745 · JiaxinD · <b>已合并 merged</b></li>
+  <li><b>链接：</b><a href="https://github.com/sgl-project/sglang-omni/pull/745">github.com/sgl-project/sglang-omni/pull/745</a></li>
+</ul>
+<p class="lead">一句话：把 MOSS-TTS-Local 解码时“每请求、对下一步关键”的状态，从分散的 Python 对象搬进一个常驻 GPU、按行索引的“状态池”，输出收集改走一份每步独立的“日志（journal）”，整个改动<b>逐位（bit-identical）不改变输出</b>（只有一处披露过的 bug 修复例外）。</p>
+<h3><span class="ic">②</span>它解决了什么问题</h3>
+<p>MOSS-TTS-Local 是一个 TTS（文字转语音）模型的“本地 Transformer”解码路径。它每生成一帧音频，都需要一批“下一步要用的状态”，比如：</p>
+<ul>
+  <li><b>反馈嵌入（feedback embedding）</b>：上一帧的输出要变成下一帧的输入向量；</li>
+  <li><b>采样参数 + 随机种子</b>：温度、top-p、top-k、seed（请求级别，整个请求不变）；</li>
+  <li><b>本步产出的帧</b>：要在“下一步”被收集成最终音频。</li>
+</ul>
+<p>改之前，这些状态分别躺在三个“临时容器”里：每个请求对象上挂一个 <code class="inl">pending_feedback_queue</code> 双端队列、一个组合键的 <code class="inl">_param_cache</code> 单槽缓存、以及 runner 全局的 <code class="inl">_pending_rows</code> 单槽。</p>
+<div class="note">痛点：在<b>连续批处理</b>下 batch 每步都在重组，请求会被“撤回（retraction）/恢复”、会中途加入；这些挂在 Python 对象上的零散状态，既难保证 CUDA Graph 捕获所需的“地址固定/形状固定”，又给后续要做的 async 解码（#734/#758）埋了坑。说白了：<b>状态太“散”，没法上 CUDA Graph、也没法做一步前瞻。</b></div>
+<h3><span class="ic">③</span>具体做了什么改动</h3><p>核心是新增一个文件 <code class="inl">state_pool.py</code>，定义 <code class="inl">MossTTSLocalDecodeStatePool</code>（状态池）和 <code class="inl">MossTTSLocalDecodeJournal</code>（日志）。涉及核心文件：</p>
+<ul>
+  <li><code class="inl">models/moss_tts_local/state_pool.py</code>（+175，新文件）— 池子 + 日志</li>
+  <li><code class="inl">models/moss_tts_local/model_runner.py</code>（+102/-87）— gather/scatter 改造、GPU 哈希、chunked 行处理</li>
+  <li><code class="inl">models/moss_tts_local/radix_hash.py</code>（+87，新文件）— 可捕获的 GPU 多项式哈希</li>
+  <li><code class="inl">model_runner/base.py</code>（+14/-1）— 新增通用钩子 <code class="inl">finalize_skip_rids</code></li>
+  <li><code class="inl">radix_hash.py</code> 设计文档 + 6 个测试文件（含 622 行池子测试）</li>
+</ul>
+<h4>(a) 池子怎么开：尺寸“蹭”现有权重表，地址锁死一辈子</h4>
+<pre class="code"><code><span class="k">def</span> __init__(<span class="b">self</span>, model):
+    weight = model._decode_input_embedding.weight
+    <span class="c"># P = max_running_requests + 1；+1 是预留的“填充行(padding row)”</span>
+    <span class="b">self</span>.num_rows = <span class="b">int</span>(weight.shape[<span class="m">0</span>]) + <span class="m">1</span>
+    <span class="b">self</span>.padding_row = <span class="b">self</span>.num_rows - <span class="m">1</span>
+    <span class="b">self</span>.hidden_size = <span class="b">int</span>(weight.shape[<span class="m">1</span>])
+    <span class="b">self</span>.device = weight.device
+    <span class="b">self</span>.dtype = weight.dtype
+    <span class="c"># 下一帧的反馈嵌入；dtype 用 bf16，与 staging 表一致，</span>
+    <span class="c"># 这样 before_decode 里的 gather 就是一次纯拷贝（为 #736 铺路）</span>
+    <span class="b">self</span>.feedback_embeds = <span class="b">torch</span>.zeros(
+        <span class="b">self</span>.num_rows, <span class="b">self</span>.hidden_size,
+        device=<span class="b">self</span>.device, dtype=<span class="b">self</span>.dtype,
+    )</code></pre>
+<p>逐块解释（假设你没读过这段）：</p>
+<ul>
+  <li><b>不写死行数</b>：池子大小直接读现有的 <code class="inl">_decode_input_embedding.weight</code>（解码输入嵌入表）的形状。它有几行就代表能并发几个请求，于是池子自动跟着 <code class="inl">max_running_requests</code> 走。</li>
+  <li><b><code class="inl">num_rows = shape[0] + 1</code></b>：每个并发请求一行，<b>额外多一行</b>当“填充行”，索引 <code class="inl">padding_row</code>。这一行专门留给“这个槽位现在不是真实请求”的情况（为将来上 CUDA Graph 做准备：#736）。</li>
+  <li><b>device/dtype 全部抄权重表</b>：保证之后的 gather/scatter 都是同设备同精度，无需类型转换，纯内存拷贝。</li>
+  <li><b><code class="inl">feedback_embeds</code></b> 是一个 <code class="inl">[P, hidden]</code> 的 GPU 大缓冲区，<b>在模型初始化时（任何图捕获之前）一次性分配</b>，于是它的显存地址在整个进程生命周期固定不变——这正是 CUDA Graph 能捕获它的前提。</li>
+</ul>
+<p>另外 7 个采样相关张量（text/audio 的 temperature、top-p、top-k 和 seeds）也都是 <code class="inl">[P]</code> 形状，在请求“拿到行”时写一次。</p>
+
+<h4>(b) 收尾时把反馈嵌入“撒（scatter）”进池子 + 写日志</h4>
+<pre class="code"><code><span class="c"># 只处理“真正会发帧”的行（过滤掉 chunked-prefill 的中间块）</span>
+emit_indices = [i <span class="k">for</span> i, r <span class="k">in</span> <span class="b">enumerate</span>(requests)
+                <span class="k">if</span> <span class="k">not</span> <span class="b">self</span>._is_chunked_request(r)]
+<span class="k">if</span> <span class="k">not</span> emit_indices:
+    <span class="k">return</span>
+emit_index_t = <span class="b">torch</span>.tensor(emit_indices, dtype=<span class="b">torch</span>.long, device=rows.device)
+emit_row_t  = row_t[emit_index_t.to(device=row_t.device)]        <span class="c"># 这些请求各自的池子行号</span>
+emit_embeds = embeds.index_select(<span class="m">0</span>, emit_index_t.to(device=embeds.device))
+<span class="c"># scatter：把每个请求“下一步的反馈嵌入”写进它固定的池子行</span>
+pool.feedback_embeds[emit_row_t] = emit_embeds.detach().to(
+    device=pool.feedback_embeds.device, dtype=pool.feedback_embeds.dtype)
+<span class="c"># 日志：记录这步发了帧的 rid、池子行、以及本步私有的 rows 张量，留给“下一步”收集</span>
+result.moss_journal = MossTTSLocalDecodeJournal(
+    rids=[requests[i].request_id <span class="k">for</span> i <span class="k">in</span> emit_indices],
+    pool_rows=[pool_rows[i] <span class="k">for</span> i <span class="k">in</span> emit_indices],
+    rows=rows.index_select(<span class="m">0</span>, emit_index_t),
+)</code></pre>
+<p><b>scatter（散射）</b>就是“把一批值按行号写到大缓冲区的对应行”。这里把每个请求新算出的反馈嵌入，写回它在池子里那一行——下一步直接按行号取就行。</p>
+<h4>(c) 下一步开头把反馈嵌入“聚（gather）”回来</h4>
+<pre class="code"><code>pool_rows = [pool.acquire_row(r.request_id) <span class="k">for</span> r <span class="k">in</span> requests]   <span class="c"># 幂等：已有行就返回原行</span>
+row_tensor = <span class="b">torch</span>.tensor(pool_rows, dtype=<span class="b">torch</span>.long, device=weight.device)
+<span class="k">with</span> <span class="b">torch</span>.no_grad():
+    <span class="c"># gather：按本步 batch 顺序，从池子里取出每个请求存好的反馈嵌入</span>
+    weight[:batch_size].copy_(pool.feedback_embeds[row_tensor])</code></pre>
+<p><b>gather（聚集）</b>是 scatter 的逆操作：按行号把分散的行取出、拼成本步 batch 的顺序，直接拷进解码输入嵌入表。因为同精度（bf16），这是一次纯拷贝、没有 GPU→CPU 同步，<b>对 CUDA Graph 友好</b>。这套 gather/scatter 完全取代了老代码里 <code class="inl">pending_feedback_queue.popleft()</code> + <code class="inl">torch.stack</code> 的逐请求拼装。</p>
+
+<h4>(d) 为什么要单独一份“日志（journal）”？</h4>
+<p>关键洞察：池子的行会被<b>同一个请求在下一步覆盖写</b>。所以池子不能同时承担“这步产出、下步才收集”的输出数据——否则下一步一覆盖，上一步的产出就没了。于是 journal 是一份<b>每步独立、不可变的小快照</b>（rids + 池子行 + 本步私有 rows 张量），挂在 <code class="inl">result</code> 上；其中 rids 纯粹用来在收集时做一次“日志和 batch 对得上吗”的对齐断言。</p>
+
+<h4>(e) 一处披露的 bug 修复 + 一个通用钩子</h4>
+<pre class="code"><code><span class="k">def</span> finalize_skip_rids(<span class="b">self</span>, scheduler_output) -&gt; <span class="b">set</span>:
+    <span class="s">&quot;&quot;</span><span class="s">&quot;非最终的 chunked-prefill 行，这一步不能推进 generation_steps。&quot;</span><span class="s">&quot;&quot;</span>
+    <span class="k">return</span> {r.request_id <span class="k">for</span> r <span class="k">in</span> scheduler_output.requests
+            <span class="k">if</span> <span class="b">self</span>._is_chunked_request(r)}</code></pre>
+<p>采样位置是按 <code class="inl">position = generation_steps * num_channels + channel</code> 算的。如果一个被“分块预填充（chunked prefill）”切成 K 块的请求，每块都让 <code class="inl">generation_steps</code> +1，就会把最终块第一帧的采样位置整体挪偏，破坏“逐位一致”。这个在 <code class="inl">base.py</code> 里新增的<b>模型无关钩子</b> <code class="inl">finalize_skip_rids</code>（默认空集合）让模型可以声明“这些请求 id 本步别推进步数”，从而只让最终块推进一次。</p>
+
+    <div class="concept">
+      <div class="h">📚 概念：状态池化（State Pooling）这一设计模式</div>
+      <div class="seg"><b>它是什么 →</b> 把“本来按对象 / 队列零散存放、每步重建”的状态，预先分配成一块固定大小、按整数行号索引的连续缓冲区（这里是 GPU 张量），用“拿行 / 还行”的方式管理生命周期。</div>
+      <div class="seg"><b>为什么需要它 →</b> 零散对象在热路径上反复创建/拷贝/拼装，既慢又不满足 CUDA Graph 的“地址固定、形状固定、无同步”要求。池化后，访问变成一次向量化的 gather/scatter，地址恒定，可被图捕获。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 本 PR 把反馈嵌入、采样参数、种子全部池化为 <code class="inl">[P, ...]</code> 张量；行通过 <code class="inl">acquire_row</code>/<code class="inl">release_row</code> 管理（填充行永不进空闲表）。这是后续 #759、#758 的地基。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像把每个客人的随身物品从“到处乱放”改成“统一寄存柜+号码牌”：要用就报号码一次性取出，柜子地址永远不变。</div>
+    </div>
+    <div class="concept">
+      <div class="h">📚 概念：Chunked Prefill（分块预填充）</div>
+      <div class="seg"><b>它是什么 →</b> “预填充（prefill）”是把请求的整段提示词一次性喂进模型、建好 KV cache 的阶段。当提示很长、显存/计算放不下时，把它切成几块（chunk）分多步喂，就是分块预填充。</div>
+      <div class="seg"><b>为什么需要它 →</b> 长上下文一次性预填充会撑爆显存、还会让其它请求长时间排队；切块能平滑显存峰值、让长短请求公平共享 GPU。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 切块带来一个隐患：中间块也会进入输出处理流程。本 PR 用 <code class="inl">is_chunked&gt;0</code> 守卫跳过中间块发帧，并用钩子避免中间块虚假推进采样步数，保证切块路径与不切块路径逐位一致。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像把一篇长文分页录入，但只在最后一页录完才算“真正写下了第一个字”，中间翻页不算数。</div>
+    </div>
+    <div class="concept">
+      <div class="h">📚 概念：可捕获的 GPU 多项式哈希（替换 host 端 blake2b）</div>
+      <div class="seg"><b>它是什么 →</b> 把每帧若干通道的 token id，用霍纳法（Horner）做一个定系数多项式哈希，全程 int64 张量算子（乘、加、取模），结果落在 <code class="inl">[0, 151643)</code>。</div>
+      <div class="seg"><b>为什么需要它 →</b> 老做法是在 CPU 上用 blake2b 哈希算 radix 键，每帧都要把数据从 GPU 搬到 CPU（一次 D2H 同步），在解码热路径上很伤。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 新哈希循环次数固定（通道数固定）、无数据依赖分支、无 GPU↔CPU 同步，所以能被 CUDA Graph 捕获，去掉每帧一次同步；并用 <code class="inl">torch.where(next_text==end_id, ...)</code> 保留 EOS 原值，确保停止判定不受影响。它只决定 radix 缓存命中/未命中，<b>绝不影响采样出的 token</b>。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像给每帧算一个“指纹号”，以前要寄到外地鉴定（搬 CPU），现在车间内部就能秒出（留在 GPU）。</div>
+    </div><div class="takeaway"><div class="h">💡 我能学到什么 / 延伸思考</div><ul><li><b>可复用工程思想：池化 + 行索引 + 向量化 gather/scatter</b>，是把“逐对象热路径”改造成“硬件友好批量操作”的通用套路，不只用于推理。</li><li><b>“行为中立 + 逐位验证”的重构纪律</b>：用固定种子门禁（S0 gate）证明输出 bit-identical，把“纯重构”和“披露的行为变化”严格分开，是大型重构可信落地的范本。</li><li>想深入可前置了解：CUDA Graph 的捕获约束、PyTorch 的 <code class="inl">index_select</code>/高级索引、以及 Transformer 解码阶段（decode vs prefill）的区别。</li></ul></div></div>
+    </details>
+    <details class="pr" open>
+      <summary>
+        <div class="pr-id">PR #759 · 性能</div>
+        <div class="pr-title">池化 frame 启动状态（generation_steps + 重复惩罚历史）</div>
+        <div class="pr-meta">作者 <b>Hayden727</b> · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/759">#759</a> · Closes #757 · 8 文件</div>
+      </summary>
+      <div class="pr-body"><h3><span class="ic">①</span>PR 概览</h3>
+<ul>
+  <li><b>标题：</b>[Perf] Pool MOSS-TTS Local frame launch state</li>
+  <li><b>编号 / 作者 / 状态：</b>#759 · Hayden727 · <b>已合并</b>（Closes #757）</li>
+  <li><b>链接：</b><a href="https://github.com/sgl-project/sglang-omni/pull/759">pull/759</a></li>
+</ul>
+<p class="lead">一句话：在 #745 的池子基础上，把<b>剩下还在每帧用 Python 重建的“启动状态”</b>——generation_steps、以及音频重复惩罚的历史——也搬进池子，改成一次向量化 gather；并且让“无重复惩罚”的常见路径继续走 CUDA Graph。</p>
+<h3><span class="ic">②</span>它解决了什么问题</h3>
+<p>#745 把反馈嵌入和采样参数池化了，但 <code class="inl">_collect_frame</code>（收集帧）这个热函数里还残留着每帧都重做的“启动准备”：</p>
+<ul>
+  <li>循环遍历请求去 acquire 行号；</li>
+  <li>用 Python list 拼出 <code class="inl">gen_steps</code> 张量；</li>
+  <li>从 <code class="inl">output_rows</code> 里逐请求 gather 出“重复惩罚历史”；</li>
+  <li>从请求对象上逐个读 <code class="inl">generation_steps</code>。</li>
+</ul>
+<div class="note">痛点：这些“每帧一次的 Python 小循环 + 临时张量”是 GPU 启动前的纯 CPU 开销，在大 batch 下累积明显（实测 bs=64 时 launch 准备从 <b>79.77µs 降到 44.17µs</b>）。更重要的是，重复惩罚的历史是“数据依赖、形状不定”的，正好是 CUDA Graph 的天敌——必须把它整理成“常驻、定形”的结构，才能让常见路径保持图化。</div>
+<h3><span class="ic">③</span>具体做了什么改动</h3><p>核心文件：<code class="inl">state_pool.py</code>（+141）新增常驻缓冲区与方法、<code class="inl">model_runner.py</code>（+191/-100）改写收集逻辑、<code class="inl">base.py</code>（+18/-18）新增提交钩子。</p><h4>(a) 新增 4 个常驻池子缓冲区</h4><pre class="code"><code><span class="b">self</span>.generation_steps = <span class="b">torch</span>.zeros(<span class="b">self</span>.num_rows, device=<span class="b">self</span>.device, dtype=<span class="b">torch</span>.<span class="b">int64</span>)
+<span class="b">self</span>.sampling_steps   = <span class="b">torch</span>.zeros(<span class="b">self</span>.num_rows, device=<span class="b">self</span>.device, dtype=<span class="b">torch</span>.<span class="b">int64</span>)
+<span class="b">self</span>.audio_repetition_penalty = <span class="b">torch</span>.zeros(<span class="b">self</span>.num_rows, device=<span class="b">self</span>.device, dtype=<span class="b">torch</span>.<span class="b">float32</span>)
+<span class="c"># 关键新结构：每行 × 每通道 × 整个音频词表 的布尔“出现过”掩码</span>
+<span class="b">self</span>.audio_token_presence = <span class="b">torch</span>.zeros(
+    <span class="b">self</span>.num_rows, <span class="b">self</span>.n_vq, <span class="b">self</span>.audio_vocab_size,
+    device=<span class="b">self</span>.device, dtype=<span class="b">torch</span>.<span class="b">bool</span>)</code></pre>
+<ul>
+  <li><b>generation_steps</b>：每行一个 int64，记“已提交”的解码步数（调度器推进的真值）。</li>
+  <li><b>sampling_steps</b>：独立的“发射位置”计数。在一步前瞻（#758）下它会领先 generation_steps，所以单独存、并对 generation_steps 取 max 做下限。</li>
+  <li><b>audio_repetition_penalty</b>：每行的惩罚系数，<code class="inl">1.0</code> 表示关闭。</li>
+  <li><b>audio_token_presence</b>：最妙的一个。形状 <code class="inl">[P, n_vq, audio_vocab]</code> 的布尔掩码，<code class="inl">[行, 通道, token]=True</code> 表示该请求在该通道生成过这个音频码。它把“每步重新 gather+去重历史张量”换成了<b>定形、O(1) 可索引</b>的掩码。</li>
+</ul>
+<h4>(b) 一次 gather，全步复用：把 row_t 缓存到 forward_batch</h4>
+<pre class="code"><code><span class="c"># 这一步只在写解码输入嵌入时做一次：拿行、写静态参数、判断有无惩罚</span>
+row_tensor, pool_rows, has_pen = pool.prepare_active_rows(requests)
+<span class="k">with</span> <span class="b">torch</span>.no_grad():
+    weight[:batch_size].copy_(pool.feedback_embeds[row_tensor])
+forward_batch.moss_pool_row_t = row_tensor           <span class="c"># 缓存，供后续复用</span>
+forward_batch.moss_pool_rows = pool_rows
+forward_batch.moss_has_audio_repetition_penalty = has_pen
+<span class="c"># ... 后面 _run_frame_decode 直接复用 row_t，不再重建：</span>
+gen_steps = <span class="b">torch</span>.maximum(pool.sampling_steps[row_t], pool.generation_steps[row_t])
+rep_penalties = pool.audio_repetition_penalty[row_t]</code></pre>
+<p>老代码用 Python 循环 <code class="inl">[float(d.audio_repetition_penalty) for d in datas]</code> 逐请求取值；现在 <code class="inl">gen_steps</code> 和 <code class="inl">rep_penalties</code> 都是<b>一次向量化 gather</b>（按行号张量索引）。<code class="inl">torch.maximum(sampling_steps, generation_steps)</code> 就是“发射位置不低于已提交步数”的下限逻辑。</p>
+<h4>(c) 把“已提交步数”镜像回池子的批量钩子</h4>
+<pre class="code"><code><span class="k">def</span> commit_generation_steps(<span class="b">self</span>, row_t, generation_steps):
+    <span class="s">&quot;&quot;</span><span class="s">&quot;把这一批已提交的步数，一次写进对应池子行。&quot;</span><span class="s">&quot;&quot;</span>
+    <span class="k">if</span> row_t.numel() == <span class="m">0</span>:
+        <span class="k">return</span>
+    steps = generation_steps.to(device=<span class="b">self</span>.device, dtype=<span class="b">torch</span>.<span class="b">int64</span>)
+    row_t = row_t.to(device=<span class="b">self</span>.device, dtype=<span class="b">torch</span>.long)
+    <span class="b">self</span>.generation_steps[row_t] = steps
+    <span class="b">self</span>.sampling_steps[row_t] = <span class="b">torch</span>.maximum(<span class="b">self</span>.sampling_steps[row_t], steps)</code></pre>
+<p><code class="inl">base.py</code> 的 <code class="inl">_finalize</code> 里，每个未跳过的请求把 <code class="inl">data.generation_steps</code> 自增（这是真值提交），再把 <code class="inl">(请求, 新步数)</code> 收集起来，一次性触发 <code class="inl">on_generation_steps_advanced</code> 钩子。MOSS 的实现走快路径：若 batch 上缓存的 <code class="inl">row_t</code> 长度匹配，就一把 <code class="inl">commit_generation_steps</code> 全行写完。<code class="inl">sampling_steps</code> 取 max 确保它永不回退到已提交步数以下（维持前瞻不变式）。</p>
+<h4>(d) 无惩罚走 CUDA Graph，有惩罚走 eager 的掩码版</h4>
+<pre class="code"><code><span class="c"># 是否走图：只要这批里没有任何一行开了惩罚，且 batch 不超过捕获上限</span>
+use_graph = (<span class="k">not</span> has_audio_repetition_penalty) <span class="k">and</span> (batch_size &lt;= frame_graph_max_bs)
+
+<span class="k">def</span> _apply_audio_repetition_penalty_mask(logits, token_presence, penalties):
+    penalties = penalties.to(device=logits.device, dtype=logits.dtype)
+    active = token_presence.to(<span class="b">torch</span>.<span class="b">bool</span>) &amp; (penalties != <span class="m">1.0</span>).unsqueeze(-<span class="m">1</span>)
+    penalties = penalties.unsqueeze(-<span class="m">1</span>)
+    <span class="c"># v1.5 规则：正 logit 除以惩罚、负 logit 乘以惩罚（都向不利方向推）</span>
+    penalized = <span class="b">torch</span>.where(logits &lt; <span class="m">0</span>, logits * penalties, logits / penalties)
+    logits.copy_(<span class="b">torch</span>.where(active, penalized, logits))   <span class="c"># 只在 active 处改写</span></code></pre>
+<p>关键设计：<code class="inl">has_audio_repetition_penalty</code> 是一个<b>极便宜的 host 端布尔判断</b>（看这批里有没有任何一行的惩罚 ≠ 1.0）。</p>
+<ul>
+  <li><b>没有任何惩罚</b>（绝大多数请求）→ <code class="inl">use_graph=True</code>，整帧走捕获好的 CUDA Graph 重放，惩罚相关的“数据依赖 gather + torch.where”根本不执行，自然不会破坏图捕获。</li>
+  <li><b>有惩罚</b> → 退回 eager，但用 <code class="inl">audio_token_presence</code> 掩码做一次定形张量运算，而不是逐请求 Python 历史 gather。混合 batch 里没开惩罚的行被 <code class="inl">penalties!=1.0</code> 自动屏蔽。</li>
+</ul>
+<p>撤回-恢复的正确性也照顾到了：<code class="inl">reset_for_refill</code> 在清零行的同时把 steps 还原到已提交值，<code class="inl">rebuild_audio_history</code> 在 KV 压力重预填充后用 <code class="inl">output_rows</code> 重放掩码。</p>
+
+    <div class="concept">
+      <div class="h">📚 概念：重复惩罚（Repetition Penalty）与“出现掩码”</div>
+      <div class="seg"><b>它是什么 →</b> 重复惩罚是采样时的一种控制：对“已经生成过的 token”降低其再次被选中的概率，避免模型复读机式重复。这里作用在音频码上。</div>
+      <div class="seg"><b>为什么需要它 →</b> TTS 解码若不抑制重复，容易卡在某个音节反复输出。但“记住每个请求生成过哪些码”本身是个会随时间增长、形状不定的历史——对 CUDA Graph 不友好。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 本 PR 把历史表示成固定形状的布尔掩码 <code class="inl">audio_token_presence[行,通道,词表]</code>：生成过就置 True。惩罚时只需一次 <code class="inl">torch.where</code> 在掩码为真处改写 logits，O(1) 索引、定形、可与图化路径共存。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像给每个客人发一张“已点过的菜”划勾表（格子固定），而不是不断加长的小纸条。</div>
+    </div>
+    <div class="concept">
+      <div class="h">📚 概念：Logits / Temperature / Top-p / Top-k（采样基础）</div>
+      <div class="seg"><b>它是什么 →</b> 模型每步输出一个覆盖整个词表的分数向量叫 <b>logits</b>。<b>temperature</b> 调整分布的“尖锐/平缓”，<b>top-k</b> 只在分数最高的 k 个里采样，<b>top-p</b> 只在累计概率达到 p 的最小集合里采样。</div>
+      <div class="seg"><b>为什么需要它 →</b> 纯取最大（贪心）会让语音呆板；纯随机又会跑偏。这些参数是“可控随机性”的旋钮。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 这些参数是<b>请求级静态</b>的，所以 #745/#759 把它们作为 <code class="inl">[P]</code> 池子张量，在“拿行”时写一次、每步 gather；重复惩罚则在 temperature 之前、用 fp32 作用于 logits。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像调音台上每个客人有一组固定旋钮，开场设好，演出中按号取用即可。</div>
+    </div><div class="takeaway"><div class="h">💡 我能学到什么 / 延伸思考</div><ul><li><b>“快慢路径分离 + 便宜的标志位决定走哪条”</b>是兼顾性能与功能的经典手法：让 99% 的常见请求走极致优化（图化）路径，把昂贵但少见的特性（惩罚）隔离到 eager 慢路径。</li><li><b>用“定形掩码”替换“变长历史”</b>是迁就向量化/图化硬件约束的通用技巧——空间换“可预测的形状”。</li><li>想深入可了解：PyTorch 高级索引与 <code class="inl">torch.where</code> 的向量化、以及 CUDA Graph capture 为何排斥数据依赖控制流。</li></ul></div></div>
+    </details>
+    <details class="pr" open>
+      <summary>
+        <div class="pr-id">PR #758 · 性能 + 架构</div>
+        <div class="pr-title">MOSS-TTS-Local async 解码：一步前瞻（默认关闭）</div>
+        <div class="pr-meta">作者 <b>JiaxinD</b> · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/758">#758</a> · 建立在 #745 之上 · 12 文件</div>
+      </summary>
+      <div class="pr-body"><h3><span class="ic">①</span>PR 概览</h3>
+<ul>
+  <li><b>标题：</b>[Perf] MOSS-TTS-Local v1.5 async decode (one-step lookahead) (#734)</li>
+  <li><b>编号 / 作者 / 状态：</b>#758 · JiaxinD · <b>已合并</b>（默认关闭）</li>
+  <li><b>链接：</b><a href="https://github.com/sgl-project/sglang-omni/pull/758">pull/758</a></li>
+</ul>
+<p class="lead">一句话：在 #745 的状态池之上，给 MOSS-TTS-Local 打开“一步前瞻（one-step lookahead）”的 async 解码——把每步“GPU 发射”和“host 收尾”错开一步并行；同时修复了一个只在 bs=1 停止时才暴露的“停止符被覆盖”的隐蔽 bug。</p>
+<h3><span class="ic">②</span>它解决了什么问题</h3>
+<p>同步解码每一步是“发射 GPU 计算 → 等结果 → host 收集结果 → 再发下一步”。host 收集（resolve）这段纯 CPU 工作，GPU 在干等。<b>一步前瞻</b>的想法是：第 N 步的 GPU 一发射出去，先别等它的 host 收尾，<b>立刻去发射第 N+1 步的 GPU 计算</b>，让第 N 步的 host 收尾和第 N+1 步的 GPU 计算重叠起来。</p>
+<div class="note">这个 PR 老实说明：在当前 MOSS 路径上，因为 #745 已经把 host 端尾巴削得极短（每步约 0.06ms vs GPU 步约 10.4ms），<b>实测吞吐 ON/OFF 在噪声内、无可分辨的加速也无回退</b>。所以它的价值是<b>“先把正确性契约和重叠插槽建好”</b>，等 #757 把 resolve 变重后再翻默认开关——一个标准的“两阶段落地”策略。</div>
+<h3><span class="ic">③</span>具体做了什么改动</h3><p>核心是把解码拆成 <code class="inl">post_decode_launch</code>（GPU 发射半步）与 <code class="inl">post_decode_resolve</code>（host 收尾半步）两个钩子，并修调度器计数。</p><h4>(a) 发射半步：给“已发布的 token id”拍一张设备快照</h4><pre class="code"><code><span class="k">def</span> post_decode_launch(<span class="b">self</span>, result, forward_batch, requests):
+    <span class="k">if</span> <span class="k">not</span> requests:
+        <span class="k">return</span> <span class="k">None</span>
+    rows, end_id = <span class="b">self</span>._run_frame_decode(result, requests)        <span class="c"># 跑 GPU 帧解码</span>
+    next_token_ids = <span class="b">self</span>._row_radix_token_ids(rows, rows[:, <span class="m">0</span>], end_id)
+    result.next_token_ids = next_token_ids                          <span class="c"># 发布，给“下一步”建输入用</span>
+    <span class="k">return</span> next_token_ids.clone()                                   <span class="c"># ★ 关键：拍一张设备快照</span></code></pre>
+<p>逐行讲（这是全 PR 最“烧脑”的地方）：</p>
+<ul>
+  <li><code class="inl">_run_frame_decode</code> 在 GPU 上算出这一帧的 <code class="inl">rows</code> 和 end_id；</li>
+  <li><code class="inl">next_token_ids</code> 由 GPU radix 哈希算出（<code class="inl">rows[:,0]</code> 是文本通道），纯设备操作、无 host 同步；</li>
+  <li><code class="inl">result.next_token_ids = ...</code> 把 id 发布出去，好让<b>下一步</b>的 <code class="inl">prepare_for_decode</code> 拿去拼自己的 <code class="inl">input_ids</code>（host 收尾被推迟了一步）；</li>
+  <li><b><code class="inl">return next_token_ids.clone()</code> 是“承重墙”</b>：base runner 会把 <code class="inl">result.next_token_ids</code> 别名到 <code class="inl">schedule_batch.output_ids</code>，而下一步会<b>原地覆盖</b>这个张量。在前瞻下，下一步的发射跑在这一步的滞后 resolve 之前——于是没有快照的话，发布出去的“停止符（== end_id）”在 resolve 拿到它之前就被覆盖没了：bs=1 的 EOS 完成丢失，请求一路跑到 4096 帧上限。<code class="inl">.clone()</code> 做一份 GPU→GPU 的私有快照（无 host 同步）来扛住这次覆盖。</li>
+</ul>
+<h4>(b) 收尾半步：把快照换回去（指针交换）</h4>
+<pre class="code"><code><span class="k">def</span> post_decode_resolve(<span class="b">self</span>, launch_buf, result, forward_batch, schedule_batch, requests):
+    <span class="k">if</span> launch_buf <span class="k">is</span> <span class="k">not</span> <span class="k">None</span> <span class="k">and</span> result <span class="k">is</span> <span class="k">not</span> <span class="k">None</span>:
+        result.next_token_ids = launch_buf      <span class="c"># 把被覆盖前的干净快照换回来</span></code></pre>
+<p>就一行有效逻辑：把 <code class="inl">next_token_ids</code> 重新指回发射时拍下的干净快照，撤销下一步的原地覆盖，于是共享的 <code class="inl">_finalize</code> 尾巴能读到真正的停止符、EOS 完成照常触发。注意这是<b>指针交换、不是拷贝</b>。</p>
+<h4>(c) 调度器：补回 forward_ct，并丢弃“撤回的陈旧请求”</h4>
+<pre class="code"><code><span class="c"># OmniScheduler 重写了 run_batch，绕过了上游自增 forward_ct 的地方；</span>
+<span class="c"># 不补的话 forward_ct 恒为 0，SGLANG_TEST_RETRACT 会每步触发。</span>
+<span class="b">self</span>.forward_ct = <span class="b">getattr</span>(<span class="b">self</span>, <span class="s">&quot;forward_ct&quot;</span>, <span class="m">0</span>) + <span class="m">1</span>     <span class="c"># 每次真实前向 +1（resolve 不算）</span>
+
+<span class="c"># 撤回的请求(KV 已释放)仍在“滞后 batch”里，必须像“上一步已完成”一样丢掉，避免二次释放 KV</span>
+pre_finished = [r.finished() <span class="k">or</span> <span class="b">bool</span>(<span class="b">getattr</span>(r, <span class="s">&quot;is_retracted&quot;</span>, <span class="k">False</span>)) <span class="k">for</span> r <span class="k">in</span> batch.reqs]
+skip_rids = {batch.reqs[i].rid <span class="k">for</span> i, was <span class="k">in</span> <span class="b">enumerate</span>(pre_finished) <span class="k">if</span> was}</code></pre>
+<p>前瞻把“发射”和“收尾”拉开一步，于是出现两个原本不会有的竞态：① 调度器的前向计数器要精确（每次真实前向 +1，resolve 不前向所以不计），否则撤回测试每步误触发；② 一个在某步被“撤回（retraction）”的请求，其 KV 已经释放，但它仍残留在“发射时就建好”的滞后 batch 里——若不丢弃，再跑一遍就会二次释放 KV 触发崩溃。所以 resolve 路径和同步快路径都改成“丢弃 已完成 <b>或</b> 已撤回”的请求。</p>
+<h4>(d) CLI 门控：从单一 Higgs 工厂扩成集合</h4>
+<pre class="code"><code>_ASYNC_DECODE_FACTORIES = frozenset({
+    <span class="s">&quot;sglang_omni.models.higgs_tts.stages.create_sglang_tts_engine_executor&quot;</span>,
+    <span class="s">&quot;sglang_omni.models.moss_tts_local.stages.create_sglang_tts_engine_executor&quot;</span>,
+})</code></pre><p>把 <code class="inl">--async-decode</code> 支持的工厂从“只有 Higgs”改成一个 <code class="inl">frozenset</code>（现在含 MOSS-TTS-Local），并更新报错文案。MOSS 路径默认仍 OFF，待后续 Phase-3 再翻开关。</p>
+    <div class="concept">
+      <div class="h">📚 概念：Async Decode / 一步前瞻（One-step Lookahead）</div>
+      <div class="seg"><b>它是什么 →</b> 把解码的每一步拆成两半：“launch（在 GPU 上发射这步的计算）”和“resolve（在 CPU 上把上一步结果收集成可用状态）”。引擎先发射第 N+1 步，再去做第 N 步的 resolve，让两者重叠。</div>
+      <div class="seg"><b>为什么需要它 →</b> GPU 算得快，但每步之间 CPU 要做一堆“收尾”杂活（收集 token、更新状态、判断停止），这段 CPU 时间里 GPU 闲着。重叠起来就能把 CPU 尾巴藏到 GPU 计算背后。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 本 PR 用 <code class="inl">post_decode_launch</code>/<code class="inl">post_decode_resolve</code> 实现这套错位；难点在于“发布出去的张量会被下一步原地覆盖”，所以用一次 GPU 端 <code class="inl">.clone()</code> 快照守住 bs=1 的停止符。当前是“正确性契约 + 预留的重叠插槽”，性能收益留待 resolve 变重后兑现。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像厨师把菜下锅(launch)后不守着，转身去摆上一道菜的盘(resolve)；但要先拍张照记住这锅菜该几分熟，免得下一道菜把灶台占了、火候记错。</div>
+    </div>
+    <div class="concept">
+      <div class="h">📚 概念：Retraction（请求撤回）与双重释放</div>
+      <div class="seg"><b>它是什么 →</b> 在显存吃紧时，调度器可以把某个正在解码的请求“撤回”：释放它的 KV cache、把它退回等待队列，等显存宽裕再重新预填充恢复。</div>
+      <div class="seg"><b>为什么需要它 →</b> 连续批处理下并发请求数是动态的，撤回是引擎在 OOM 边缘“弹性让位”的安全阀。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 一步前瞻让 batch 在“撤回发生前”就被建好，于是被撤回的请求会以“陈旧成员”身份残留在滞后 batch 里；本 PR 在 resolve 和快路径都加上 <code class="inl">is_retracted</code> 过滤，避免对已释放的 KV 二次释放（原本只过滤 finished）。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像把已经离场的客人从“上一轮就排好的上菜清单”里划掉，免得给空座位再上一份、还重复收走餐具。</div>
+    </div><div class="takeaway"><div class="h">💡 我能学到什么 / 延伸思考</div><ul><li><b>诚实的性能叙事</b>：本 PR 明确写“当前无可分辨加速”，把机制正确性与吞吐收益分开陈述，并解释为何留作“预留插槽”——这是工程严谨度的范例，避免夸大。</li><li><b>“别名 + 原地覆盖”是高性能代码里的隐形地雷</b>：当你把一个张量发布给下游、下游又会复用同一块内存时，跨越异步边界就需要快照。这个 bug 只在 bs=1+EOS+lookahead 同时成立时才现形，提醒我们边界条件测试的重要性。</li><li>想深入可了解：CUDA stream 与异步执行、张量别名（aliasing）/视图、以及调度器的 forward 计数与撤回机制。</li></ul></div></div>
+    </details>
+    <details class="pr" open>
+      <summary>
+        <div class="pr-id">PR #713 · Higgs TTS</div>
+        <div class="pr-title">优化 Higgs 参考音频缓存键（内容寻址）</div>
+        <div class="pr-meta">作者 <b>Ratish1</b> · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/713">#713</a> · 3 文件</div>
+      </summary>
+      <div class="pr-body"><h3><span class="ic">①</span>PR 概览</h3>
+<ul>
+  <li><b>标题：</b>[Higgs]: Optimize Higgs ref-audio cache keying</li>
+  <li><b>编号 / 作者 / 状态：</b>#713 · Ratish1 · <b>已合并</b></li>
+  <li><b>链接：</b><a href="https://github.com/sgl-project/sglang-omni/pull/713">pull/713</a></li>
+</ul>
+<p class="lead">一句话：Higgs TTS 做“声音克隆”要先把参考音频编码成参考码（reference codes）并缓存；本 PR 把缓存键从“音频来源字符串”改成“解码后波形的内容哈希”，于是指向同一段音频的不同 URL 也能安全命中缓存。</p>
+<h3><span class="ic">②</span>它解决了什么问题</h3>
+<p>Higgs 是声音克隆型 TTS：你给一段“参考音频”，它模仿那个音色说出目标文本。把参考音频用音频编码器编成“参考码”很贵，所以要缓存。</p>
+<p>老的缓存键基于<b>来源</b>：本地路径/base64 还好，但 URL 直接拿 URL 字符串当键就有两个毛病——① 同一段音频挂在两个不同 URL 上，会被当成两份、重复做昂贵编码；② URL 字符串本身不可靠（同一 URL 内容可能变）。</p>
+<div class="note">痛点本质：缓存键应该反映“真正喂给编码器的内容”，而不是“你怎么引用它”。</div>
+<h3><span class="ic">③</span>具体做了什么改动</h3><p>核心文件 <code class="inl">models/higgs_tts/stages.py</code>，把“一个缓存键”拆成两个职责不同的键。</p><pre class="code"><code><span class="k">def</span> _reference_code_cache_key_from_waveform(waveform, sample_rate):
+    <span class="s">&quot;&quot;</span><span class="s">&quot;音频解码/重采样之后，用‘消耗给编码器的波形内容’做参考码缓存键。&quot;</span><span class="s">&quot;&quot;</span>
+    wav = waveform.detach().cpu().contiguous().<span class="b">float</span>()
+    meta = f<span class="s">&quot;sr:{int(sample_rate)}|shape:{tuple(wav.shape)}&quot;</span>
+    <span class="k">return</span> f<span class="s">&quot;waveform:{meta}:{hash_bytes(wav.numpy().tobytes())}&quot;</span></code></pre>
+<p>逐块解释：</p>
+<ul>
+  <li><b>source key（来源键）</b>：仍用来查“波形缓存”（避免对本地/base64 重复解码）。URL 不进这个缓存。</li>
+  <li><b>content key（内容键）</b>：上面这个函数——把已经解码、重采样到 24kHz 的<b>波形张量</b>按字节哈希，带上采样率和形状元信息。它才是“参考码缓存”的键。</li>
+</ul>
+<p>于是流程变成：先按来源查波形缓存；解码出 24kHz 波形后，用波形内容算 content key，再去查/写昂贵的“参考码缓存”。两个不同 URL 只要解码出的波形一样，content key 就一样，安全复用参考码。配套把状态字段 <code class="inl">reference_cache_key</code> 改名为更准确的 <code class="inl">reference_code_cache_key</code>，并加了 URL 复用、内容键只算一次等单测。</p>
+
+    <div class="concept">
+      <div class="h">📚 概念：声音克隆中的“参考音频 → 参考码（codes）”</div>
+      <div class="seg"><b>它是什么 →</b> TTS 里的音频编码器（codec / audio tokenizer）把一段连续波形压成一串离散的“音频 token（codes）”，模型在这串 codes 的条件下生成同音色的新语音。</div>
+      <div class="seg"><b>为什么需要它 →</b> 直接在原始波形上做条件计算又慢又难；把音频离散成 codes，就能像处理文本 token 一样喂给 Transformer，还能缓存复用。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 本 PR 优化的正是“参考码缓存”的命中率：把键绑定到解码后的波形内容，让相同音频（即便来源不同）只编码一次。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像把一段录音先转成乐谱(codes)，谁来要这段都给同一份乐谱，而不是每次重新扒谱。</div>
+    </div>
+    <div class="concept">
+      <div class="h">📚 概念：内容寻址缓存（Content-addressed Cache）</div>
+      <div class="seg"><b>它是什么 →</b> 用“数据内容的哈希”当缓存键，而不是用“数据的名字/位置/URL”。内容相同 → 键相同 → 命中。</div>
+      <div class="seg"><b>为什么需要它 →</b> 用名字做键会漏掉“同物异名”（两个 URL 同一段音频）和误中“同名异物”（同一 URL 内容变了）。内容寻址从根本上避免这两类错配。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 本 PR 把参考码缓存改成内容寻址（波形字节哈希），同时保留来源键用于更便宜的“波形解码缓存”——两级缓存各司其职。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像 Git 用文件内容的哈希做对象 id：内容一样就是同一个对象，叫什么名字无所谓。</div>
+    </div><div class="takeaway"><div class="h">💡 我能学到什么 / 延伸思考</div><ul><li><b>“缓存键要绑定语义内容，而非引用方式”</b>是一条可直接复用的缓存设计准则；并发性能/正确性问题常常出在键选错了。</li><li><b>把一个键拆成两个职责不同的键</b>（便宜的来源键 vs 昂贵的内容键）是“分层缓存”的实用模式——便宜的先挡一层，贵的用更准的键。</li><li>想深入可了解：音频 codec / 神经音频 tokenizer、重采样（resampling）、以及哈希在缓存与去重中的应用。</li></ul></div></div>
+    </details>
+    <details class="pr" open>
+      <summary>
+        <div class="pr-id">PR #700 · Higgs TTS</div>
+        <div class="pr-title">打磨 Higgs decode-mode CLI</div>
+        <div class="pr-meta">作者 <b>Ratish1</b> · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/700">#700</a> · CLI/配置层</div>
+      </summary>
+      <div class="pr-body"><h3><span class="ic">①</span>PR 概览</h3><p><b>#700</b> · Ratish1 · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/700">pull/700</a>。<span class="lead">把 Higgs 暴露给用户的 <code class="inl">--async-decode default|on|off</code> 旧开关，换成更直白的 <code class="inl">--decode-mode async|sync</code>。</span></p><h3><span class="ic">②③</span>动机与改动</h3>
+<p>Higgs 现在默认就用 async 解码，旧的三态开关 <code class="inl">--async-decode default|on|off</code> 既泄露了实现术语、又让“不传参时到底走哪个默认”难以推理。改动：</p>
+<ul>
+  <li>用 <code class="inl">--decode-mode async|sync</code> 取代旧标志；不传 = 用流水线默认，传了才覆盖。内部仍映射到原来的 <code class="inl">enable_async_decode</code> 工厂参数。</li>
+  <li>高级调参标志改名为 <code class="inl">--async-lookahead-min-batch-size</code>；当与 <code class="inl">--decode-mode sync</code> 同用时 CLI 直接报错（sync 模式根本不用前瞻阈值）。</li>
+  <li>重写该 CLI 的单测，覆盖默认 async、显式覆盖、省略、阈值校验、不支持的配置、以及旧标志已删除等场景。</li>
+</ul>
+<p>纯 CLI/配置层改动，不碰调度器或模型执行路径。</p>
+
+    <div class="concept">
+      <div class="h">📚 概念：CLI 作为“契约表面（surface）”的设计</div>
+      <div class="seg"><b>它是什么 →</b> 命令行参数是用户与系统之间的约定。好的 CLI 应表达“用户意图”，而不是暴露内部实现细节或模糊的默认。</div>
+      <div class="seg"><b>为什么需要它 →</b> <code class="inl">--async-decode default|on|off</code> 把内部实现词（async）和三态默认糊在一起，难懂；<code class="inl">--decode-mode async|sync</code> 直接表达“我要哪种解码模式”，省略即默认。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 本 PR 还顺手做了“非法组合早失败”（sync + 前瞻阈值直接报错），把错误尽早、清晰地反馈给用户。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像把开关上的标签从“模式A/B/默认”改成直接写“快/慢”，谁都看得懂。</div>
+    </div><div class="takeaway"><div class="h">💡 我能学到什么 / 延伸思考</div><ul><li><b>面向意图、隐藏实现、非法组合早报错</b>是 CLI/API 设计的通用好习惯，可直接套用到自己的工具。</li></ul></div></div>
+    </details>
+    <details class="pr" open>
+      <summary>
+        <div class="pr-id">PR #763 · 基础设施</div>
+        <div class="pr-title">适配 Blackwell（SM100+）GPU</div>
+        <div class="pr-meta">作者 <b>zhaochenyang20</b> · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/763">#763</a> · 新增 gpu_compat.py</div>
+      </summary>
+      <div class="pr-body"><h3><span class="ic">①</span>PR 概览</h3><p><b>#763</b> · zhaochenyang20 · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/763">pull/763</a>。<span class="lead">让 sglang-omni 在 NVIDIA Blackwell（SM 100+）新卡上跑起来：按 GPU 的 SM 版本自动设置 FlashInfer/注意力后端的兼容兜底。</span></p><h3><span class="ic">②③</span>动机与改动</h3><p>新增 <code class="inl">utils/gpu_compat.py</code>（+148），核心是探测每张可见 GPU 的“计算能力（compute capability / SM 版本）”，并据此自动注入兼容性环境变量与后端选择：</p><pre class="code"><code><span class="k">def</span> get_visible_gpu_sm_version(logical_gpu_id, env=<span class="k">None</span>):
+    <span class="s">&quot;&quot;</span><span class="s">&quot;返回某张可见 GPU 的 SM 版本，如 90(Hopper)、100(Blackwell)。&quot;</span><span class="s">&quot;&quot;</span>
+    capability = _get_compute_capability(logical_gpu_id, env <span class="k">or</span> os.environ)
+    <span class="k">if</span> capability <span class="k">is</span> <span class="k">None</span>:
+        <span class="k">return</span> <span class="k">None</span>
+    major, minor = capability
+    <span class="k">return</span> major * <span class="m">10</span> + minor            <span class="c"># 例如 (10,0) -&gt; 100</span>
+
+<span class="k">def</span> get_gpu_compat_env_defaults(env=<span class="k">None</span>):
+    <span class="s">&quot;&quot;</span><span class="s">&quot;SM&gt;=100(Blackwell) 时，默认打开 FlashInfer 的 CUDA norm 兼容开关。&quot;</span><span class="s">&quot;&quot;</span>
+    source_env = env <span class="k">or</span> os.environ
+    <span class="k">if</span> source_env.get(<span class="s">&quot;FLASHINFER_USE_CUDA_NORM&quot;</span>) <span class="k">is</span> <span class="k">not</span> <span class="k">None</span>:
+        <span class="k">return</span> {}                        <span class="c"># 用户已显式设置就不覆盖</span>
+    <span class="k">if</span> <span class="k">not</span> visible_gpus_need_flashinfer_cuda_norm(source_env):
+        <span class="k">return</span> {}
+    <span class="k">return</span> {<span class="s">&quot;FLASHINFER_USE_CUDA_NORM&quot;</span>: <span class="s">&quot;1&quot;</span>}</code></pre>
+<ul>
+  <li>用 NVML（pynvml）优先、PyTorch 兜底两条路探测 SM 版本，兼容 <code class="inl">CUDA_VISIBLE_DEVICES</code> 的设备重映射。</li>
+  <li>SM≥100（Blackwell）时自动设 <code class="inl">FLASHINFER_USE_CUDA_NORM=1</code>；Qwen3-ASR 路径在 SM≥100 时把多模态注意力后端切到 <code class="inl">triton_attn</code>。</li>
+  <li>在 server 启动（<code class="inl">launcher.py</code>）和各 stage worker 进程（<code class="inl">stage_workers.py</code>）spawn 时都应用这些默认，保证子进程也带上正确环境。</li>
+  <li>顺手清理了 Qwen3-ASR 的 stages：把延迟导入提到模块顶层、用 AutoTokenizer/AutoFeatureExtractor 替代 AutoProcessor。</li>
+</ul>
+
+    <div class="concept">
+      <div class="h">📚 概念：GPU 计算能力 / SM 版本与 Attention Backend</div>
+      <div class="seg"><b>它是什么 →</b> 每代 NVIDIA GPU 有个“计算能力”号（compute capability），常折成 SM 版本：如 Ampere=80、Hopper=90、Blackwell=100。它决定了哪些算子实现/特性可用。<b>Attention Backend</b> 是注意力计算的具体实现库（FlashInfer、Triton 等）。</div>
+      <div class="seg"><b>为什么需要它 →</b> 新架构刚出时，高性能算子库（如 FlashInfer）对它的支持可能不全或有 bug。引擎需要按硬件代际自动选择“能正确跑的后端/开关”，否则新卡直接报错。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 本 PR 探测到 Blackwell(SM100+) 就自动启用 FlashInfer 的 CUDA norm 兜底、并把 ASR 的多模态注意力换成 triton 后端，让代码在新卡上开箱即用、又不影响老卡（默认不动）。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像新型号插座刚上市，万能转换头会自动识别制式并切到兼容档，老插座照旧。</div>
+    </div><div class="takeaway"><div class="h">💡 我能学到什么 / 延伸思考</div><ul><li><b>“按硬件代际自动降级/切换后端”</b>是推理基础设施的常见兼容性策略；探测能力 + 仅在需要时注入默认 + 不覆盖用户显式设置，是稳妥的兜底写法。</li></ul></div></div>
+    </details>
+    <details class="pr" open>
+      <summary>
+        <div class="pr-id">PR #698 · 基础设施</div>
+        <div class="pr-title">升级钉死的 SGLang 后端 + 适配多模型组件</div>
+        <div class="pr-meta">作者 <b>Hayden727</b> · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/698">#698</a> · 30 文件 · Closes #658</div>
+      </summary>
+      <div class="pr-body"><h3><span class="ic">①</span>PR 概览</h3><p><b>#698</b> · Hayden727 · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/698">pull/698</a>（Closes #658）。<span class="lead">升级钉死（pinned）的 SGLang 后端版本，并把众多模型组件适配到新版 API。</span></p><h3><span class="ic">②③</span>动机与改动</h3>
+<p>sglang-omni 把底层 SGLang 当依赖钉在某个版本。底层升级能拿到新特性/修复（如 CUDA13 栈、qwen3-vl 上游支持），但也意味着要跟着改一堆调用点。本 PR 跨 30 个文件：</p>
+<ul>
+  <li><b>依赖与 CI</b>：<code class="inl">pyproject.toml</code> 调整版本约束、新增 <code class="inl">install_flashinfer_jit_cache.sh</code>、更新各 CI workflow 与文档安装说明。</li>
+  <li><b>模型适配</b>：精简 <code class="inl">_sglang_qwen3_vl_patches.py</code>（-104 行，说明上游已原生支持，少打补丁）、调整 <code class="inl">qwen3_omni</code> 的 thinker/talker/image_encoder、<code class="inl">moss_tts</code>、<code class="inl">ming_omni</code>、<code class="inl">fishaudio_s2_pro</code> 等多个多模态模型组件到新 API。</li>
+  <li><b>runner 层</b>：<code class="inl">model_worker.py</code>、<code class="inl">sglang_model_runner.py</code> 跟随上游接口变化调整。</li>
+</ul>
+<div class="note">这类 PR 不引入新功能，但是“站在巨人肩膀上”的必要维护：上游 SGLang 持续优化，omni 分支要定期 rebase 才能持续受益。注意 #764（CI 镜像换阿里云）正是这次升级引入 CUDA13 依赖后、为修 CI 取包 404 的连带修复。</div>
+
+    <div class="concept">
+      <div class="h">📚 概念：依赖钉版（Pinning）与上游同步（Rebase onto upstream）</div>
+      <div class="seg"><b>它是什么 →</b> “钉版”是把依赖锁定在确切版本，保证构建可复现。“上游同步”是周期性地把上游新版本合进来并适配。</div>
+      <div class="seg"><b>为什么需要它 →</b> 锁死能稳定，但会逐渐落后、错过性能与修复；定期升级能持续受益，代价是适配上游的接口变更（breaking changes）。这是稳定性与新鲜度之间的权衡。</div>
+      <div class="seg"><b>在这个 PR 里怎么用 →</b> 本 PR 是一次集中的上游同步：升级 SGLang 版本，同时把 qwen3-vl、qwen3-omni、moss/ming/fish 等模型组件改到新 API；并因新栈依赖 CUDA13 包，连带触发 #764 换镜像。</div>
+      <div class="seg analogy">🔗 <b>类比：</b>像 App 跟随系统大版本升级：能用新能力，但要把被改动的系统接口逐一适配。</div>
+    </div><div class="takeaway"><div class="h">💡 我能学到什么 / 延伸思考</div><ul><li><b>“衍生分支要定期 rebase 上游、并把适配集中成一个可审阅的 PR”</b>是依赖管理的现实功课；一次升级常引发连锁（如 CI 取包源），要顺着修。</li></ul></div></div>
+    </details>
+    <details class="pr" open>
+      <summary>
+        <div class="pr-id">PR #764 · 基础设施</div>
+        <div class="pr-title">CI PyPI 镜像切换到阿里云</div>
+        <div class="pr-meta">作者 <b>Ratish1</b> · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/764">#764</a> · CI 配置</div>
+      </summary>
+      <div class="pr-body"><h3><span class="ic">①</span>PR 概览</h3><p><b>#764</b> · Ratish1 · 已合并 · <a href="https://github.com/sgl-project/sglang-omni/pull/764">pull/764</a>。<span class="lead">把 Omni CI 默认的 uv PyPI 镜像从清华源切到阿里云源。</span></p><h3><span class="ic">②③</span>动机与改动</h3>
+<p>承接 #698：CUDA13 栈现在依赖 <code class="inl">mooncake-transfer-engine-cuda13&gt;=0.3.10</code>。清华 PyPI 镜像对该包返回 404，于是 CI 的 <code class="inl">setup - omni venv</code> 在 <code class="inl">uv pip install -e .</code> 阶段就失败、所有测试任务都跑不起来。阿里云镜像有 CUDA13 中继 wheel，切过去即可。同时让本地 CI 环境助手与 GitHub Actions 的 setup 路径保持一致。</p>
+<div class="takeaway"><div class="h">💡 我能学到什么 / 延伸思考</div><ul><li><b>镜像源不是“无所谓的小事”</b>：依赖升级后，包是否在你用的镜像上有同步，会直接决定 CI 能否启动。基础设施的“取包源”要和依赖版本一起被当成一等公民管理。</li></ul></div></div>
+    </details>
+
+  <footer>
+    本日报由对 sgl-project/sglang-omni 过去 24h merged PR 的源码 diff 逐一研读后生成，面向“推理基础设施小白”做了概念补全。
+    代码片段忠实摘自各 PR 的实际 diff（仅取新增行、去掉前导 +）。术语解释为帮助理解所作的通俗化表述，权威细节请以各 PR 源码与设计文档为准。<br/>
+    生成日期 2026-06-13 · 主题聚焦 Omni / 多模态 / 多阶段 TTS 推理架构。
+  </footer>
+</div>
+</body>
+</html>
