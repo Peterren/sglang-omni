@@ -9,21 +9,40 @@ duration control, and the vocoder reconstructs 24 kHz speech. In SGLang-Omni it 
 `preprocessing → tts_engine → vocoder` pipeline and is served through the OpenAI-compatible
 `/v1/audio/speech` endpoint.
 
+SGLang-Omni serves two MOSS-TTS checkpoints:
+
+- **`MOSS-TTS-v1.5`** (default) — the delay-pattern model described above; a single-GPU
+  `preprocessing → tts_engine → vocoder` pipeline.
+- **`MOSS-TTS-Local-Transformer-v1.5`** — the "Local" variant, which pairs the Qwen3 backbone
+  with a local frame transformer and the `MOSS-Audio-Tokenizer-v2` codec (reconstructing **48 kHz**
+  speech). Its pipeline defaults to **two GPUs** (the ~1B-param codec runs on a second device so
+  it does not starve the AR engine). It exposes the same `/v1/audio/speech` request shape and
+  generation parameters as the delay model, so the synthesis examples below apply to both.
+
 ## Prerequisites
 
 Install `sglang-omni` by following [Installation](../get_started/installation.md), then
-download the model (public, no token required):
+download the checkpoint for the variant you want (both are public, no token required):
 
 ```bash
+# Delay model (single GPU)
 hf download OpenMOSS-Team/MOSS-TTS-v1.5
+
+# Local variant (defaults to two GPUs)
+hf download OpenMOSS-Team/MOSS-TTS-Local-Transformer-v1.5
 ```
 
-The processor ships with the checkpoint, so no extra TTS package is needed. Decoding base64
-(data-URI) reference audio additionally requires `soundfile` (`uv pip install soundfile`).
+The processor ships with each checkpoint, so no extra TTS package is needed. The Local variant
+loads its codec (`OpenMOSS-Team/MOSS-Audio-Tokenizer-v2`) through the checkpoint's remote code,
+so launch it with `trust_remote_code` enabled. Decoding base64 (data-URI) reference audio
+additionally requires `soundfile` (`uv pip install soundfile`).
 
 ## Server Configuration
 
-The pipeline is `preprocessing → tts_engine → vocoder`.
+Both variants serve the same `preprocessing → tts_engine → vocoder` pipeline; pick the config
+that matches the checkpoint.
+
+### MOSS-TTS-v1.5 (delay model, single GPU)
 
 ```bash
 sgl-omni serve \
@@ -31,6 +50,22 @@ sgl-omni serve \
   --config examples/configs/moss_tts.yaml \
   --port 8000
 ```
+
+### MOSS-TTS-Local-Transformer-v1.5 (two GPUs)
+
+The Local config places the AR engine on `cuda:0` and the codec on `cuda:1`, so launch it on a
+host with at least two visible GPUs:
+
+```bash
+sgl-omni serve \
+  --model-path OpenMOSS-Team/MOSS-TTS-Local-Transformer-v1.5 \
+  --config examples/configs/moss_tts_local.yaml \
+  --port 8000
+```
+
+To run the Local variant on a single GPU, colocate the codec with the AR engine by setting
+`config_cls: MossTTSLocalColocatedPipelineConfig` in a copy of `moss_tts_local.yaml` (this packs
+the codec and AR engine onto `cuda:0`, at the cost of throughput under concurrency).
 
 ## Synthesizing Speech
 
