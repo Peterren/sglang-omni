@@ -1,90 +1,41 @@
-# Calibration host profile — sglang-h20-ci (user-provided layout).
-# tune.py still uses models/*/config.yaml auto_env for CI *logical* paths
-# (HF_HOME=/github/home/.cache/huggingface, etc.). This file maps those
-# logical paths to this machine's physical layout via symlinks below.
+# In-container calibration layout — sglang-h20-ci
 #
-# Select: user says "use sglang-h20-ci host" or agent matches `hostname`.
-# Override any field via env: TUNE_VENV_PYTHON, TUNE_REPO_ROOT.
+# Used by tune.py inside an already-running repro container (hostname match
+# or --host sglang-h20-ci). User starts the container; this file only records
+# paths and env overrides for calibration — not how to launch Docker.
 
 name: sglang-h20-ci
 hostname: sglang-h20-ci
-description: "H20 repro container; repo + venv under /data/chenyang; caches under /root/.cache"
 
-# --- Repo & Python (override CI defaults /sgl-workspace and OMNI_CI_HOME/omni) ---
 repo_root: /data/chenyang/sglang-omni
 venv_python: /data/chenyang/.python/omni/bin/python
 
-# --- Physical caches (persist across docker restart when volume-mounted) ---
 physical:
   hf_hub: /root/.cache/huggingface
-  speaker_sim: /root/.cache/sglang-omni/speaker_sim
-  # Optional: mount these on the host and bind into the container at the same paths.
-
-# --- CI logical paths (tune.py auto_env; do not change unless aligning a new host) ---
-logical:
-  home: /github/home
+  speaker_sim: /root/.cache/huggingface/speaker_sim
   omni_ci_home: /github/home/calibration
-  hf_home: /github/home/.cache/huggingface
-  seedtts_sim_cache_dir: /github/home/seedtts-wavlm-sim
 
-# --- Symlinks: logical -> physical (run after every container start) ---
-symlinks:
-  - link: /github/home/.cache/huggingface
-    target: /root/.cache/huggingface
-  - link: /github/home/seedtts-wavlm-sim
-    target: /root/.cache/sglang-omni/speaker_sim
+# tune.py maps physical.* → auto_env (HF_HOME, SEEDTTS_SIM_CACHE_DIR, …).
+# No symlinks. precheck reads these paths directly.
 
-post_start_commands:
-  - mkdir -p /github/home/.cache /github/home/calibration
-  - ln -sfn /root/.cache/huggingface /github/home/.cache/huggingface
-  - ln -sfn /root/.cache/sglang-omni/speaker_sim /github/home/seedtts-wavlm-sim
-
-# --- Docker (cannot fix CAP_SYS_PTRACE inside a running container) ---
-docker:
-  image: crpi-n6adu6llixz83q37.cn-hangzhou.personal.cr.aliyuncs.com/hongccc/sglang-omni:dev
-  cap_add:
-    - SYS_PTRACE  # required for videoamme_talker_tp2 (stage 11) only
-  recommended_volumes:
-    - /data/chenyang:/data/chenyang
-    - "<host>/huggingface:/root/.cache/huggingface"
-    - "<host>/speaker_sim:/root/.cache/sglang-omni/speaker_sim"
-
-# --- Downloads (not covered by tune.py precheck) ---
 speaker_similarity_bootstrap:
-  # precheck does NOT verify WavLM SV assets; check .complete before TTS similarity / Omni tts_utmos.
-  verify:
-    - "${physical.speaker_sim}/wavlm_large.pt"
-    - "${physical.speaker_sim}/wavlm_large_finetune.pth"
-    - "${physical.speaker_sim}/.complete"
   warm_cache:
-    repo_root: /data/chenyang/sglang-omni
     env:
       HF_ENDPOINT: https://hf-mirror.com
       HF_HUB_DISABLE_XET: "1"
       HF_HUB_ENABLE_HF_TRANSFER: "0"
-      SEEDTTS_SIM_CACHE_DIR: /root/.cache/sglang-omni/speaker_sim
-    hf_token: "source ~/.zshrc  # or ~/.bashrc; never commit token into this file"
+      SEEDTTS_SIM_CACHE_DIR: /root/.cache/huggingface/speaker_sim
+    hf_token: "source ~/.zshrc"
     command: |
       cd /data/chenyang/sglang-omni
-      python -m benchmarks.metrics.speaker_similarity_assets --warm-cache
-  notes:
-    - ModelScope does not mirror popsoda2002/seedtts-wavlm-sim; use HF mirror + token.
-    - precheck asset ✗ with weights present under physical.hf_hub usually means symlinks missing.
+      /data/chenyang/.python/omni/bin/python -m benchmarks.metrics.speaker_similarity_assets --warm-cache
 
-# --- Agent policy on this host ---
 agent_policy:
-  env_check: report_missing_first  # list gaps; fix only when user asks or for named bootstrap steps
+  env_check: report_missing_first
   poll_interval_max_s: 120
-  cap_missing_strategy: |
-    TTS ALL and Qwen3 stages 1–10 do not need SYS_PTRACE.
-    Defer videoamme_talker_tp2 until container restarted with cap_add SYS_PTRACE.
 
-# --- Session handoff (update at end of each calibration session) ---
 handoff:
   goal: "Full CI calibration — tts ALL r5, then qwen3-omni-v1 ALL r5"
-  precheck_tts: ok_after_symlinks
-  precheck_qwen3: ok_after_symlinks
-  speaker_sim_complete: false  # wavlm_large.pt done; finetune.pth pending as of 2026-06-15
-  sys_ptrace: false
+  speaker_sim_complete: true
   calibration_started: false
   run_dirs: []

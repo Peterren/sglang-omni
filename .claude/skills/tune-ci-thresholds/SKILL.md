@@ -16,16 +16,11 @@ comparable and must not drive threshold changes. If you just want to
 run the tests locally, use pytest directly — this skill is not for
 that.
 
-**Host layouts are not fixed to the CI doc paths.** The paths in
-`models/*/config.yaml` (`/sgl-workspace/sglang-omni`,
-`/github/home/calibration/omni`, …) describe the **GitHub Actions
-reference layout**. A repro host may use different **physical** repo,
-venv, and cache directories if documented in a **host profile** under
-`hosts/<name>.yaml` (see **Calibration host profiles** below). User-
-provided paths in chat override defaults the same way. What must stay
-aligned with CI is **runtime semantics** (torch/sglang pins, 2× GPU,
-`auto_env` logical names, cold FlashInfer wipe, strict worst-of-N) — not
-the absolute mount points on disk.
+**Host layouts are not fixed to the CI doc paths.** Paths in
+`models/*/config.yaml` describe the **GitHub Actions reference**. Inside a
+repro container, `hosts/<name>.yaml` gives the **in-container paths**
+`tune.py` uses (see **Calibration host profiles**). User-provided paths in
+chat override the YAML.
 
 The skill is observation-first: it runs tests N times and produces a
 **strict worst-of-N** report. After the report is shown, it offers a
@@ -119,103 +114,63 @@ ignore HALT and start a fresh run directory without user approval.
 
 ## Calibration host profiles (mandatory — before precheck)
 
-Calibration does **not** require the literal paths printed in older
-sections of this skill (`/sgl-workspace/sglang-omni`, venv under
-`$OMNI_CI_HOME/omni`, …). Those are the **CI Actions reference**. On a
-repro machine, read the matching file under:
+**Assumes the repro container is already running.** The user starts Docker;
+this skill only describes **in-container paths** for `tune.py` / precheck /
+calibration. Do not document `docker run`, volume maps, or host-side layout
+in host profiles.
 
-```
-.claude/skills/tune-ci-thresholds/hosts/<name>.yaml
-```
+Calibration does **not** require CI doc paths (`/sgl-workspace/...`). On a
+repro machine, **`tune.py` loads `hosts/<name>.yaml`** and applies
+**physical paths directly** to `auto_env` — no symlinks.
 
-Match by `hostname`, user instruction (“use my paths”), or explicit
-host name. **User-provided `repo_root` / `venv_python` / physical
-cache paths in chat override** the YAML when they conflict — update the
-host file when the layout stabilizes.
+**Selection order:** `--host <name>` → `$TUNE_HOST` → autodetect by
+`hostname`. List profiles: `tune.py hosts-list`.
+
+When a host profile is active, `tune.py` automatically:
+
+| Override | From host profile |
+|----------|-------------------|
+| `REPO_ROOT` / pytest `cwd` | `repo_root` |
+| venv | `venv_python` → `$TUNE_VENV_PYTHON` |
+| `HF_HOME` | `physical.hf_hub` |
+| `SEEDTTS_SIM_CACHE_DIR` | `physical.speaker_sim` |
+| `OMNI_CI_HOME` (optional) | `physical.omni_ci_home` |
+
+User-provided paths in chat override the YAML; update the host file when
+the layout stabilizes.
 
 ### What a host profile defines
 
 | Field | Purpose |
 |-------|---------|
-| `repo_root` | Git checkout used for `tune.py` and `uv pip install -e .` |
-| `venv_python` | Passed as `$TUNE_VENV_PYTHON` (or first hit in `default_venv_python`) |
-| `physical.hf_hub` | Real HuggingFace hub cache on disk |
-| `physical.speaker_sim` | WavLM SV assets (`wavlm_large.pt`, `wavlm_large_finetune.pth`) |
-| `symlinks` | Map CI **logical** paths (`auto_env` `HF_HOME`, `SEEDTTS_SIM_CACHE_DIR`) → physical |
-| `docker.cap_add` | e.g. `SYS_PTRACE` for `videoamme_talker_tp2` — **cannot** be added inside a running container |
+| `repo_root` | Git checkout inside the container |
+| `venv_python` | Calibration venv inside the container |
+| `physical.hf_hub` | HuggingFace hub cache path **inside the container** |
+| `physical.speaker_sim` | WavLM SV assets directory **inside the container** |
 | `agent_policy` | e.g. report env gaps before fixing; max poll interval |
 
-`tune.py` still sets **logical** env from `models/*/config.yaml` `auto_env`
-(`HF_HOME=/github/home/.cache/huggingface`, …). On hosts where weights
-live elsewhere (e.g. `/root/.cache/huggingface`), **symlinks satisfy
-precheck** — an asset ✗ often means the symlink is missing, not that
-weights must be re-downloaded.
+Ensure `mkdir -p /github/home/calibration` exists if FlashInfer /
+torchinductor slice paths are used (once per fresh container filesystem).
 
-### Post-container-start checklist (every docker restart)
+### Speaker Similarity — checked in precheck
 
-From the host profile's `post_start_commands` (example `sglang-h20-ci`):
-
-```bash
-mkdir -p /github/home/.cache /github/home/calibration
-ln -sfn /root/.cache/huggingface /github/home/.cache/huggingface
-ln -sfn /root/.cache/sglang-omni/speaker_sim /github/home/seedtts-wavlm-sim
-```
-
-Then verify pins + symlinks + optional speaker sim (below). Persist
-`repo_root`, `venv_python`, and physical caches via **volume mounts**;
-recreate symlinks after each start.
-
-### Speaker Similarity bootstrap (not in tune.py precheck)
-
-TTS `tts_nonstream_similarity` and Qwen3 `tts_utmos` need WavLM assets
-under `SEEDTTS_SIM_CACHE_DIR` (logical → physical via symlink). Precheck
-does **not** check them. Before calibration that includes similarity /
-utmos:
-
-```bash
-source ~/.zshrc   # or ~/.bashrc — HF_TOKEN; never commit tokens into host YAML
-export HF_ENDPOINT=https://hf-mirror.com HF_HUB_DISABLE_XET=1 HF_HUB_ENABLE_HF_TRANSFER=0
-export SEEDTTS_SIM_CACHE_DIR=<physical.speaker_sim from host profile>
-cd <repo_root> && python -m benchmarks.metrics.speaker_similarity_assets --warm-cache
-```
-
-Require `<cache>/.complete` plus both weight files. Use HF mirror +
-`HF_TOKEN`; ModelScope does not currently mirror `popsoda2002/seedtts-wavlm-sim`.
-
-### CAP_SYS_PTRACE and split calibration
-
-| Stages | Needs `SYS_PTRACE`? |
-|--------|---------------------|
-| `--model tts --stages ALL` | No |
-| Qwen3 stages 1–10 (all except `videoamme_talker_tp2`) | No |
-| `videoamme_talker_tp2` (FP8 Thinker TP=2, CI stage 11) | **Yes** — else requests 500 |
-
-If the running container lacks ptrace, calibrate TTS + Qwen3 minus stage 11
-first; restart docker with `--cap-add=SYS_PTRACE`, recreate symlinks, then
-run only `videoamme_talker_tp2` (or `--stages videoamme_talker_tp2`).
-
-### Session handoff
-
-At end of a session (or before docker restart), update `handoff:` in the
-host YAML and optionally copy a short summary to
-`.tune-runs/HANDOFF.md` (gitignored): goal, precheck status, speaker sim
-`.complete`, ptrace, run-dirs, strict audit progress, whether apply was
-asked.
+When a host profile is active (or model is `tts` / `qwen3-omni-v1`),
+`precheck` verifies `physical.speaker_sim`: `.complete`,
+`wavlm_large.pt`, `wavlm_large_finetune.pth`. Bootstrap once if ✗ — see
+`speaker_similarity_bootstrap` in the host YAML.
 
 ### Shipped profile: `sglang-h20-ci`
 
-See `hosts/sglang-h20-ci.yaml` — repo `/data/chenyang/sglang-omni`, venv
-`/data/chenyang/.python/omni/bin/python`, HF hub `/root/.cache/huggingface`,
-speaker sim `/root/.cache/sglang-omni/speaker_sim`.
+`repo_root` `/data/chenyang/sglang-omni`, `venv_python`
+`/data/chenyang/.python/omni/bin/python`, `physical.hf_hub`
+`/root/.cache/huggingface`, `physical.speaker_sim`
+`/root/.cache/huggingface/speaker_sim`.
 
 ### Adding a new host profile
 
-Copy `hosts/sglang-h20-ci.yaml` → `hosts/<your-host>.yaml`. Set
-`repo_root`, `venv_python`, `physical.*`, `symlinks`, `docker` volumes/
-`cap_add`, and `agent_policy`. Add the venv path to the **top** of
-`default_venv_python` in each `models/*/config.yaml` if it should be the
-default fallback. Do **not** change `auto_env` logical paths unless the
-machine truly uses a different CI layout — prefer symlinks.
+Copy `hosts/sglang-h20-ci.yaml` → `hosts/<name>.yaml`. Set `hostname`,
+`repo_root`, `venv_python`, `physical.*` — **in-container paths only**.
+Add venv to `default_venv_python` in `models/*/config.yaml`.
 
 ## Two-terminal supervision (mandatory — always)
 
@@ -446,15 +401,15 @@ explicitly asks you to fix a named gap (e.g. speaker sim warm-cache).
 
 ### Resolve host profile first
 
-1. Read `hosts/<name>.yaml` (match `hostname` or user-provided layout).
-2. Set `TUNE_VENV_PYTHON=<venv_python>` and `cd <repo_root>` for all
-   `tune.py` invocations unless the user overrides in chat.
-3. Run `post_start_commands` symlinks; confirm physical caches exist.
-4. If calibration includes similarity/utmos, verify speaker sim `.complete`
-   (see **Speaker Similarity bootstrap** — not covered by precheck).
-5. **Report** any remaining gap to the user before bulk fixes; do not
-   run `prepare_omni_venv.sh`, re-download HF assets, or rebuild venvs
-   unless precheck/smoke proves need **or** the user directs a specific fix.
+1. Run `tune.py hosts-list`; load matching `hosts/<name>.yaml` (autodetect
+   by `hostname`, or `--host`, or `$TUNE_HOST`). **No symlinks** — `tune.py`
+   sets `HF_HOME`, `SEEDTTS_SIM_CACHE_DIR`, `repo_root`, and venv from the
+   profile.
+2. `cd <repo_root>` for all commands (or rely on autodetect).
+3. Run `precheck` — it checks HF assets at `physical.hf_hub`, speaker sim
+   at `physical.speaker_sim`, pins, and GPUs.
+4. **Report** any remaining gap before bulk fixes unless the user directs a
+   specific fix.
 
 ### Default workflow (always, before `run`)
 
@@ -1028,12 +983,10 @@ Two gates — **both** required before apply:
   is corrupt.
 
 ## Steps I follow
-0. **Host profile.** Read `hosts/<name>.yaml` (or use paths the user gave
-   in chat). Apply `post_start_commands` symlinks. Set
-   `TUNE_VENV_PYTHON` and `cd <repo_root>`. Verify speaker sim if
-   similarity/utmos stages are in scope. Note `docker.cap_add` / handoff
-   state. On env gaps, **report first** unless the user asked to fix a
-   specific item.
+0. **Host profile.** `tune.py` autodetects `hosts/*.yaml` by `hostname`
+   (or `--host` / `$TUNE_HOST`). It applies physical paths to `auto_env` —
+   **no symlink setup**. Run `precheck` (includes speaker sim when
+   applicable). Report env gaps before fixing unless user asked.
 1. Run `python .claude/skills/tune-ci-thresholds/tune.py models-list` to
    discover available models. Then for the selected model, run
    `python tune.py --model <M> stages-list` to read the per-test-file
