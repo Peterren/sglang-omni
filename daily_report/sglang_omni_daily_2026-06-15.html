@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang Omni 每日 PR 学习日报 · 2026-06-15</title>
+<style>
+  :root{
+    --bg:#0f1117; --card:#1a1d27; --card2:#21252f; --ink:#e6e8ee; --muted:#9aa3b2;
+    --accent:#6ea8fe; --accent2:#8be9c0; --warn:#f0b86e; --code-bg:#11141b;
+    --green:#3ddc97; --pink:#ff7eb6; --line:#2a2f3a;
+  }
+  *{box-sizing:border-box}
+  html{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    line-height:1.75; font-size:16px;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:32px 22px 80px}
+  header.top{
+    background:linear-gradient(135deg,#1c2746,#15233b 60%,#101826);
+    border:1px solid var(--line); border-radius:18px; padding:30px 30px 24px; margin-bottom:26px;
+  }
+  header.top h1{margin:0 0 6px;font-size:27px;letter-spacing:.3px}
+  header.top .sub{color:var(--muted);font-size:14px}
+  .pillrow{margin-top:18px;display:flex;flex-wrap:wrap;gap:10px}
+  .pill{background:#0e1626;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--ink)}
+  .pill b{color:var(--accent)}
+  .overview{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:28px}
+  .overview h2{margin:0 0 12px;font-size:18px;color:var(--accent2)}
+  .topic-tags{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+  .tag{font-size:12px;padding:3px 10px;border-radius:6px;background:#15202e;border:1px solid var(--line);color:var(--muted)}
+  .tag.t-omni{color:#6ea8fe;border-color:#274060}
+  .tag.t-tts{color:#8be9c0;border-color:#21433a}
+  .tag.t-mm{color:#ff7eb6;border-color:#43213a}
+  .tag.t-ci{color:#f0b86e;border-color:#473a21}
+  table.idx{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px}
+  table.idx th,table.idx td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
+  table.idx th{color:var(--muted);font-weight:600}
+  table.idx code{color:var(--accent)}
+
+  details.card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:20px;overflow:hidden}
+  details.card[open]{box-shadow:0 0 0 1px #2c3650 inset}
+  summary{cursor:pointer;list-style:none;padding:18px 22px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  summary::-webkit-details-marker{display:none}
+  summary .num{font-weight:700;color:var(--accent);font-size:15px}
+  summary .ttl{font-size:16.5px;font-weight:600;flex:1 1 60%}
+  .badge{font-size:11px;padding:2px 9px;border-radius:6px;border:1px solid var(--line)}
+  .badge.merged{color:#c7a3ff;border-color:#3d2c5c;background:#1c1430}
+  .badge.star{color:#0f1117;background:linear-gradient(90deg,#8be9c0,#6ea8fe);border:none;font-weight:700}
+  .cardbody{padding:6px 24px 26px;border-top:1px solid var(--line)}
+  .meta{color:var(--muted);font-size:13px;margin:14px 0 6px;display:flex;flex-wrap:wrap;gap:16px}
+  .meta a{color:var(--accent);text-decoration:none}
+  h3.sec{font-size:15.5px;margin:24px 0 8px;padding-left:11px;border-left:3px solid var(--accent)}
+  h3.sec.k{border-color:var(--pink)}
+  h3.sec.learn{border-color:var(--green)}
+  p{margin:9px 0}
+  ul{margin:8px 0;padding-left:22px}
+  li{margin:5px 0}
+  .tldr{background:#13202c;border:1px solid #213847;border-radius:10px;padding:12px 16px;margin:14px 0;font-size:14.5px}
+  .tldr b{color:var(--accent2)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.6}
+  code{font-family:"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+  pre code{color:#d6deeb}
+  .c-cmt{color:#6b7689;font-style:italic}
+  .c-key{color:#c792ea}
+  .c-str{color:#c3e88d}
+  .c-fn{color:#82aaff}
+  .c-num{color:#f78c6c}
+  .kbox{background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--pink);border-radius:8px;padding:12px 16px;margin:12px 0}
+  .kbox .kt{font-weight:700;color:var(--pink);font-size:14.5px}
+  .kbox .seg{margin-top:6px;font-size:14px}
+  .kbox .seg b{color:var(--accent2)}
+  .analogy{background:#1a1626;border:1px solid #2e2342;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:14px;color:#d9cdf0}
+  .analogy b{color:#c792ea}
+  table.data{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  table.data th,table.data td{border:1px solid var(--line);padding:7px 10px;text-align:right}
+  table.data th:first-child,table.data td:first-child{text-align:left}
+  table.data th{background:#15202e;color:var(--muted)}
+  .good{color:var(--green);font-weight:600}
+  hr.soft{border:none;border-top:1px dashed var(--line);margin:22px 0}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:40px;line-height:1.9}
+  a{color:var(--accent)}
+  @media print{
+    body{background:#fff;color:#15181f;font-size:12.5px}
+    .wrap{max-width:100%;padding:0}
+    header.top{background:#eef3fc;border-color:#cdd8ea}
+    header.top h1,summary .ttl{color:#15181f}
+    .overview,details.card{background:#fff;border-color:#d4dae3;box-shadow:none;break-inside:avoid}
+    details.card{margin-bottom:14px}
+    summary{padding:12px 14px}
+    .cardbody{padding:4px 16px 16px}
+    pre{background:#f4f6fa;border-color:#d4dae3}
+    pre code{color:#1d2330}
+    .c-cmt{color:#6a737d}.c-key{color:#a626a4}.c-str{color:#3a8a2e}.c-fn{color:#2451b2}.c-num{color:#b5630a}
+    .tldr{background:#eef6fb}.kbox{background:#faf7ff}.analogy{background:#f7f3fc}
+    .pill,.tag{background:#f0f3f8;color:#333}
+    a{color:#1a56c4}
+    h3.sec{break-after:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>🛰️ SGLang Omni · 每日 PR 学习日报</h1>
+  <div class="sub">报告日期：2026-06-15 ｜ 覆盖窗口：过去 24 小时合并（merged）的 PR ｜ 仓库：
+    <a href="https://github.com/sgl-project/sglang-omni/">sgl-project/sglang-omni</a>
+    （SGLang Omni: High-Performance Multi-Stage Pipeline Framework for Omni Models）
+  </div>
+  <div class="pillrow">
+    <span class="pill">窗口内合并 PR：<b>10</b> 个</span>
+    <span class="pill">深度讲解：<b>5</b> 个核心 + 1 组 CI</span>
+    <span class="pill">主线主题：<b>Omni 多阶段调度 · TTS 服务化 · 多模态稳定性</b></span>
+  </div>
+</header>
+
+<section class="overview">
+  <h2>📋 当日概览</h2>
+  <p>过去 24 小时内 <code>main</code> 分支共合并 10 个 PR。本仓库是一个为 <b>Omni（全模态）模型</b>服务的
+  「<b>多阶段流水线（Multi-Stage Pipeline）</b>」推理框架——一个请求会依次/并行流经多个模型阶段
+  （例如 <b>thinker</b> 负责理解+生成文本/语义、<b>talker</b> 负责把语义转成语音 token、<b>code2wav/vocoder</b>
+  负责把 token 还原成波形）。今天的改动恰好覆盖了这条流水线的几个关键环节。</p>
+
+  <div class="topic-tags">
+    <span class="tag t-omni">Omni 调度 / mixed-chunk</span>
+    <span class="tag t-tts">TTS 服务化 / OpenAI 兼容 API</span>
+    <span class="tag t-tts">MOSS-TTS 缓存与流式</span>
+    <span class="tag t-mm">多模态 / 视频 Talker 稳定性</span>
+    <span class="tag t-ci">CI 基础设施 / 校准</span>
+  </div>
+
+  <p style="margin-top:16px;color:var(--muted);font-size:13.5px">
+  本报告遵循「<b style="color:var(--accent2)">深度优先于广度</b>」原则：对架构相关的核心 PR 逐行讲透，
+  对同主题的小型 PR 做合并讲解，对纯 CI 校准类做简述。</p>
+
+  <table class="idx">
+    <tr><th>#</th><th>标题</th><th>作者</th><th>主题</th><th>讲解深度</th></tr>
+    <tr><td><code>#789</code></td><td>qwen3-omni：thinker 路径默认开启 mixed-chunk</td><td>luojiaxuan</td><td>Omni 调度</td><td>⭐ 深度精讲</td></tr>
+    <tr><td><code>#659</code></td><td>[TTS] 新增 OpenAI 兼容的 /v1/audio/speech 语音合成 API</td><td>Ratish1</td><td>TTS 服务化</td><td>⭐ 深度精讲</td></tr>
+    <tr><td><code>#767</code></td><td>修复 Video-AMME Talker 的张量设备错配与 CI 稳定性</td><td>MelodyyyYin</td><td>多模态稳定性</td><td>⭐ 深度精讲</td></tr>
+    <tr><td><code>#787</code></td><td>修复 MOSS-TTS Local 无 stream outbox 时的输出收集崩溃</td><td>Ratish1</td><td>TTS / 健壮性</td><td>合并精讲</td></tr>
+    <tr><td><code>#788</code></td><td>[Perf] 提高 MOSS-TTS Local 参考音频缓存条目上限</td><td>SandyLuXY</td><td>TTS / 缓存</td><td>合并精讲</td></tr>
+    <tr><td><code>#790</code></td><td>Omni 单测 CI 提前 + 修复 profiler 路由测试</td><td>Ratish1</td><td>CI / 测试设计</td><td>中等</td></tr>
+    <tr><td><code>#793–796</code></td><td>CI 校准 / Host Profiles / 预检清单 / 校准技能</td><td>zhaochenyang20</td><td>CI 基础设施</td><td>简述（一组）</td></tr>
+  </table>
+</section>
+
+<!-- ============ PR #789 ============ -->
+<details class="card" open>
+  <summary>
+    <span class="num">#789</span>
+    <span class="ttl">feat(qwen3-omni)：在 thinker 路径上默认开启 mixed-chunk</span>
+    <span class="badge merged">merged</span>
+    <span class="badge star">★ 今日最值得读</span>
+  </summary>
+  <div class="cardbody">
+    <div class="meta">
+      <span>作者：<b>luojiaxuan</b></span>
+      <span>合并者：zhaochenyang20</span>
+      <span>改动量：<b>+17 / −2</b>，1 个文件</span>
+      <span><a href="https://github.com/sgl-project/sglang-omni/pull/789">查看 PR ↗</a></span>
+      <span>关联 #760</span>
+    </div>
+
+    <h3 class="sec">1️⃣ PR 概览</h3>
+    <div class="tldr"><b>一句话：</b>给 Qwen3-Omni 的 thinker（理解+生成阶段）默认打开
+    <code>enable_mixed_chunk=True</code> 和 <code>chunked_prefill_size=8192</code>，让「正在解码的请求」不再被「正在做 prefill 的请求」饿死，
+    并发流式翻译场景下吞吐 <span class="good">+14%</span>、计算感知延迟 <span class="good">−6%</span>，质量（BLEU）持平。</div>
+    <p>这是个「四两拨千斤」的 PR——核心改动只有 3 行，但背后是对调度器（scheduler）工作节律的深入观测。</p>
+
+    <h3 class="sec">2️⃣ 它解决了什么问题</h3>
+    <p>SGLang 的 thinker 调度器每一个 step（调度步）只能二选一：<b>要么做 prefill，要么做 decode</b>（论文/工程里叫
+    "prefill XOR decode"）。在<b>并发流式</b>场景下（比如 32 路同声传译会话同时进行），新请求不断到来，于是大量 step 被
+    "纯 prefill" 占据；而那些已经在生成 token 的请求（decode）只能干等这一步结束。</p>
+    <p>作者用一个 env 开关把调度器内部探针打开，量化了这个痛点（Qwen3-Omni-30B-A3B，TP=2，32 路流式）：</p>
+    <ul>
+      <li><b>~98%</b> 的纯 prefill step，其实运行队列 <code>running_batch</code> 里都有「已经可以 decode 的请求」被跳过（平均每步约 <b>18 个</b>被晾着）；</li>
+      <li>decode 只在约 <b>58%</b> 的调度迭代里真正推进。</li>
+    </ul>
+    <p>结论很关键：这<b>不是</b>「请求不够多/到达太慢」（arrival-bound），而是一个「<b>占空比/节律问题</b>（duty-cycle problem）」——
+    机器有活儿干，却把活儿排在了错误的时序里。</p>
+    <div class="analogy"><b>类比：</b>把调度器想成一个只有一条收银通道的超市。每个 step 收银员要么"给一位拿着满满购物车的新顾客扫码结账"（prefill），
+    要么"给已经在装袋的老顾客找零"（decode）。流式高并发时，新顾客源源不断，收银员一直在扫新车，结果一堆只差找零就能走人的老顾客被堵在通道里。
+    <b>mixed-chunk</b> 相当于让收银员"扫新车的间隙顺手把旁边老顾客的零钱找了"，通道不再空转。</p>
+
+    <h3 class="sec">3️⃣ 具体做了什么改动</h3>
+    <p>只改了一个文件：<code>sglang_omni/models/qwen3_omni/stages.py</code> 里的
+    <code>create_sglang_thinker_executor_from_config()</code>——这是构造 thinker 调度器（OmniScheduler）的工厂函数。
+    改动就是把默认的 <code>overrides</code> 字典多塞两个键：</p>
+<pre><code><span class="c-cmt"># 改动前：只关掉一个开关</span>
+overrides: dict[str, Any] = {<span class="c-str">"disable_cuda_graph"</span>: <span class="c-key">False</span>}
+
+<span class="c-cmt"># 改动后：额外打开 mixed-chunk，并把 chunked_prefill_size 定为 8192</span>
+overrides: dict[str, Any] = {
+    <span class="c-str">"disable_cuda_graph"</span>: <span class="c-key">False</span>,
+    <span class="c-str">"enable_mixed_chunk"</span>: <span class="c-key">True</span>,      <span class="c-cmt"># ← 关键：允许把 decode 折进 prefill 的 chunk 里</span>
+    <span class="c-str">"chunked_prefill_size"</span>: <span class="c-num">8192</span>,  <span class="c-cmt"># ← 必要条件：chunk 大小 > 0 时 mixed-chunk 才会生效</span>
+}
+<span class="c-key">if</span> server_args_overrides:
+    overrides.update(server_args_overrides)  <span class="c-cmt"># ← 用户传的覆盖项仍然优先，可 enable_mixed_chunk=False 退出</span>
+overrides[<span class="c-str">"tp_size"</span>] = tp_size</code></pre>
+    <p>逐点解释这段逻辑在做什么：</p>
+    <ul>
+      <li><b>为什么两个键要一起设？</b> mixed-chunk 的机制依赖"分块 prefill"——只有当 <code>chunked_prefill_size &gt; 0</code> 时，
+      prefill 才会被切成固定大小的 chunk（这里是 8192 token），调度器才有"空位"把正在 decode 的请求塞进同一个前向（forward）批次。所以
+      <code>enable_mixed_chunk=True</code> 必须配上一个正的 chunk size 才真正起效。</li>
+      <li><b>为什么是 8192？</b> 作者扫了 <code>{4096, 8192, 16384}</code>，吞吐都在 ~9.2–9.3 seg/s 持平，8192 作为"安全默认值"。</li>
+      <li><b>会不会破坏用户配置？</b> 不会。<code>overrides.update(server_args_overrides)</code> 这行保证：用户在
+      <code>server_args_overrides</code> 或命令行（<code>--enable-mixed-chunk</code>/<code>--chunked-prefill-size</code>）里显式传的值会<b>覆盖</b>这里的默认值，
+      想退出只需传 <code>enable_mixed_chunk=False</code>。同时 <code>cli/serve.py</code> 和 qwen3-omni 的 <code>factory_args</code> 都没设这两个键，所以默认值不会被悄悄冲掉。</li>
+      <li><b>影响范围严格收窄：</b>只动 Qwen3-Omni 的 thinker；ming-omni 有自己的同名工厂函数，不受影响；talker 完全没碰。</li>
+    </ul>
+
+    <table class="data">
+      <tr><th>指标（en→zh 流式同传, ACL6060）</th><th>baseline</th><th>mixed-chunk 默认</th><th>变化</th></tr>
+      <tr><td>吞吐 (seg/s)</td><td>~8.1</td><td>~9.3</td><td class="good">+14%</td></tr>
+      <tr><td>StreamLAAL_CA（计算感知延迟）</td><td>~2280</td><td>~2143</td><td class="good">−6%</td></tr>
+      <tr><td>BLEU（翻译质量）</td><td>32.1</td><td>32.1</td><td>持平</td></tr>
+      <tr><td>"晾着 decode"的纯 prefill 步占比</td><td>~98%</td><td class="good">~0%</td><td>—</td></tr>
+    </table>
+
+    <h3 class="sec k">4️⃣ 涉及的知识点（重点展开）</h3>
+
+    <div class="kbox">
+      <div class="kt">Prefill 与 Decode（预填充 / 解码）</div>
+      <div class="seg"><b>是什么：</b>大模型推理分两个阶段。<b>Prefill</b> = 把整段输入 prompt 一次性喂进模型，算出每个 token 的隐状态并填充 KV cache，是一次"大批量并行"运算；<b>Decode</b> = 之后逐个 token 自回归生成，每步只算 1 个新 token，是"小而频繁"的运算。</div>
+      <div class="seg"><b>为什么需要区分：</b>两者算力特征完全不同——prefill 是计算密集（吃 GPU 算力），decode 是访存密集（吃显存带宽，算力利用率低）。调度器如何编排它们，直接决定吞吐和延迟。</div>
+      <div class="seg"><b>本 PR 里：</b>痛点正是"prefill 步会把 decode 步挤掉"。mixed-chunk 让一个 step 同时干两种活，提高了 GPU 的有效利用。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">Scheduler（调度器）与 running_batch</div>
+      <div class="seg"><b>是什么：</b>SGLang 引擎的"大脑"。它维护一个等待队列和一个<code>running_batch</code>（正在跑的请求批次），每个 step 决定"这一拍把哪些请求、做什么操作"打包成一次 GPU 前向。</div>
+      <div class="seg"><b>为什么需要它：</b>GPU 一次前向能处理一批 token 最划算（见下方 continuous batching）。调度器要在"延迟"和"吞吐"之间动态权衡。</div>
+      <div class="seg"><b>本 PR 里：</b>作者直接观测调度器：发现 <code>running_batch</code> 里有大量 decode-ready 请求在 prefill 步被"passed over（跳过）"，这是定位问题的核心证据。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">Continuous Batching（连续批处理）</div>
+      <div class="seg"><b>是什么：</b>传统批处理要等一批请求全部到齐、全部结束才换下一批；连续批处理允许请求"随到随进、随完随出"，每个 step 动态重组批次。</div>
+      <div class="seg"><b>为什么需要它：</b>LLM 请求长度差异极大，固定批会让短请求等长请求，GPU 大量空转。连续批处理是现代推理引擎（vLLM/SGLang/TensorRT-LLM）吞吐高的根本原因。</div>
+      <div class="seg"><b>本 PR 里：</b>mixed-chunk 是连续批处理之上的进一步优化——不仅请求级别动态混合，连"prefill 块"和"decode 步"也混进同一个前向。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">Chunked Prefill（分块预填充）</div>
+      <div class="seg"><b>是什么：</b>把一个超长 prompt 的 prefill 切成若干固定大小（如 8192 token）的块，分多个 step 完成，而不是一次性塞进去。</div>
+      <div class="seg"><b>为什么需要它：</b>(1) 超长 prompt 一次 prefill 会造成巨大的激活显存尖峰、并长时间独占 GPU 让所有 decode 停摆（延迟尖刺）；(2) 切块后留出的"空隙"正好可以塞 decode。</div>
+      <div class="seg"><b>本 PR 里：</b><code>chunked_prefill_size=8192</code> 是 mixed-chunk 的<b>前置条件</b>——没有切块就没有空隙去混合 decode。对短 prefill 它是 no-op（无副作用）。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">Mixed-Chunk（混合分块）⭐ 本 PR 主角</div>
+      <div class="seg"><b>是什么：</b>把"正在 decode 的请求"的那 1 个 token，<b>折叠进</b>同一拍的 chunk-prefill（extend）批次里一起算。于是这一个 GPU 前向既推进了某个长 prompt 的一块 prefill，又顺手把一堆 decode 各往前走了一步。</div>
+      <div class="seg"><b>为什么需要它：</b>消灭"纯 prefill 步饿死 decode"的占空比浪费。原本 decode 只在 58% 的 step 推进，开启后纯 prefill 步晾着 decode 的比例从 ~98% 降到 ~0%。</div>
+      <div class="seg"><b>本 PR 里：</b>就是默认把它打开。注意它<b>不改变数学结果</b>（BLEU 持平），只改变"什么时候算"，是纯粹的调度/吞吐优化。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">KV Cache（键值缓存）</div>
+      <div class="seg"><b>是什么：</b>注意力机制里，每个已生成 token 的 Key/Value 向量会被缓存复用，这样 decode 第 N 个 token 时不必重算前 N−1 个。</div>
+      <div class="seg"><b>为什么需要它：</b>没有它，自回归生成是 O(N²) 重复计算；有了它每步只算新 token，是 LLM 推理可用的基础。它也是显存的主要消耗者。</div>
+      <div class="seg"><b>本 PR 里：</b>prefill 阶段填充 KV cache，decode 阶段读取它。mixed-chunk 把两类访问编排进同一前向，KV cache 的读写仍各自独立、结果不变。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">Tensor Parallelism（张量并行，TP）& CUDA Graph</div>
+      <div class="seg"><b>TP 是什么：</b>把一个大模型的权重矩阵按列/行切到多张 GPU 上（这里 <code>TP=2</code> = 2 卡），每卡算一部分再 all-reduce 汇总。用于单卡放不下的大模型。</div>
+      <div class="seg"><b>CUDA Graph 是什么：</b>把一串固定的 GPU kernel 调用"录制"成一张图，之后重放（replay）整张图，省去每个 kernel 逐个 launch 的 CPU 开销。decode 步形状固定，最适合用它。</div>
+      <div class="seg"><b>本 PR 里：</b>默认 <code>disable_cuda_graph=False</code>（即启用 CUDA Graph）；30B 模型用 TP=2 部署。这些是 mixed-chunk 收益得以兑现的运行环境。</div>
+    </div>
+
+    <h3 class="sec learn">5️⃣ 我能学到什么 / 延伸思考</h3>
+    <ul>
+      <li><b>"先量化、再下结论"的工程方法论：</b>作者没有凭感觉调参，而是写了个 env-gated 探针去测"纯 prefill 步里有多少 decode 被跳过"，把问题精确归类为 duty-cycle 而非 arrival-bound。值得复用：<b>优化前先用数据证明瓶颈在哪</b>。</li>
+      <li><b>"安全的默认值"设计：</b>新默认值必须 (a) 可被用户覆盖、(b) 不破坏现有配置、(c) 在边界条件（N=1/N=8 低并发）无回归、(d) 对参数不敏感（扫了 3 个 chunk size）。这是把一个实验性优化"默认化"的标准清单。</li>
+      <li><b>A/B 的严谨性：</b>交换 A/B 顺序（mixed-first）复测，排除"先跑的占便宜"这类系统偏差。</li>
+      <li><b>前置知识建议：</b>想吃透可以再看 → SGLang/vLLM 的 continuous batching 论文（Orca）、chunked prefill（Sarathi-Serve 论文）、以及 prefill/decode disaggregation 的取舍。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============ PR #659 ============ -->
+<details class="card" open>
+  <summary>
+    <span class="num">#659</span>
+    <span class="ttl">[TTS] 新增 OpenAI 兼容的 /v1/audio/speech 语音合成 API</span>
+    <span class="badge merged">merged</span>
+    <span class="badge star">★ 服务化重头戏</span>
+  </summary>
+  <div class="cardbody">
+    <div class="meta">
+      <span>作者：<b>Ratish1</b></span>
+      <span>合并者：zhaochenyang20</span>
+      <span>改动量：<b>+3092 / −1505</b>，48 个文件</span>
+      <span><a href="https://github.com/sgl-project/sglang-omni/pull/659">查看 PR ↗</a></span>
+      <span>关联 #601</span>
+    </div>
+
+    <h3 class="sec">1️⃣ PR 概览</h3>
+    <div class="tldr"><b>一句话：</b>给 TTS（文本转语音）服务接上一层 <b>OpenAI 风格的 <code>/v1/audio/speech</code> 接口</b>，
+    让任何写过 OpenAI 语音 SDK 的开发者，几乎零成本就能调用 SGLang Omni 的语音合成——支持非流式（一次返回整段音频）和 SSE 流式（边合成边吐音频块）。</div>
+
+    <h3 class="sec">2️⃣ 它解决了什么问题</h3>
+    <p>在这个 PR 之前，框架内部已经有完整的 TTS 模型流水线（能把文本变成音频），但<b>对外没有一个标准、好用的 HTTP 接口</b>。
+    下游开发者要接入就得了解框架内部的 <code>GenerateRequest</code> 私有协议、自己处理音频编码格式、自己拼流式协议——心智负担重、迁移成本高。</p>
+    <p>OpenAI 的 <code>/v1/audio/speech</code> 已经是事实标准，生态里大量客户端/SDK 都按它来。<b>"兼容 OpenAI"</b> 意味着：
+    用户把 base_url 一改就能跑，几乎不用改业务代码。这就是这个 PR 的价值——<b>把强大的内部能力包装成一个生态通用的门面</b>。</p>
+    <div class="analogy"><b>类比：</b>内部流水线像一台专业级咖啡机，但只有懂行的人会用一堆旋钮。这个 PR 给它装了个"星巴克点单台"——
+    你只要说"一杯拿铁（input + voice + 格式）"，后台自动翻译成机器的精确参数。</div>
+
+    <h3 class="sec">3️⃣ 具体做了什么改动</h3>
+    <p>整体架构（PR 自带的流程图）：</p>
+<pre><code>Client → POST /v1/audio/speech
+       → CreateSpeechRequest（请求字段校验）
+       → SpeechService（校验 + "降级/lowering" 转换层）
+       → GenerateRequest（框架内部统一请求）
+       → Pipeline client（流水线客户端）
+       → TTS model stages（实际的多阶段 TTS 模型）
+       → Audio response → Client</code></pre>
+    <p>关键改动逐块讲：</p>
+    <ul>
+      <li><b><code>CreateSpeechRequest</code>（请求模型）：</b>定义对外暴露的字段——合成文本 <code>input</code>、音色别名 <code>voice</code>、
+      响应格式 <code>response_format</code>（wav/pcm 等）、参考音频/文本（用于声音克隆）、生成参数、流式控制。这是 API 的"契约"。</li>
+      <li><b><code>SpeechService</code>（校验 + lowering 层）：</b>这是设计上的核心。它负责把"用户友好的 OpenAI 风格请求"<b>翻译/降级（lower）</b>
+      成"框架内部的 <code>GenerateRequest</code>"：规范化响应格式、任务类型、语言、本地/data/HTTP 三种媒体引用方式，并产生 OpenAI 风格的校验错误。
+      <b>它把 API 表层和流水线内部解耦</b>——内部协议怎么演进，对外契约不变。</li>
+      <li><b>服务端路由：</b>在 OpenAI 兼容 server 里新增 <code>/v1/audio/speech</code> 的两条路径——非流式返回编码后的整段音频；流式用 SSE 分块返回。</li>
+      <li><b>流式约束为 PCM：</b>流式只允许 PCM 格式，通过 SSE 逐块（<code>audio.speech.chunk</code> 事件）下发，
+      这样<b>不必改动 pipeline client 的契约</b>就能暴露"增量音频"。最后还会发一个带 usage 元数据的终止块和 <code>data: [DONE]</code>。</li>
+      <li><b><code>initial_codec_chunk_frames</code> 打通：</b>把这个参数从 API 一路接到 <code>GenerateRequest.extra_params</code> →
+      Higgs 流式元数据 → Higgs 流式 vocoder，让"第一个音频块多大"真正可由请求控制（以前只是文档里写写、并没生效）。</li>
+      <li><b><code>--allowed-local-media-path</code> 安全开关：</b>之前 <code>file://</code> 形式的参考音频是全局接受的（有路径穿越/读任意文件的风险）。
+      改为<b>必须由部署方显式开启白名单路径</b>才允许，默认关闭。这是一处重要的安全收敛。</li>
+      <li><b>测试 & 文档：</b>新增针对请求校验、错误响应、流式格式强制、参考校验、请求 lowering 的单测（<code>test_speech_protocol.py</code> 等共 39 passed），并更新了用户/开发者文档。</li>
+    </ul>
+
+    <h3 class="sec k">4️⃣ 涉及的知识点（重点展开）</h3>
+
+    <div class="kbox">
+      <div class="kt">TTS / Vocoder / Codec Token（语音合成基础三件套）</div>
+      <div class="seg"><b>是什么：</b><b>TTS</b>=文本转语音。现代神经 TTS 常分两步：模型先生成离散的 <b>codec token</b>（一串代表声音的整数码，像"声音的拼音"），再由 <b>vocoder（声码器）</b>把这些 token 还原成真实波形（wav）。</div>
+      <div class="seg"><b>为什么需要它：</b>直接生成原始波形（每秒上万个采样点）太难太慢；先生成压缩的离散 token、再解码成波形，既高效又可控。</div>
+      <div class="seg"><b>本 PR 里：</b><code>response_format</code> 决定最终编码（wav/pcm）；<code>initial_codec_chunk_frames</code> 控制流式时第一批 codec 帧的大小；vocoder 在流水线末端把 token 变成可播放音频。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">SSE（Server-Sent Events，服务器推送事件）</div>
+      <div class="seg"><b>是什么：</b>一种基于 HTTP 的单向流式协议——服务器保持连接打开，持续以 <code>data: ...\n\n</code> 的文本块往客户端推数据，直到发 <code>data: [DONE]</code>。</div>
+      <div class="seg"><b>为什么需要它：</b>语音合成可能要几秒，用户不想等全部合成完才听到声音。SSE 让"边合成边播放"成为可能，且比 WebSocket 更轻、天然走 HTTP。OpenAI 的流式接口正是用 SSE。</div>
+      <div class="seg"><b>本 PR 里：</b>流式语音用 SSE 推 <code>audio.speech.chunk</code> 事件（含 <code>format/mime_type/sample_rate</code>），末尾推 usage 统计和 <code>[DONE]</code>。流式被限制为 PCM，因为 PCM 是裸采样、可以无损切块拼接，而 wav 有文件头不适合中途切。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">"Lowering / 降级转换"（编译器借来的设计模式）</div>
+      <div class="seg"><b>是什么：</b>"lowering"原是编译器术语——把高层、用户友好的表示，逐步翻译成低层、贴近执行的表示。这里 <code>SpeechService</code> 把高层的 <code>CreateSpeechRequest</code> 降级为低层的 <code>GenerateRequest</code>。</div>
+      <div class="seg"><b>为什么需要它：</b>它是一道<b>防腐层（Anti-Corruption Layer）</b>——把"对外 API 的稳定契约"和"对内引擎的易变实现"隔开。对外协议可以保持 OpenAI 兼容，对内 <code>GenerateRequest</code> 随便重构，互不污染。</div>
+      <div class="seg"><b>本 PR 里：</b>这正是为什么作者强调"不改动 pipeline client 契约"就能加流式——所有适配都收敛在 lowering 这一层。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">OpenAI 兼容层（API 门面模式）</div>
+      <div class="seg"><b>是什么：</b>实现一套与 OpenAI HTTP 接口（路径、请求体、响应体、错误格式）完全一致的服务端，让客户端"无感切换"。</div>
+      <div class="seg"><b>为什么需要它：</b>生态护城河。OpenAI SDK 用户众多，兼容=零迁移成本接入，是开源推理框架获取用户的标准打法（vLLM、SGLang 都这么做）。</div>
+      <div class="seg"><b>本 PR 里：</b>新增的 <code>/v1/audio/speech</code> 字段命名（<code>input/voice/response_format</code>）和错误风格都对齐 OpenAI，curl 验证可直接 <code>--output speech.wav</code>。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">本地媒体白名单 / 路径安全</div>
+      <div class="seg"><b>是什么：</b>对 <code>file://</code> 这类指向服务器本地文件的引用，只允许访问管理员显式列入白名单的目录。</div>
+      <div class="seg"><b>为什么需要它：</b>若全局放开，恶意请求可能用 <code>file:///etc/passwd</code> 之类让服务器读取/泄露任意文件（典型的 SSRF/路径穿越风险）。默认拒绝、显式开启是安全的"最小权限原则"。</div>
+      <div class="seg"><b>本 PR 里：</b>新增 <code>--allowed-local-media-path</code>，把"接受本地参考音频"从默认行为改成部署方主动授权的行为。</div>
+    </div>
+
+    <h3 class="sec learn">5️⃣ 我能学到什么 / 延伸思考</h3>
+    <ul>
+      <li><b>"门面 + 防腐层"是接入生态的黄金组合：</b>对外兼容既有标准（降低用户成本），对内用 lowering 层吸收差异（保护核心演进自由）。这套模式在任何"给老引擎加新 API"的场景都适用。</li>
+      <li><b>流式协议的格式取舍：</b>为什么流式强制 PCM 而非 wav？因为要可切块、可拼接、无文件头依赖。设计流式接口时要想清楚"哪种编码适合分块传输"。</li>
+      <li><b>把安全收敛和功能一起做：</b>顺手把 <code>file://</code> 从默认放开改成白名单——新增能力的同时不留口子。</li>
+      <li><b>前置知识建议：</b>OpenAI Audio API 规范、SSE vs WebSocket 的差异、神经 TTS 的 codec+vocoder 两段式架构（如 EnCodec / SoundStream / 各家 neural codec）。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============ PR #767 ============ -->
+<details class="card" open>
+  <summary>
+    <span class="num">#767</span>
+    <span class="ttl">fix：修复 Qwen3-Omni Video-AMME Talker 阶段的张量设备错配与 CI 稳定性</span>
+    <span class="badge merged">merged</span>
+    <span class="badge star">★ 多模态实战排错</span>
+  </summary>
+  <div class="cardbody">
+    <div class="meta">
+      <span>作者：<b>MelodyyyYin</b></span>
+      <span>合并者：zhaochenyang20</span>
+      <span>改动量：<b>+124 / −110</b>，13 个文件</span>
+      <span><a href="https://github.com/sgl-project/sglang-omni/pull/767">查看 PR ↗</a></span>
+      <span>关联 #765</span>
+    </div>
+
+    <h3 class="sec">1️⃣ PR 概览</h3>
+    <div class="tldr"><b>一句话：</b>修复 Qwen3-Omni "视频理解+说话"（Video-AMME Talker）CI 间歇性失败的一连串<b>真实 bug</b>：
+    CPU/CUDA 张量混用导致的设备错配、TP=2 下 GPU-1 显存 OOM、跨进程传 fd 的权限错误、CI 产物 glob 不匹配、以及孤儿 GPU 进程清理。</div>
+    <p>这是一份非常典型的"<b>多模态多阶段流水线在真实硬件上的排错日志</b>"，每一条都对应一个值得学习的基础设施坑。</p>
+
+    <h3 class="sec">2️⃣ 它解决了什么问题</h3>
+    <p>Qwen3-Omni 的视频对话流水线在 CI 里<b>时绿时红（flaky）</b>——这种"间歇性失败"最折磨人，因为它既不能说功能坏了，又不能放心合并。
+    作者逐个定位，发现是 5 个独立的根因叠加，而非单一 bug。下面挑最有代表性的讲。</p>
+
+    <h3 class="sec">3️⃣ 具体做了什么改动</h3>
+
+    <p><b>① Talker prefill 的设备错配（最核心的代码 bug）</b></p>
+    <p>问题：<code>talker_prefill.py</code> 里对一组张量做 <code>torch.stack</code>，但这些张量有的在 CPU、有的在 CUDA 上，
+    <code>torch.stack</code> 要求所有输入在同一设备，于是间歇性抛错。修复就是在 stack 之前把每个张量都搬到统一设备：</p>
+<pre><code><span class="c-cmt"># 修复后（sglang_omni/models/qwen3_omni/components/talker_prefill.py）</span>
+assistant_hidden = torch.<span class="c-fn">stack</span>(
+    [
+        <span class="c-cmt"># 关键：对每个 chunk 的 hidden/embed 先 .to(统一设备+dtype) 再 stack</span>
+        self.<span class="c-fn">chunk_layer_hidden_or_embed</span>(chunk).<span class="c-fn">to</span>(
+            device=self._device, dtype=self._dtype,
+        )
+        <span class="c-key">for</span> chunk <span class="c-key">in</span> thinker_chunks
+    ],
+    dim=<span class="c-num">0</span>,
+)</code></pre>
+    <p>这里 <code>self._device</code> 在初始化时被定为 <code>model.model.codec_embedding.weight.device</code>——即"模型权重在哪张卡，就以哪张卡为基准设备"。
+    把所有参与运算的张量统一到这个设备，<code>torch.stack</code> 就不会再因设备不一致而崩。</p>
+
+    <p><b>② TP=2 下 GPU-1 的 OOM（显存超限）</b></p>
+    <p>在 stage 11 里，thinker 的 rank-1 和 talker_ar + code2wav <b>共享同一张 GPU 1</b>。当 <code>thinker-mem-fraction-static</code> 设为 0.55 时，
+    并发 16 的视频 prefill 激活尖峰把显存撑爆。修复：把它降到 <b>0.40</b>，并设置
+    <code>PYTORCH_ALLOC_CONF=expandable_segments:True</code>（让 CUDA 分配器用可扩展段、减少碎片）。
+    细节彩蛋：PyTorch 2.9 把环境变量从 <code>PYTORCH_CUDA_ALLOC_CONF</code> 改名成 <code>PYTORCH_ALLOC_CONF</code>，所以<b>两个名字都设</b>以兼容新旧版本。</p>
+
+    <p><b>③ <code>pidfd_getfd: Operation not permitted</code>（跨进程传 fd 的权限）</b></p>
+    <p>请求进入"<b>解耦式（disaggregated）中继</b>"后，阶段进程之间需要用 Linux 的 <code>pidfd_getfd</code> 系统调用<b>互传文件描述符（fd）</b>，
+    这个调用需要 <code>CAP_SYS_PTRACE</code> 能力。修复：只给真正用到解耦 server 的 stage 11 容器加 <code>--cap-add=SYS_PTRACE</code>
+    （路由/同卡共置的阶段不需要，就不加，遵循最小权限）。</p>
+
+    <p><b>④ CI 产物 glob 不匹配 & ⑤ 孤儿 GPU 进程清理</b></p>
+    <ul>
+      <li>测试用 <code>mktemp("videoamme_audio")</code> 生成的目录实际叫 <code>videoamme_audio0</code>（带后缀），而上传产物的 glob 没加通配符 <code>*</code>，导致从来没匹配到。修复：给 stage 4/6/8/10/11 的 glob 补 <code>*</code>。</li>
+      <li>重试路径会漏掉 <code>multiprocessing.spawn</code> 起的孤儿 worker——它们持有 <code>/dev/nvidia*</code> 的 fd 占着显存，却对 <code>nvidia-smi</code> 不可见。给 <code>delete_gpu_process.sh</code> 加 <code>--kill-orphans</code>（扫 <code>/proc/*/fd</code> + pkill），并删掉已成空壳的 <code>ensure_gpus_idle.sh</code>，统一收口。</li>
+    </ul>
+    <p>另外作者明确标注了"<b>非本 PR 改动</b>"：stage 10 的精度阈值 0.65 是预先就存在的 flaky 阈值（模型均值 ~0.61），不是本 PR 引入的回归，留给维护者处理。这种"划清边界"的诚实很专业。</p>
+
+    <h3 class="sec k">4️⃣ 涉及的知识点（重点展开）</h3>
+
+    <div class="kbox">
+      <div class="kt">设备错配（device mismatch）与 torch.stack</div>
+      <div class="seg"><b>是什么：</b>PyTorch 张量都"住"在某个设备上（CPU 或某张 cuda:N）。像 <code>torch.stack/cat</code> 这类合并操作，要求所有输入在同一设备，否则直接报 RuntimeError。</div>
+      <div class="seg"><b>为什么会错配：</b>多阶段流水线里，有的中间结果在 CPU（如刚从主机内存读出的特征），有的在 GPU（如模型刚算出的 hidden）。混在一起就崩。</div>
+      <div class="seg"><b>本 PR 里：</b>统一搬到 <code>codec_embedding.weight.device</code> 这个"基准设备"再 stack——用"模型权重所在卡"作为唯一真相源，是个干净的约定。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">Thinker / Talker / Code2wav（Omni 多阶段角色分工）</div>
+      <div class="seg"><b>是什么：</b>Omni 模型的典型三段式：<b>thinker</b> 理解多模态输入（文/图/视频/音）并产出语义与文本；<b>talker (talker_ar)</b> 把语义自回归地转成语音 codec token；<b>code2wav</b> 把 token 解码成波形。</div>
+      <div class="seg"><b>为什么这样拆：</b>每段算力/显存需求不同，拆开可以分别放在不同卡、分别优化、分别扩缩容——这正是"Multi-Stage Pipeline"框架的核心理念。</div>
+      <div class="seg"><b>本 PR 里：</b>OOM 正是因为 thinker rank-1、talker_ar、code2wav 被<b>共置（colocate）</b>在同一张 GPU 1 上抢显存——拆分带来灵活，也带来资源争用，需要精细的显存预算（mem-fraction）。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">显存预算：mem-fraction-static 与 expandable_segments</div>
+      <div class="seg"><b>是什么：</b><code>mem-fraction-static</code> 指引擎静态预留多少比例显存给 KV cache / 权重；<code>expandable_segments:True</code> 让 CUDA caching allocator 用可按需扩展的内存段，减少因碎片导致的"明明总量够却分不出大块"的 OOM。</div>
+      <div class="seg"><b>为什么需要它：</b>共置多个阶段时，必须给每个阶段留够、又不能各自贪多。激活尖峰（prefill 时最大）是最容易爆的时刻。</div>
+      <div class="seg"><b>本 PR 里：</b>0.55→0.40 给共置的 talker/code2wav 让出空间，配合可扩展段吸收 prefill 尖峰，OOM 消失。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">Disaggregated Serving（解耦式服务）与 fd 传递</div>
+      <div class="seg"><b>是什么：</b>把推理的不同部分（如 prefill 与 decode、或不同阶段）放到不同进程/节点上，用中继（relay）转发请求和数据。进程间有时需要直接共享打开的文件/socket，靠 Linux <code>pidfd_getfd</code> 把一个进程的 fd "搬"到另一个进程。</div>
+      <div class="seg"><b>为什么需要 CAP_SYS_PTRACE：</b>从别的进程偷取 fd 是高权限操作（等于能窥探别的进程），内核要求调用方具备 ptrace 能力，容器默认不给。</div>
+      <div class="seg"><b>本 PR 里：</b>只给用到解耦 server 的 stage 11 容器加这个 capability，其余阶段不加——精确授权而非全局放开。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">孤儿进程 / multiprocessing.spawn 与 GPU fd 泄漏</div>
+      <div class="seg"><b>是什么：</b>Python 用 <code>spawn</code> 起的子进程若父进程异常退出，可能变成"孤儿"——还活着、还持有 <code>/dev/nvidia*</code> 的 fd 占着显存，但 <code>nvidia-smi</code> 的进程列表里可能看不到它们。</div>
+      <div class="seg"><b>为什么棘手：</b>下一个测试想用显存却发现被占，且找不到凶手，于是清理等待超时、把本来能过的测试判红。</div>
+      <div class="seg"><b>本 PR 里：</b>通过扫描 <code>/proc/*/fd</code> 找出持有 nvidia fd 的进程再 pkill（<code>--kill-orphans</code>），从根上回收，让 flaky 变稳定。</div>
+    </div>
+
+    <h3 class="sec learn">5️⃣ 我能学到什么 / 延伸思考</h3>
+    <ul>
+      <li><b>"flaky 往往不是一个 bug 而是一堆"：</b>本 PR 一口气修了 5 个独立根因。面对间歇性失败，要有耐心逐个隔离，而不是寄望于单点修复。</li>
+      <li><b>共置（colocation）是把双刃剑：</b>省卡，但带来显存争用、设备错配、fd/capability 等一连串系统级问题。多阶段框架的难点很多在"系统/OS 层"而非"模型层"。</li>
+      <li><b>最小权限：</b>capability、本地路径白名单都只在真正需要的地方开——和 #659 的安全思路一脉相承。</li>
+      <li><b>诚实划清边界：</b>把"不是我引入的 flaky 阈值"明确标注、留给维护者，避免在一个 PR 里夹带不相关改动。</li>
+      <li><b>前置知识建议：</b>CUDA caching allocator 与显存碎片、Linux capabilities 与 <code>pidfd</code> 系列系统调用、Python multiprocessing 的 spawn/fork 差异。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============ PR #787 + #788 group ============ -->
+<details class="card" open>
+  <summary>
+    <span class="num">#787 + #788</span>
+    <span class="ttl">MOSS-TTS Local：输出收集健壮性修复 + 参考音频缓存容量调优</span>
+    <span class="badge merged">merged ×2</span>
+  </summary>
+  <div class="cardbody">
+    <div class="meta">
+      <span>作者：Ratish1（#787） / SandyLuXY（#788）</span>
+      <span>#787: +6/−1 ｜ #788: +5/−5</span>
+      <span><a href="https://github.com/sgl-project/sglang-omni/pull/787">#787 ↗</a> · <a href="https://github.com/sgl-project/sglang-omni/pull/788">#788 ↗</a></span>
+    </div>
+
+    <h3 class="sec">1️⃣ 概览（两个小而精的 TTS 基础设施 PR）</h3>
+    <div class="tldr">
+      <b>#787：</b>修复单测里用 <code>__new__</code> 构造 runner 时，因缺少 <code>_outbox</code> 属性导致 <code>post_process_outputs()</code> 崩溃——
+      让"流式发送"成为可选副作用，不再阻塞核心的"输出行收集"。<br>
+      <b>#788：</b>把 MOSS-TTS Local 的参考音频缓存条目上限从 1024 提到 8192（字节上限 64 MiB 不变），
+      让"字节上限"而非"条目数"成为更大声音克隆负载下的实际约束。性能对当前负载持平（纯容量余量改动）。
+    </div>
+
+    <h3 class="sec">2️⃣ 它们各自解决了什么问题</h3>
+    <p><b>#787 的痛点：</b>PR #753 给 MOSS-TTS Local 加流式时，在 <code>__init__()</code> 里初始化 <code>_outbox</code>，并在
+    <code>post_process_outputs()</code> 里直接读 <code>self._outbox</code>。但很多单测<b>故意</b>用 <code>__new__</code>/<code>object.__new__</code>
+    绕过完整构造来单独测 model-runner 钩子。结果"可选的流式状态"变成了"输出收集的硬依赖"，一测就 <code>AttributeError</code>。</p>
+    <p><b>#788 的痛点：</b>MOSS-TTS Local 把编码后的参考音频缓存成<b>离散 codec token 张量</b>（不是波形也不是连续特征）。
+    SeedTTS EN 负载里 666 个唯一参考音频总共才占 ~1.85 MiB，远低于 64 MiB 的字节上限——但若条目数上限太小，会在条目数维度提前淘汰。</p>
+
+    <h3 class="sec">3️⃣ 具体改动</h3>
+    <p><b>#787：</b></p>
+    <ul>
+      <li>给 <code>MossTTSLocalModelRunner._outbox</code> 和 <code>_vocoder_target</code> 加<b>类级默认值</b>，这样即使构造被绕过，实例也有和正常对象一致的"无流式"默认状态。</li>
+      <li>把 <code>post_process_outputs()</code> 里的可选流式检查<b>拆开</b>：先把非 EOS 的 journal 行 append 进 <code>output_rows</code>（这是核心契约），
+      <b>再</b>在没有 <code>stream_metadata</code> 或没配 outbox 时跳过流式发布。生产环境的流式路径（<code>set_stream_outbox</code> + 发
+      <code>OutgoingMessage(type="stream", target="vocoder")</code>）保持不变。</li>
+    </ul>
+    <p><b>#788：</b>在 <code>config.py</code> 与 <code>stages.py</code> 把默认 <code>ref_audio_cache_max_items</code> 1024→8192（默认双卡配置和共置配置都走 <code>_stages(...)</code> 同时生效），
+    <code>ref_audio_cache_max_bytes=64 MiB</code> 的 LRU 上限不变；并更新单测断言三条构造路径都用 8192。</p>
+    <table class="data">
+      <tr><th>缓存行为（SeedTTS EN）</th><th>cache=1024</th><th>cache=8192</th></tr>
+      <tr><td>最终缓存条目数</td><td>666</td><td>666</td></tr>
+      <tr><td>占用字节</td><td>1,850,592</td><td>1,850,592</td></tr>
+    </table>
+    <p>两者命中行为完全一致，故吞吐/延迟在当前负载持平（±1% 噪声内）——这是有意为之的"容量余量"改动，为更大负载预留。</p>
+
+    <h3 class="sec k">4️⃣ 涉及的知识点</h3>
+
+    <div class="kbox">
+      <div class="kt">outbox / 流式路由（scheduler outbox routing）</div>
+      <div class="seg"><b>是什么：</b><code>outbox</code> 是调度器的"出件箱"——model runner 把要发给下游阶段（如 vocoder）的消息放进去，由调度器路由转发。流式 TTS 就是不断把 codec 块通过 outbox 推给 vocoder 实时出声。</div>
+      <div class="seg"><b>为什么是"可选副作用"：</b>核心契约是"runner 产出 output journal 行"；要不要把这些行<b>同时</b>流式推给 vocoder，取决于请求是否流式（是否配了 <code>stream_to=["vocoder"]</code>）。#787 的修复正是把这层"可选"在代码结构上落实。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">用 <code>__new__</code> 绕过构造的单测手法</div>
+      <div class="seg"><b>是什么：</b><code>object.__new__(Cls)</code> 创建一个实例但<b>不调用 <code>__init__</code></b>，于是不会拉起完整依赖（这里是整个 SGLang worker 栈）。</div>
+      <div class="seg"><b>为什么用它：</b>单测想孤立验证某个方法（如 <code>post_process_outputs</code>）的逻辑，不想付出启动 GPU/进程的代价。</div>
+      <div class="seg"><b>启示：</b>这种测试要求方法不能假设"所有实例属性都已在 __init__ 设好"。#787 用<b>类级默认值</b>解决——这是兼顾"可测试性"与"运行时正确性"的经典手法。</div>
+    </div>
+
+    <div class="kbox">
+      <div class="kt">LRU 缓存的双维度上限（条目数 vs 字节）</div>
+      <div class="seg"><b>是什么：</b>LRU（Least Recently Used，最近最少使用）缓存淘汰最久未用的项。这里同时有两个上限：条目数 <code>max_items</code> 和总字节 <code>max_bytes</code>，任一触顶就淘汰。</div>
+      <div class="seg"><b>为什么要两个维度：</b>条目数防止"很多小项"撑爆数量，字节数防止"少数大项"撑爆内存。设计缓存时让"更合理的那个维度"成为实际约束。</div>
+      <div class="seg"><b>本 PR 里：</b>参考音频是小 token 张量，字节上限远难触及，所以把条目上限抬高，让 64 MiB 字节上限成为真正的"硬预算"，避免在大声音库下因条目数过早淘汰、反复 miss。</div>
+    </div>
+
+    <h3 class="sec learn">5️⃣ 我能学到什么</h3>
+    <ul>
+      <li><b>可选功能不要变成核心路径的硬依赖：</b>#787 的本质教训——新增的流式状态把基础的输出收集"绑架"了。区分"核心契约"与"可选副作用"，并在代码结构上显式分离。</li>
+      <li><b>类级默认值是构造健壮性的廉价保险：</b>给可能被绕过初始化的属性设类级默认，几行就能消除一类 AttributeError。</li>
+      <li><b>"性能中性的容量改动"也要用数据证明：</b>#788 明确给出"两种配置命中完全一致、字节占用相同"，证明这是纯余量、无回归——改配置也讲证据。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============ PR #790 ============ -->
+<details class="card" open>
+  <summary>
+    <span class="num">#790</span>
+    <span class="ttl">Omni 单测 CI 提前执行 + 修复 profiler 路由测试的脆弱断言</span>
+    <span class="badge merged">merged</span>
+  </summary>
+  <div class="cardbody">
+    <div class="meta">
+      <span>作者：<b>Ratish1</b></span>
+      <span>改动量：<b>+51 / −21</b>，6 个文件</span>
+      <span><a href="https://github.com/sgl-project/sglang-omni/pull/790">查看 PR ↗</a></span>
+    </div>
+
+    <h3 class="sec">1️⃣ 概览</h3>
+    <div class="tldr"><b>一句话：</b>修复一个因 FastAPI/Starlette 升级而变脆的 profiler 路由单测（改成<b>真发请求</b>而非<b>检查路由对象内部结构</b>），
+    并把便宜的 PR 单测挪到昂贵的 TTS/Qwen3-Omni 基准测试之前先跑，同时恢复复用 venv 的依赖刷新。</div>
+
+    <h3 class="sec">2️⃣ 它解决了什么问题</h3>
+    <p>老测试 <code>test_launcher_uses_runner_and_mounts_profiler_routes</code> 直接去遍历 <code>app.routes</code> 检查路由的对象形状。
+    但 launcher 是用 <code>app.include_router(router)</code> 挂载 profiler 端点的——新版 FastAPI/Starlette 可能把端点藏在
+    "included-router 条目"后面，顶层 <code>app.routes</code> 不再逐个暴露具体路由。于是测试断言的是"恰好成立的内部布局"，框架一升级就误报失败。</p>
+
+    <h3 class="sec">3️⃣ 具体改动</h3>
+    <ul>
+      <li>把测试改成用 <code>TestClient</code> 真正请求 <code>/start_profile</code> 和 <code>/stop_profile</code>，验证"端点能被正确分发"这一<b>真实契约</b>，而不是路由对象长什么样。</li>
+      <li>用一个<b>最小 fake</b> 替换真实的 <code>ProfilerControlClient</code>，这样测端点分发时不必真去开 IPC socket。</li>
+      <li>CI 顺序从 <code>setup → TTS → Qwen3-Omni → PR Test</code> 改为 <code>setup → PR Test → TTS → Qwen3-Omni</code>——便宜快的先跑，能更早 fail-fast。</li>
+      <li><code>prepare_omni_venv.sh</code> 复用 venv 的路径改用 <code>uv pip install --upgrade -e .</code>，避免缓存环境长期留着过时但"兼容"的依赖版本。</li>
+    </ul>
+
+    <h3 class="sec k">4️⃣ 涉及的知识点</h3>
+    <div class="kbox">
+      <div class="kt">测"行为契约"而非"实现细节"</div>
+      <div class="seg"><b>是什么：</b>好的测试应验证"对外可观察的行为"（发请求能不能命中端点），而不是"内部怎么实现的"（路由对象在列表里排第几）。</div>
+      <div class="seg"><b>为什么：</b>断言实现细节的测试是"脆性测试（brittle test）"——依赖库一升级、内部结构一变就误报，维护成本高、还会掩盖真实回归。</div>
+      <div class="seg"><b>本 PR 里：</b>用 <code>TestClient</code> 发真实 HTTP 请求，正是从"检查 <code>app.routes</code> 形状"转向"验证端点真的能响应"。</div>
+    </div>
+    <div class="kbox">
+      <div class="kt">Fail-fast 的 CI 编排 & profiler / IPC</div>
+      <div class="seg"><b>Fail-fast：</b>把又快又便宜的检查放最前面，一旦挂掉立刻反馈，省下后面昂贵 GPU 基准的时间和成本。</div>
+      <div class="seg"><b>Profiler/IPC：</b><code>/start_profile</code> /<code>/stop_profile</code> 是控制性能剖析的端点；<code>ProfilerControlClient</code> 通过 IPC（进程间通信）socket 给各阶段进程发指令。用 fake 替换它，测试就不必真起 socket。</div>
+    </div>
+
+    <h3 class="sec learn">5️⃣ 我能学到什么</h3>
+    <ul>
+      <li><b>面向契约写测试</b>能极大降低"框架升级即测试爆炸"的维护负担。</li>
+      <li><b>CI 编排顺序本身就是一种优化</b>：便宜的先跑、贵的后跑，是省钱省时的免费午餐。</li>
+      <li><b>复用环境要主动刷新依赖</b>，否则缓存会悄悄留住过时版本，埋下"本地能过 CI 挂"的隐患。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============ CI group #793-796 ============ -->
+<details class="card">
+  <summary>
+    <span class="num">#793–796</span>
+    <span class="ttl">CI 基础设施：校准 / Host Profiles / 预检清单 / 校准技能（一组简述）</span>
+    <span class="badge merged">merged ×4</span>
+  </summary>
+  <div class="cardbody">
+    <p>这一组由 zhaochenyang20 提交的 PR 都属于 <b>CI 基础设施与基准校准</b>，与 Omni 模型运行时架构关系较弱，故合并简述：</p>
+    <ul>
+      <li><b>#796 [CI] Calibration 2026/06/15：</b>当日基准阈值校准——把各 stage 的延迟/吞吐/精度门槛按最新硬件实测重新标定，减少 flaky 误报。</li>
+      <li><b>#795 [CI] Add Pre Check List：</b>新增提交前预检清单，规范 PR 在跑昂贵 GPU CI 前应自查的项目。</li>
+      <li><b>#794 [CI] CI Host Profiles：</b>引入"主机画像"概念，按不同 GPU 主机（H20/H100/H200…）记录其硬件特征，让基准阈值能按硬件分别匹配。</li>
+      <li><b>#793 [CI] Update Calibration Skills：</b>更新校准用的自动化技能/脚本。</li>
+    </ul>
+    <div class="kbox">
+      <div class="kt">为什么基准要"按硬件校准"</div>
+      <div class="seg"><b>背景：</b>同一段推理代码在 H20 和 H100 上的延迟/吞吐天差地别。若用一套固定阈值，换硬件就会大面积误报。Host Profiles + 周期性 Calibration 让"门槛随硬件走"，是把 GPU CI 稳定下来的工程基石——和 #767、#790 治理 flaky 是同一条主线。</div>
+    </div>
+  </div>
+</details>
+
+<hr class="soft">
+
+<section class="overview">
+  <h2>🧭 今日主线串讲（把 10 个 PR 连成一条故事线）</h2>
+  <p>把今天的改动按"<b>一个 Omni 请求的生命周期</b>"串起来，会看得更清楚：</p>
+  <ul>
+    <li><b>入口（服务化）</b> → <code>#659</code> 给 TTS 接上 OpenAI 兼容门面，请求从这里进来。</li>
+    <li><b>理解 + 调度（thinker）</b> → <code>#789</code> 用 mixed-chunk 让 thinker 调度器别再饿死 decode，吞吐 +14%。</li>
+    <li><b>语音生成（talker/code2wav）</b> → <code>#767</code> 修好视频 Talker 的设备错配/OOM/fd 权限；<code>#787</code> 让输出收集不被流式状态绑架；<code>#788</code> 给参考音频缓存留足余量。</li>
+    <li><b>质量护栏（CI）</b> → <code>#790</code> 修脆性测试 + fail-fast 编排；<code>#793–796</code> 按硬件校准基准、稳住 flaky。</li>
+  </ul>
+  <p>贯穿全天的三个工程母题：<b>(1) 先量化再优化</b>（#789 的调度探针、#788 的缓存证据）；
+  <b>(2) 最小权限 / 安全收敛</b>（#659 本地媒体白名单、#767 仅给需要的容器加 capability）；
+  <b>(3) 面向契约而非实现</b>（#659 的 lowering 防腐层、#790 的行为型测试、#787 的核心/可选分离）。</p>
+</section>
+
+<footer>
+  SGLang Omni 每日 PR 学习日报 · 自动生成于 2026-06-15<br>
+  数据来源：GitHub <a href="https://github.com/sgl-project/sglang-omni/pulls">sgl-project/sglang-omni</a> · 窗口：过去 24 小时合并的 PR<br>
+  本报告侧重讲透架构相关 PR，纯 CI 校准类做简述。所有性能数据引自各 PR 描述中的作者实测。
+</footer>
+
+</div>
+</body>
+</html>
