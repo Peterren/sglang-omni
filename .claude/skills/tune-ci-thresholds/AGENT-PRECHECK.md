@@ -148,10 +148,10 @@ processes.
 
 ## Gate 5 — HuggingFace weights and datasets
 
-Authoritative check: **`tune.py precheck`** (Gate 7). Quick sanity listing:
+Authoritative check: **`tune.py precheck`** (Gate 8). Quick sanity listing:
 
 ```bash
-HF="${physical_hf_hub:-/root/.cache/huggingface}"
+HF=/root/.cache/huggingface   # or physical.hf_hub from host profile
 ls "$HF/hub" 2>/dev/null | rg -i 'qwen3|higgs|seed-tts|video|mmmu|mmsu|marksverdhei' | head -20
 ```
 
@@ -219,6 +219,7 @@ Run for **each** model in Gate 0 scope:
 
 ```bash
 cd /data/chenyang/sglang-omni
+export TUNE_HOST=sglang-h20-ci   # if Gate 1 autodetect failed
 
 python .claude/skills/tune-ci-thresholds/tune.py --model tts precheck \
   --output-dir /tmp/precheck_tts
@@ -257,6 +258,9 @@ precheck OK
 | speaker_sim ✗ | Gate 6 incomplete | Fix per Gate 6 or report |
 | GPU busy | Gate 4 | Report |
 
+Do **not** run `prepare_omni_venv.sh` or bulk `ensure_hf_models.sh` when precheck
+is green or only reports one missing repo.
+
 ---
 
 ## Gate 9 — Optional smoke (after precheck OK)
@@ -290,8 +294,10 @@ Before `run`:
 
 **Forbidden:**
 
+- Document or run `docker run` inside this skill
 - `tune.py run` with pytest `-x`
 - Symlinks for `HF_HOME` / `SEEDTTS_SIM_CACHE_DIR` when host profile is active
 - `prepare_omni_venv.sh` / bulk downloads when precheck is green or one-repo ✗
 - Start calibration while any Gate 8 model shows not `precheck OK`
+- Proceed while strict audit has △/✗ repeats
 - Fix env without reporting first (unless user explicitly asked)
