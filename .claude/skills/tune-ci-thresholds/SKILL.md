@@ -1,6 +1,6 @@
 ---
 name: tune-ci-thresholds
-description: Run CI tests N times per stage on the H20 CI-reproduction host, produce a per-metric strict worst-of-N observation report (every stage must have N full-sample repeats), and (on user confirmation) write the worst-of-N values back into the test files as new baselines. Use when recalibrating CI thresholds after an engine update. Currently supports qwen3-omni-v1, qwen3-asr-v1, and tts; extensible via models/<name>/config.yaml.
+description: Run CI tests N times per stage on the H20 CI-reproduction host, produce a per-metric strict worst-of-N observation report (every stage must have N full-sample repeats), and (on user confirmation) write the worst-of-N values back into the test files as new baselines. Host-specific repo/venv/cache paths live in hosts/*.yaml (CI doc paths are reference only). Currently supports qwen3-omni-v1, qwen3-asr-v1, and tts; extensible via models/<name>/config.yaml.
 ---
 
 # tune-ci-thresholds
@@ -15,6 +15,17 @@ GPU model, different image, different pinned sglang/torch) are not
 comparable and must not drive threshold changes. If you just want to
 run the tests locally, use pytest directly — this skill is not for
 that.
+
+**Host layouts are not fixed to the CI doc paths.** The paths in
+`models/*/config.yaml` (`/sgl-workspace/sglang-omni`,
+`/github/home/calibration/omni`, …) describe the **GitHub Actions
+reference layout**. A repro host may use different **physical** repo,
+venv, and cache directories if documented in a **host profile** under
+`hosts/<name>.yaml` (see **Calibration host profiles** below). User-
+provided paths in chat override defaults the same way. What must stay
+aligned with CI is **runtime semantics** (torch/sglang pins, 2× GPU,
+`auto_env` logical names, cold FlashInfer wipe, strict worst-of-N) — not
+the absolute mount points on disk.
 
 The skill is observation-first: it runs tests N times and produces a
 **strict worst-of-N** report. After the report is shown, it offers a
@@ -105,6 +116,106 @@ re-run.
 `tune.py` **halts immediately** when pytest passes but metric extraction
 fails (config / JSON path bug). The agent must fix and `--resume`; never
 ignore HALT and start a fresh run directory without user approval.
+
+## Calibration host profiles (mandatory — before precheck)
+
+Calibration does **not** require the literal paths printed in older
+sections of this skill (`/sgl-workspace/sglang-omni`, venv under
+`$OMNI_CI_HOME/omni`, …). Those are the **CI Actions reference**. On a
+repro machine, read the matching file under:
+
+```
+.claude/skills/tune-ci-thresholds/hosts/<name>.yaml
+```
+
+Match by `hostname`, user instruction (“use my paths”), or explicit
+host name. **User-provided `repo_root` / `venv_python` / physical
+cache paths in chat override** the YAML when they conflict — update the
+host file when the layout stabilizes.
+
+### What a host profile defines
+
+| Field | Purpose |
+|-------|---------|
+| `repo_root` | Git checkout used for `tune.py` and `uv pip install -e .` |
+| `venv_python` | Passed as `$TUNE_VENV_PYTHON` (or first hit in `default_venv_python`) |
+| `physical.hf_hub` | Real HuggingFace hub cache on disk |
+| `physical.speaker_sim` | WavLM SV assets (`wavlm_large.pt`, `wavlm_large_finetune.pth`) |
+| `symlinks` | Map CI **logical** paths (`auto_env` `HF_HOME`, `SEEDTTS_SIM_CACHE_DIR`) → physical |
+| `docker.cap_add` | e.g. `SYS_PTRACE` for `videoamme_talker_tp2` — **cannot** be added inside a running container |
+| `agent_policy` | e.g. report env gaps before fixing; max poll interval |
+
+`tune.py` still sets **logical** env from `models/*/config.yaml` `auto_env`
+(`HF_HOME=/github/home/.cache/huggingface`, …). On hosts where weights
+live elsewhere (e.g. `/root/.cache/huggingface`), **symlinks satisfy
+precheck** — an asset ✗ often means the symlink is missing, not that
+weights must be re-downloaded.
+
+### Post-container-start checklist (every docker restart)
+
+From the host profile's `post_start_commands` (example `sglang-h20-ci`):
+
+```bash
+mkdir -p /github/home/.cache /github/home/calibration
+ln -sfn /root/.cache/huggingface /github/home/.cache/huggingface
+ln -sfn /root/.cache/sglang-omni/speaker_sim /github/home/seedtts-wavlm-sim
+```
+
+Then verify pins + symlinks + optional speaker sim (below). Persist
+`repo_root`, `venv_python`, and physical caches via **volume mounts**;
+recreate symlinks after each start.
+
+### Speaker Similarity bootstrap (not in tune.py precheck)
+
+TTS `tts_nonstream_similarity` and Qwen3 `tts_utmos` need WavLM assets
+under `SEEDTTS_SIM_CACHE_DIR` (logical → physical via symlink). Precheck
+does **not** check them. Before calibration that includes similarity /
+utmos:
+
+```bash
+source ~/.zshrc   # or ~/.bashrc — HF_TOKEN; never commit tokens into host YAML
+export HF_ENDPOINT=https://hf-mirror.com HF_HUB_DISABLE_XET=1 HF_HUB_ENABLE_HF_TRANSFER=0
+export SEEDTTS_SIM_CACHE_DIR=<physical.speaker_sim from host profile>
+cd <repo_root> && python -m benchmarks.metrics.speaker_similarity_assets --warm-cache
+```
+
+Require `<cache>/.complete` plus both weight files. Use HF mirror +
+`HF_TOKEN`; ModelScope does not currently mirror `popsoda2002/seedtts-wavlm-sim`.
+
+### CAP_SYS_PTRACE and split calibration
+
+| Stages | Needs `SYS_PTRACE`? |
+|--------|---------------------|
+| `--model tts --stages ALL` | No |
+| Qwen3 stages 1–10 (all except `videoamme_talker_tp2`) | No |
+| `videoamme_talker_tp2` (FP8 Thinker TP=2, CI stage 11) | **Yes** — else requests 500 |
+
+If the running container lacks ptrace, calibrate TTS + Qwen3 minus stage 11
+first; restart docker with `--cap-add=SYS_PTRACE`, recreate symlinks, then
+run only `videoamme_talker_tp2` (or `--stages videoamme_talker_tp2`).
+
+### Session handoff
+
+At end of a session (or before docker restart), update `handoff:` in the
+host YAML and optionally copy a short summary to
+`.tune-runs/HANDOFF.md` (gitignored): goal, precheck status, speaker sim
+`.complete`, ptrace, run-dirs, strict audit progress, whether apply was
+asked.
+
+### Shipped profile: `sglang-h20-ci`
+
+See `hosts/sglang-h20-ci.yaml` — repo `/data/chenyang/sglang-omni`, venv
+`/data/chenyang/.python/omni/bin/python`, HF hub `/root/.cache/huggingface`,
+speaker sim `/root/.cache/sglang-omni/speaker_sim`.
+
+### Adding a new host profile
+
+Copy `hosts/sglang-h20-ci.yaml` → `hosts/<your-host>.yaml`. Set
+`repo_root`, `venv_python`, `physical.*`, `symlinks`, `docker` volumes/
+`cap_add`, and `agent_policy`. Add the venv path to the **top** of
+`default_venv_python` in each `models/*/config.yaml` if it should be the
+default fallback. Do **not** change `auto_env` logical paths unless the
+machine truly uses a different CI layout — prefer symlinks.
 
 ## Two-terminal supervision (mandatory — always)
 
@@ -330,7 +441,20 @@ constant-naming convention not covered by `match_metric()` in `tune.py`
 **Never download or rebuild the calibration environment proactively.**
 Every calibration session starts with **read-only alignment checks**; only
 run install/download commands for items that precheck (or a failed smoke
-test) explicitly marks as missing or misaligned.
+test) explicitly marks as missing or misaligned — **or** when the user
+explicitly asks you to fix a named gap (e.g. speaker sim warm-cache).
+
+### Resolve host profile first
+
+1. Read `hosts/<name>.yaml` (match `hostname` or user-provided layout).
+2. Set `TUNE_VENV_PYTHON=<venv_python>` and `cd <repo_root>` for all
+   `tune.py` invocations unless the user overrides in chat.
+3. Run `post_start_commands` symlinks; confirm physical caches exist.
+4. If calibration includes similarity/utmos, verify speaker sim `.complete`
+   (see **Speaker Similarity bootstrap** — not covered by precheck).
+5. **Report** any remaining gap to the user before bulk fixes; do not
+   run `prepare_omni_venv.sh`, re-download HF assets, or rebuild venvs
+   unless precheck/smoke proves need **or** the user directs a specific fix.
 
 ### Default workflow (always, before `run`)
 
@@ -387,9 +511,13 @@ Prefer repairing the single reported gap over rebuilding.
   `crpi-n6adu6llixz83q37.cn-hangzhou.personal.cr.aliyuncs.com/hongccc/sglang-omni:dev`
   or equivalent cu13 image). The container name is not checked — rely on the
   image being correct.
-- Venv path from the selected model's `config.yaml` resolves; default
-  overridable via `--venv-python` or `$TUNE_VENV_PYTHON`. **Existence ≠ run
-  `prepare_omni_venv.sh`** — run precheck first (see policy above).
+- **Host profile** loaded (`hosts/*.yaml`): `repo_root`, `venv_python`,
+  physical caches, symlinks applied. CI doc paths (`/sgl-workspace/...`) are
+  optional when the profile maps logical `auto_env` paths to physical caches.
+- Venv path from the host profile or selected model's `config.yaml`
+  `default_venv_python`; overridable via `--venv-python` or
+  `$TUNE_VENV_PYTHON`. **Existence ≠ run `prepare_omni_venv.sh`** — run
+  precheck first (see policy above).
 - Branch checked out; **`uv pip install -e .` only** to sync sglang-omni onto
   the existing venv unless precheck proves the venv is missing or corrupt.
 - Model weights and datasets from the config cached locally. During
@@ -900,6 +1028,12 @@ Two gates — **both** required before apply:
   is corrupt.
 
 ## Steps I follow
+0. **Host profile.** Read `hosts/<name>.yaml` (or use paths the user gave
+   in chat). Apply `post_start_commands` symlinks. Set
+   `TUNE_VENV_PYTHON` and `cd <repo_root>`. Verify speaker sim if
+   similarity/utmos stages are in scope. Note `docker.cap_add` / handoff
+   state. On env gaps, **report first** unless the user asked to fix a
+   specific item.
 1. Run `python .claude/skills/tune-ci-thresholds/tune.py models-list` to
    discover available models. Then for the selected model, run
    `python tune.py --model <M> stages-list` to read the per-test-file
@@ -974,9 +1108,10 @@ Two gates — **both** required before apply:
 
    **Tab B — job (tune.py milestones on stdout — no redirect):**
    ```bash
-   cd /sgl-workspace/sglang-omni && python .claude/skills/tune-ci-thresholds/tune.py --model <M> run ... \
+   cd <repo_root from host profile> && python .claude/skills/tune-ci-thresholds/tune.py --model <M> run ... \
      --output-dir <run-dir>
    ```
+   Example (`sglang-h20-ci`): `cd /data/chenyang/sglang-omni && TUNE_VENV_PYTHON=/data/chenyang/.python/omni/bin/python python .claude/skills/tune-ci-thresholds/tune.py ...`
 
    Tell the user: **Tab A = pytest/server**, **Tab B = tune progress** — if both
    tabs show the same lines, Tab A is wrong (likely tailing `run.log`). Never
@@ -1206,6 +1341,8 @@ Two gates — **both** required before apply:
 ├── tune.py                              # CLI; METRIC_SPECS + JSON extractor
 │                                        # subcommands: run, report, status,
 │                                        # apply-plan, precheck, discover
+├── hosts/                               # per-machine repo/venv/cache layouts
+│   └── sglang-h20-ci.yaml               # example: /data/chenyang + /root/.cache
 └── models/
     ├── qwen3-omni-v1/                   # v1 pipeline (qwen3-omni)
     │   ├── config.yaml
