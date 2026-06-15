@@ -17,6 +17,19 @@ physical:
 
 # tune.py maps physical.* → auto_env (HF_HOME, SEEDTTS_SIM_CACHE_DIR, …).
 # No symlinks. precheck reads these paths directly.
+# Full agent checklist: ../AGENT-PRECHECK.md
+
+precheck_checklist:
+  repo_root_exists: /data/chenyang/sglang-omni/pyproject.toml
+  venv_exists: /data/chenyang/.python/omni/bin/python
+  hf_hub: /root/.cache/huggingface
+  speaker_sim:
+    dir: /root/.cache/huggingface/speaker_sim
+    files: [wavlm_large.pt, wavlm_large_finetune.pth, .complete]
+  omni_ci_home: /github/home/calibration
+  tune_py:
+    - "python .claude/skills/tune-ci-thresholds/tune.py --model tts precheck --output-dir /tmp/precheck_tts"
+    - "python .claude/skills/tune-ci-thresholds/tune.py --model qwen3-omni-v1 precheck --output-dir /tmp/precheck_qwen3"
 
 speaker_similarity_bootstrap:
   warm_cache:

@@ -119,6 +119,11 @@ this skill only describes **in-container paths** for `tune.py` / precheck /
 calibration. Do not document `docker run`, volume maps, or host-side layout
 in host profiles.
 
+**Agent runbook:** follow
+`.claude/skills/tune-ci-thresholds/AGENT-PRECHECK.md` end-to-end before
+any `tune.py run` (repo, venv, pins, HF weights, speaker_sim, GPUs, precheck
+commands, pass criteria).
+
 Calibration does **not** require CI doc paths (`/sgl-workspace/...`). On a
 repro machine, **`tune.py` loads `hosts/<name>.yaml`** and applies
 **physical paths directly** to `auto_env` — no symlinks.
@@ -466,9 +471,8 @@ Prefer repairing the single reported gap over rebuilding.
   `crpi-n6adu6llixz83q37.cn-hangzhou.personal.cr.aliyuncs.com/hongccc/sglang-omni:dev`
   or equivalent cu13 image). The container name is not checked — rely on the
   image being correct.
-- **Host profile** loaded (`hosts/*.yaml`): `repo_root`, `venv_python`,
-  physical caches, symlinks applied. CI doc paths (`/sgl-workspace/...`) are
-  optional when the profile maps logical `auto_env` paths to physical caches.
+- **Host profile** loaded (`hosts/*.yaml`): `tune.py` maps `physical.*` into
+  `auto_env` (no symlinks). See **AGENT-PRECHECK.md** for the full checklist.
 - Venv path from the host profile or selected model's `config.yaml`
   `default_venv_python`; overridable via `--venv-python` or
   `$TUNE_VENV_PYTHON`. **Existence ≠ run `prepare_omni_venv.sh`** — run
@@ -703,8 +707,8 @@ precheck proves the venv path is missing or corrupt.
 For missing model/dataset assets only, run the precheck-printed download
 command (often with `HF_ENDPOINT=https://hf-mirror.com`).
 
-If HF cache lives elsewhere, symlink into `/github/home/.cache/huggingface` rather
-than redownloading checkpoints.
+If HF cache lives on a non-default path, add a host profile with
+`physical.hf_hub` — do not rely on symlinks; `tune.py` sets `HF_HOME` directly.
 
 ### Verify runtime before calibration
 
@@ -983,6 +987,11 @@ Two gates — **both** required before apply:
   is corrupt.
 
 ## Steps I follow
+
+**Before step 0:** read and execute
+`.claude/skills/tune-ci-thresholds/AGENT-PRECHECK.md` (full environment +
+weights checklist for agents).
+
 0. **Host profile.** `tune.py` autodetects `hosts/*.yaml` by `hostname`
    (or `--host` / `$TUNE_HOST`). It applies physical paths to `auto_env` —
    **no symlink setup**. Run `precheck` (includes speaker sim when
@@ -1290,6 +1299,7 @@ Two gates — **both** required before apply:
 ```
 .claude/skills/tune-ci-thresholds/
 ├── SKILL.md
+├── AGENT-PRECHECK.md                  # agent runbook: env + weights before run
 ├── tail_calibration_pytest.sh         # Tab A helper for tune.py run (_pytest log)
 ├── tune.py                              # CLI; METRIC_SPECS + JSON extractor
 │                                        # subcommands: run, report, status,
