@@ -233,13 +233,13 @@ class ReferenceEncodeCache(Generic[StoredT]):
         try:
             result = encode_fn()
             stored = self._store_fn(result)
+            do_put = revalidate() if revalidate is not None else True
         except BaseException as exc:
             with self._lock:
                 self._inflight.pop(key, None)
             leader_fut.set_exception(exc)
             raise
 
-        do_put = revalidate() if revalidate is not None else True
         with self._lock:
             if do_put:
                 self._cache.put(key, stored)

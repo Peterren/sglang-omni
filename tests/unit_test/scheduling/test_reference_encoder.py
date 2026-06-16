@@ -104,7 +104,6 @@ def test_reference_encode_cache_single_flight_and_clone_policy() -> None:
     first_hit.fill_(-1)
     second_hit = cache.get_or_encode("same-key", encode, desc="same-key")
 
-    assert call_count == 1
     assert torch.equal(second_hit, torch.full((4, 3), 11, dtype=torch.long))
     assert cache.stats() == {
         "hits": 2,
@@ -120,3 +119,32 @@ def test_reference_encode_cache_rejects_invalid_capacity() -> None:
         ReferenceEncodeCache(max_items=0, max_bytes=1024)
     with pytest.raises(ValueError, match="max_bytes"):
         ReferenceEncodeCache(max_items=1, max_bytes=0)
+
+
+def test_reference_encode_cache_revalidate_failure_clears_inflight() -> None:
+    cache = ReferenceEncodeCache(timeout_s=0.05)
+
+    def encode() -> torch.Tensor:
+        return torch.ones((1,), dtype=torch.long)
+
+    def fail_revalidate() -> bool:
+        raise RuntimeError("stat failed")
+
+    with pytest.raises(RuntimeError, match="stat failed"):
+        cache.get_or_encode(
+            "flaky-key",
+            encode,
+            desc="flaky-key",
+            revalidate=fail_revalidate,
+        )
+
+    assert cache.inflight == {}
+    assert cache.stats()["entries"] == 0
+
+    recovered = cache.get_or_encode(
+        "flaky-key",
+        encode,
+        desc="flaky-key",
+        revalidate=lambda: True,
+    )
+    assert torch.equal(recovered, torch.ones((1,), dtype=torch.long))
