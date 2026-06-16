@@ -3,12 +3,8 @@
 
 from __future__ import annotations
 
-import concurrent.futures
 import logging
 import os
-import queue
-import threading
-import time
 from typing import Any
 
 import torch
@@ -33,8 +29,11 @@ from sglang_omni.models.moss_tts_local.streaming_vocoder import (
 from sglang_omni.preprocessing.cache_key import (
     reference_path_cache_key as _reference_path_cache_key,
 )
+from sglang_omni.scheduling.reference_encoder import (
+    BatchedReferenceEncoder as _SharedBatchedReferenceEncoder,
+)
+from sglang_omni.scheduling.reference_encoder import ReferenceEncodeCache
 from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
-from sglang_omni.scheduling.stage_cache import StageOutputCache
 
 logger = logging.getLogger(__name__)
 
@@ -130,13 +129,18 @@ class _BatchedReferenceEncoder:
         max_batch_wait_ms: int = 4,
     ) -> None:
         self._processor = processor
-        self._max_batch_size = max(int(max_batch_size), 1)
-        self._max_wait_s = max(float(max_batch_wait_ms), 0.0) / 1000.0
-        self._queue: queue.Queue[tuple[str, concurrent.futures.Future]] = queue.Queue()
-        self._thread = threading.Thread(
-            target=self._worker, name="moss-local-ref-encode", daemon=True
+        self._encoder = _SharedBatchedReferenceEncoder(
+            lambda paths: self._processor.encode_audios_from_path(paths),
+            single_encode_fn=lambda path: self._processor.encode_audios_from_path(
+                [path]
+            )[0],
+            validate_fn=self._check_reference_duration,
+            key_fn=str,
+            max_batch_size=max_batch_size,
+            max_batch_wait_ms=max_batch_wait_ms,
+            encode_timeout_s=self.ENCODE_TIMEOUT_S,
+            worker_name="moss-local-ref-encode",
         )
-        self._thread.start()
 
     @classmethod
     def _check_reference_duration(cls, path: str) -> None:
@@ -155,62 +159,11 @@ class _BatchedReferenceEncoder:
 
     def encode(self, path: str) -> torch.Tensor:
         """Encode one reference file; blocks until its batch completes."""
-        path = str(path)
-        self._check_reference_duration(path)
-        future: concurrent.futures.Future = concurrent.futures.Future()
-        self._queue.put((path, future))
-        return future.result(timeout=self.ENCODE_TIMEOUT_S)
-
-    def _drain_batch(self) -> list[tuple[str, concurrent.futures.Future]]:
-        batch = [self._queue.get()]
-        while len(batch) < self._max_batch_size:
-            try:
-                if self._max_wait_s > 0:
-                    batch.append(self._queue.get(timeout=self._max_wait_s))
-                else:
-                    batch.append(self._queue.get_nowait())
-            except queue.Empty:
-                break
-        return batch
-
-    def _worker(self) -> None:
-        while True:
-            batch = self._drain_batch()
-            unique_paths = list(dict.fromkeys(path for path, _ in batch))
-            results: dict[str, Any] = {}
-            try:
-                encoded = self._processor.encode_audios_from_path(unique_paths)
-                results = dict(zip(unique_paths, encoded))
-            except Exception:
-                logger.exception(
-                    "MOSS-TTS Local batched reference encode failed; "
-                    "retrying per item"
-                )
-                for path in unique_paths:
-                    try:
-                        results[path] = self._processor.encode_audios_from_path([path])[
-                            0
-                        ]
-                    except Exception as exc:
-                        results[path] = exc
-            for path, future in batch:
-                outcome = results.get(path)
-                if isinstance(outcome, Exception):
-                    # Fresh exception per future: a shared instance would be
-                    # mutated concurrently by every waiter's traceback raise.
-                    future.set_exception(
-                        RuntimeError(f"reference encode failed for {path}: {outcome}")
-                    )
-                elif outcome is None:
-                    future.set_exception(
-                        RuntimeError(f"reference encode produced no codes: {path}")
-                    )
-                else:
-                    future.set_result(outcome)
+        return self._encoder.encode(str(path))
 
 
 class CachedReferenceEncoder:
-    """Content-addressed LRU cache + single-flight dedup in front of _BatchedReferenceEncoder.
+    """Content-addressed LRU cache in front of _BatchedReferenceEncoder.
 
     Every path (miss, hit, follower) returns an independent CPU long tensor, so
     downstream sees one device/dtype regardless of cache temperature.
@@ -234,17 +187,27 @@ class CachedReferenceEncoder:
         if max_bytes < 1:
             raise ValueError(f"ref_audio_cache_max_bytes must be >= 1, got {max_bytes}")
         self._encoder = encoder
-        self._cache = StageOutputCache(
-            max_size=max_items,
+        self._store = ReferenceEncodeCache(
+            max_items=max_items,
             max_bytes=max_bytes,
             cache_device="cpu",
+            store_fn=self._store_codes,
+            load_fn=self._load_codes,
+            timeout_s=_BatchedReferenceEncoder.ENCODE_TIMEOUT_S + 10,
+            log_interval_s=self.LOG_INTERVAL_S,
+            log_prefix="MOSS-TTS Local ref cache",
         )
-        self._lock = threading.Lock()
-        self._inflight: dict[str, concurrent.futures.Future] = {}
-        self._hits = 0
-        self._misses = 0
-        self._merged = 0
-        self._last_log_time: float = 0.0
+        # Compatibility for existing tests and debugging probes.
+        self._cache = self._store.cache
+        self._inflight = self._store.inflight
+
+    @staticmethod
+    def _store_codes(result: torch.Tensor) -> torch.Tensor:
+        return result.detach().to("cpu", dtype=torch.int32)
+
+    @staticmethod
+    def _load_codes(stored: torch.Tensor) -> torch.Tensor:
+        return stored.clone().to(torch.long)
 
     def encode(self, path: str) -> torch.Tensor:
         path = str(path)
@@ -274,77 +237,11 @@ class CachedReferenceEncoder:
         is evaluated outside the lock and gates the put (TOCTOU guard for file
         paths).
         """
-        leader_fut: concurrent.futures.Future | None = None
-        follower_fut: concurrent.futures.Future | None = None
-
-        with self._lock:
-            stored = self._cache.get(key)
-            if stored is not None:
-                self._hits += 1
-            elif key in self._inflight:
-                self._merged += 1
-                follower_fut = self._inflight[key]
-            else:
-                self._misses += 1
-                leader_fut = concurrent.futures.Future()
-                self._inflight[key] = leader_fut
-
-        if stored is not None:
-            # Note(Jiaxin): clone on hit so callers can't mutate the shared entry.
-            self._maybe_log()
-            return stored.clone().to(torch.long)
-
-        if follower_fut is not None:
-            # Note(Jiaxin): each follower raises a FRESH RuntimeError — sharing one
-            # exception instance lets concurrent re-raises corrupt its traceback
-            # (same lesson as _BatchedReferenceEncoder._worker).
-            timeout = _BatchedReferenceEncoder.ENCODE_TIMEOUT_S + 10
-            try:
-                stored = follower_fut.result(timeout=timeout)
-            except Exception as cause:
-                raise RuntimeError(
-                    f"reference encode failed for {desc}: {cause}"
-                ) from cause
-            return stored.clone().to(torch.long)
-
-        assert leader_fut is not None
-        try:
-            result = encode_fn()
-        except BaseException as exc:
-            with self._lock:
-                self._inflight.pop(key, None)
-            leader_fut.set_exception(exc)
-            raise
-
-        do_put = revalidate() if revalidate is not None else True
-        stored = result.detach().to("cpu", dtype=torch.int32)
-        with self._lock:
-            if do_put:
-                self._cache.put(key, stored)
-            self._inflight.pop(key, None)
-        leader_fut.set_result(stored)
-        self._maybe_log()
-        # CPU long like the hit path.
-        return stored.to(torch.long)
-
-    def _maybe_log(self) -> None:
-        now = time.monotonic()
-        if now - self._last_log_time < self.LOG_INTERVAL_S:
-            return
-        with self._lock:
-            if now - self._last_log_time < self.LOG_INTERVAL_S:
-                return
-            self._last_log_time = now
-            snapshot = (
-                self._hits,
-                self._misses,
-                self._merged,
-                len(self._cache._cache),
-                self._cache.current_bytes,
-            )
-        logger.info(
-            "MOSS-TTS Local ref cache: hits=%d misses=%d merged=%d entries=%d bytes=%d",
-            *snapshot,
+        return self._store.get_or_encode(
+            key,
+            encode_fn,
+            desc=desc,
+            revalidate=revalidate,
         )
 
     def encode_data_uri(self, ref_audio: str, *, processor: Any) -> torch.Tensor:
@@ -388,14 +285,7 @@ class CachedReferenceEncoder:
         return self._cached_encode(key, _encode, desc="data-URI")
 
     def stats(self) -> dict:
-        with self._lock:
-            return {
-                "hits": self._hits,
-                "misses": self._misses,
-                "merged": self._merged,
-                "entries": len(self._cache._cache),
-                "bytes": self._cache.current_bytes,
-            }
+        return self._store.stats()
 
 
 def create_preprocessing_executor(
