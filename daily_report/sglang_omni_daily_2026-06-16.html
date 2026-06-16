@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang Omni 每日 PR 学习日报 · 2026-06-16</title>
+<style>
+  :root{
+    --bg:#0f1117; --card:#181b24; --card2:#1f232f; --ink:#e6e9f0; --muted:#9aa3b2;
+    --accent:#7c9cff; --accent2:#4fd1c5; --green:#46c46a; --amber:#e0b341; --red:#e06c75;
+    --border:#2a2f3d; --code-bg:#11141c; --kw:#c678dd; --str:#98c379; --com:#7d8799;
+    --fn:#61afef; --num:#d19a66; --cls:#e5c07b;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.75; font-size:16px;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:40px 28px 80px;}
+  header.top{
+    background:linear-gradient(135deg,#1a2238 0%,#22113a 100%);
+    border:1px solid var(--border); border-radius:18px; padding:34px 36px; margin-bottom:28px;
+  }
+  header.top h1{margin:0 0 6px; font-size:30px; letter-spacing:.3px;}
+  header.top .sub{color:var(--muted); font-size:15px;}
+  .pill{display:inline-block; padding:3px 11px; border-radius:999px; font-size:12.5px; font-weight:600; margin:2px 4px 2px 0;}
+  .pill.green{background:rgba(70,196,106,.16); color:var(--green); border:1px solid rgba(70,196,106,.35);}
+  .pill.blue{background:rgba(124,156,255,.16); color:var(--accent); border:1px solid rgba(124,156,255,.35);}
+  .pill.teal{background:rgba(79,209,197,.14); color:var(--accent2); border:1px solid rgba(79,209,197,.32);}
+  .pill.amber{background:rgba(224,179,65,.14); color:var(--amber); border:1px solid rgba(224,179,65,.32);}
+  .pill.grey{background:rgba(154,163,178,.14); color:var(--muted); border:1px solid rgba(154,163,178,.3);}
+  .overview{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:26px 30px; margin-bottom:26px;}
+  .overview h2{margin-top:0;}
+  .stat-grid{display:flex; flex-wrap:wrap; gap:14px; margin:18px 0 6px;}
+  .stat{flex:1 1 150px; background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:14px 16px;}
+  .stat .n{font-size:26px; font-weight:700; color:var(--accent);}
+  .stat .l{font-size:13px; color:var(--muted);}
+  .toc{margin:18px 0 0; padding:0; list-style:none;}
+  .toc li{margin:7px 0;}
+  .toc a{color:var(--accent); text-decoration:none;}
+  .toc a:hover{text-decoration:underline;}
+  .toc .t{color:var(--muted); font-size:13.5px;}
+  details.card{
+    background:var(--card); border:1px solid var(--border); border-radius:16px;
+    margin:20px 0; overflow:hidden;
+  }
+  details.card[open]{box-shadow:0 6px 30px rgba(0,0,0,.25);}
+  summary.head{
+    list-style:none; cursor:pointer; padding:20px 26px; display:block;
+    background:linear-gradient(90deg,rgba(124,156,255,.08),rgba(124,156,255,0));
+  }
+  summary.head::-webkit-details-marker{display:none;}
+  summary.head h3{margin:0 0 6px; font-size:20px;}
+  summary.head .meta{font-size:13.5px; color:var(--muted);}
+  summary.head .meta a{color:var(--accent2); text-decoration:none;}
+  .body{padding:6px 30px 28px;}
+  .body h4{margin:26px 0 8px; font-size:16.5px; color:var(--accent2); border-left:3px solid var(--accent2); padding-left:10px;}
+  .body h5{margin:18px 0 6px; font-size:15px; color:var(--accent);}
+  p{margin:10px 0;}
+  ul,ol{margin:10px 0; padding-left:24px;}
+  li{margin:5px 0;}
+  code.inline{background:var(--code-bg); border:1px solid var(--border); border-radius:6px; padding:1.5px 6px; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:13.5px; color:var(--cls);}
+  pre{
+    background:var(--code-bg); border:1px solid var(--border); border-radius:12px;
+    padding:16px 18px; overflow-x:auto; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    font-size:13px; line-height:1.6; margin:12px 0;
+  }
+  pre .c{color:var(--com); font-style:italic;}
+  pre .k{color:var(--kw);}
+  pre .s{color:var(--str);}
+  pre .f{color:var(--fn);}
+  pre .n{color:var(--num);}
+  pre .y{color:var(--cls);}
+  .callout{border-radius:12px; padding:14px 18px; margin:16px 0; border:1px solid var(--border);}
+  .callout.know{background:rgba(79,209,197,.07); border-color:rgba(79,209,197,.3);}
+  .callout.why{background:rgba(224,179,65,.07); border-color:rgba(224,179,65,.3);}
+  .callout.learn{background:rgba(124,156,255,.07); border-color:rgba(124,156,255,.3);}
+  .callout .tag{font-weight:700; font-size:13px; letter-spacing:.5px; text-transform:uppercase; display:block; margin-bottom:6px;}
+  .callout.know .tag{color:var(--accent2);}
+  .callout.why .tag{color:var(--amber);}
+  .callout.learn .tag{color:var(--accent);}
+  table{border-collapse:collapse; width:100%; margin:14px 0; font-size:13.5px;}
+  th,td{border:1px solid var(--border); padding:7px 11px; text-align:left;}
+  th{background:var(--card2); color:var(--accent2);}
+  .concept{background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:4px 20px 14px; margin:14px 0;}
+  .concept .name{font-weight:700; color:var(--cls); font-size:15.5px; margin-top:14px;}
+  .three{display:block; margin:6px 0;}
+  .three b{color:var(--accent2);}
+  footer{margin-top:50px; color:var(--muted); font-size:13px; text-align:center; border-top:1px solid var(--border); padding-top:22px;}
+  a.up{color:var(--accent);}
+  hr.soft{border:none; border-top:1px solid var(--border); margin:22px 0;}
+  @media print{
+    body{background:#fff; color:#1a1d24; font-size:11.5px; line-height:1.5;}
+    .wrap{max-width:none; padding:0;}
+    header.top{background:#f0f3fb; border-color:#cdd5e5;}
+    header.top h1{color:#1a2238;}
+    .overview,.stat,details.card,.concept{background:#fff; border-color:#d4dae6; box-shadow:none;}
+    summary.head{background:#f5f7fc;}
+    pre{background:#f6f8fa; color:#1a1d24; border-color:#d4dae6; white-space:pre-wrap; word-break:break-word;}
+    pre .c{color:#6a737d;} pre .k{color:#9c27b0;} pre .s{color:#22863a;}
+    pre .f{color:#1565c0;} pre .n{color:#b35900;} pre .y{color:#9a6700;}
+    code.inline{background:#f0f2f7; color:#9a6700;}
+    .body h4{color:#0b6b63;} .body h5{color:#2b50c8;}
+    th{background:#eef1f8; color:#0b6b63;}
+    .stat .n{color:#2b50c8;}
+    .callout.know{background:#effbf9;} .callout.why{background:#fdf7e8;} .callout.learn{background:#eef2ff;}
+    details.card{page-break-inside:avoid;}
+    a{color:#2b50c8;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>SGLang Omni · 每日 PR 学习日报</h1>
+  <div class="sub">报告日期：2026-06-16　|　覆盖窗口：过去 24 小时内合并（merged）的 PR　|　仓库：<a class="up" href="https://github.com/sgl-project/sglang-omni/">sgl-project/sglang-omni</a></div>
+  <div style="margin-top:14px;">
+    <span class="pill teal">多模态 / Omni</span>
+    <span class="pill blue">TTS 语音合成</span>
+    <span class="pill green">压力测试 / 基准</span>
+    <span class="pill amber">CI 基础设施</span>
+  </div>
+</header>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="overview">
+  <h2>📊 当日概览</h2>
+  <p>过去 24 小时（2026-06-15 ~ 2026-06-16）共有 <b>8 个 PR 被合并</b>。按主题可以分成三类：</p>
+  <div class="stat-grid">
+    <div class="stat"><div class="n">8</div><div class="l">合并 PR 总数</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">架构 / 功能类（深讲）</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">CI / 校准类（速览）</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">不同贡献者</div></div>
+  </div>
+
+  <h4 style="border-left-color:var(--accent2)">主题分类</h4>
+  <table>
+    <tr><th>类别</th><th>PR</th><th>一句话</th></tr>
+    <tr><td><span class="pill teal">多模态压测</span></td><td>#770</td><td>给 Qwen3-Omni 写一个并发/多 rollout 压力测试脚本</td></tr>
+    <tr><td><span class="pill blue">TTS 新功能</span></td><td>#662</td><td>给语音合成服务加"上传自定义音色"的一整套 API</td></tr>
+    <tr><td><span class="pill green">多模型 CI</span></td><td>#727</td><td>让 TTS CI 支持多模型随机抽测（新增 MOSS）</td></tr>
+    <tr><td><span class="pill amber">CI 校准/基建</span></td><td>#796 #795 #794 #793 #806</td><td>阈值重新标定、CI 主机画像、预检清单、权限</td></tr>
+  </table>
+
+  <h4 style="border-left-color:var(--accent)">本期重点讲透的 3 个 PR</h4>
+  <ul class="toc">
+    <li><a href="#pr770">#770 · [Qwen3-Omni] benchmarks: concurrency / rollout stress runner</a> <span class="t">— 并发压测、异步 IO、p50/p95/p99、RTF</span></li>
+    <li><a href="#pr662">#662 · [TTS] Add uploaded voice APIs</a> <span class="t">— 多阶段流水线、说话人缓存、声纹/参考音频、LRU</span></li>
+    <li><a href="#pr727">#727 · feat(ci): add MOSS TTS to TTS CI with random model selection</a> <span class="t">— CI 设计、阈值门控、可观测但不阻断</span></li>
+  </ul>
+  <p style="margin-top:14px;color:var(--muted);font-size:14px;">📌 本报告遵循"讲深 &gt; 讲全"原则：前 3 个与 Omni / 多模态 / 多阶段架构强相关的 PR 逐块拆解代码与概念；后 5 个 CI 类放在末尾统一速览。</p>
+</section>
+
+<!-- ============ PR 770 ============ -->
+<details class="card" id="pr770" open>
+  <summary class="head">
+    <h3>#770 · [Qwen3-Omni] benchmarks：并发 / rollout 压力测试器</h3>
+    <div class="meta">
+      作者 <b>luojiaxuan</b>　·　<span class="pill green" style="padding:1px 9px">merged</span>　·　+333 行 / 1 文件　·
+      <a href="https://github.com/sgl-project/sglang-omni/pull/770">查看 PR ↗</a>
+    </div>
+  </summary>
+  <div class="body">
+
+    <h4>1. PR 概览</h4>
+    <ul>
+      <li><b>标题</b>：[Qwen3-Omni] benchmarks: concurrency / rollout stress runner</li>
+      <li><b>编号 / 作者 / 状态</b>：#770 / luojiaxuan / 已合并（由 yxs 合并）</li>
+      <li><b>改了什么</b>：新增一个<b>独立的压测脚本</b>（合并后落在 <code class="inline">benchmarks/eval/benchmark_omni_rollout_stress.py</code>），用同一个 prompt 在一串递增的并发档位（1,2,4,8,16,32…）下反复打服务器，记录每档的 <b>req/s、输出 token/s、prompt token 数、以及 p50/p95/p99 延迟</b>。<b>不改任何运行时代码</b>。</li>
+    </ul>
+    <div class="callout know"><span class="tag">一句话</span>这是一把"压力测试卷尺"：它不改模型、不改引擎，只是反复地、并发地向已经跑起来的 Qwen3-Omni 服务发请求，量出"并发越高，服务还撑不撑得住、快不快"。</div>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>在做推理服务时，有一类非常典型的流量叫"<b>同一个 prompt 同时跑很多份</b>"（multi-rollout）——比如强化学习采样、Best-of-N 采样、A/B 一致性测试，都会出现"一模一样的输入并发 N 份"。这种流量对 KV cache 复用、batch 调度的压力跟普通流量不一样。</p>
+    <p>此前仓库里缺一个标准工具去回答这些问题："并发拉到 32 的时候吞吐还能线性增长吗？尾延迟（p99）会不会爆？服务会不会 OOM 或挂掉？"（对应 issue #760 要排查的并发服务特性）。没有这把尺子，优化前后就没有可比的数字。这个 PR 就是把这把尺子做出来。</p>
+    <div class="callout why"><span class="tag">为什么需要</span>"没有测量就没有优化。"要证明一个性能改动（比如 #771 的 prefill batching）真的有效，你得先有一个能稳定复现、能出数字的压测脚本，跑出 before/after 两组数对比。#770 就是这组对照实验的"测量仪器"。</div>
+
+    <h4>3. 具体做了什么改动</h4>
+    <p>只新增一个文件，全部是<b>异步并发的 HTTP 压测逻辑</b>。核心由几块拼成：构造请求 → 并发执行 → 统计指标 → 落盘 JSON。下面逐块讲。</p>
+
+    <h5>3.1 把一个样本"复制"成 N 份</h5>
+    <pre><span class="c"># 把同一个样本复制 count 份，只改 sample_id 让每份可区分</span>
+<span class="k">def</span> <span class="f">_duplicate_prompt</span>(sample: MMMUSample, count: <span class="y">int</span>) -&gt; <span class="y">list</span>[MMMUSample]:
+    <span class="k">return</span> [
+        <span class="f">replace</span>(
+            sample,
+            sample_id=<span class="s">f"{sample.sample_id}:rollout-n{count}-{index}"</span>,
+        )
+        <span class="k">for</span> index <span class="k">in</span> <span class="f">range</span>(count)
+    ]</pre>
+    <p>这里 <code class="inline">replace</code> 来自 <code class="inline">dataclasses</code>，作用是"复制一个 dataclass，并只改其中一个字段"。它把<b>同一个</b>多模态样本复制成 <code class="inline">count</code> 份，内容完全一样，只有 <code class="inline">sample_id</code> 不同（加了 <code class="inline">rollout-nN-i</code> 后缀），这样统计时能把每份请求区分开。这正是"same-prompt multi-rollout"的本质——输入相同，只是并发的份数不同。</p>
+
+    <h5>3.2 单条请求怎么发（send_fn 工厂）</h5>
+    <pre><span class="k">async def</span> <span class="f">send_fn</span>(session, sample) -&gt; RequestResult:
+    payload = {
+        <span class="s">"model"</span>: model_name,
+        <span class="s">"messages"</span>: [{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: sample.prompt}],
+        <span class="s">"images"</span>: [<span class="f">image_to_data_uri</span>(img) <span class="k">for</span> img <span class="k">in</span> sample.images],
+        <span class="s">"modalities"</span>: modalities,         <span class="c"># ["text","audio"] 或 ["text"]</span>
+        <span class="s">"max_tokens"</span>: max_tokens,
+        <span class="s">"stream"</span>: <span class="k">False</span>,
+        <span class="s">"user"</span>: rollout_group_id,         <span class="c"># 同一组 rollout 用同一个 user 标记</span>
+    }
+    <span class="k">if</span> enable_audio:
+        payload[<span class="s">"audio"</span>] = {<span class="s">"format"</span>: <span class="s">"wav"</span>}
+
+    start_time = time.<span class="f">perf_counter</span>()
+    <span class="k">async with</span> session.<span class="f">post</span>(api_url, json=payload) <span class="k">as</span> response:
+        body = <span class="k">await</span> response.<span class="f">json</span>()
+        <span class="k">if</span> response.status &gt;= <span class="n">400</span>:
+            result.error = body.<span class="f">get</span>(<span class="s">"detail"</span>, <span class="f">str</span>(body))
+            <span class="k">return</span> result
+    ...
+    <span class="k">if</span> enable_audio:
+        audio_b64 = (message.<span class="f">get</span>(<span class="s">"audio"</span>) <span class="k">or</span> {}).<span class="f">get</span>(<span class="s">"data"</span>, <span class="s">""</span>)
+        base64.<span class="f">b64decode</span>(audio_b64)   <span class="c"># 解码一次，确保音频没在传输中损坏</span>
+    ...
+    usage = body.<span class="f">get</span>(<span class="s">"usage"</span>, {})
+    result.prompt_tokens = <span class="f">int</span>(usage.<span class="f">get</span>(<span class="s">"prompt_tokens"</span>, <span class="n">0</span>))
+    result.completion_tokens = <span class="f">int</span>(usage.<span class="f">get</span>(<span class="s">"completion_tokens"</span>, <span class="n">0</span>))
+    result.engine_time_s = time.<span class="f">perf_counter</span>() - start_time
+    <span class="k">if</span> result.completion_tokens &gt; <span class="n">0</span> <span class="k">and</span> result.engine_time_s &gt; <span class="n">0</span>:
+        result.tok_per_s = result.completion_tokens / result.engine_time_s</pre>
+    <p>逐点拆解：</p>
+    <ul>
+      <li><b>它是个"工厂函数"</b>：<code class="inline">_make_rollout_send_fn(...)</code> 把模型名、URL、是否要音频等参数<i>固定</i>下来，再返回内层的 <code class="inline">send_fn</code>。这样压测主循环只管"调用 send_fn"，不用关心一堆参数——这是闭包/工厂模式的典型用法。</li>
+      <li><b>多模态请求</b>：payload 同时带了文本（<code class="inline">messages</code>）、图片（<code class="inline">images</code>，编码成 data URI）、以及可选的音频输出（<code class="inline">modalities</code> 含 "audio"）。这正是 Omni 模型的特点——一次请求里同时有多种模态。</li>
+      <li><b>计时用 <code class="inline">perf_counter()</code></b>：它是单调高精度时钟，专门用来测时间间隔（不会被系统改时间影响），比 <code class="inline">time.time()</code> 更适合测延迟。</li>
+      <li><b>音频只解码不落盘</b>：<code class="inline">base64.b64decode</code> 解一次，目的只是"验证音频数据完整、没在 base64 传输里坏掉"，但不为每条请求写 WAV 文件——避免磁盘 IO 干扰压测纯度。这是个很克制的工程细节。</li>
+      <li><b>从 usage 字段读 token 数</b>，算出 <code class="inline">tok_per_s</code>（每条请求的输出速度）。</li>
+    </ul>
+
+    <h5>3.3 并发扫档 + 收集指标（主循环）</h5>
+    <pre><span class="k">for</span> count <span class="k">in</span> args.rollout_counts:        <span class="c"># 例如 [1,2,4,8,16,32]</span>
+    duplicated = <span class="f">_duplicate_prompt</span>(base_sample, count)
+    runner = <span class="f">BenchmarkRunner</span>(
+        <span class="f">RunConfig</span>(
+            max_concurrency=count,        <span class="c"># 并发度 = 当前档位</span>
+            request_rate=<span class="f">float</span>(<span class="s">"inf"</span>),     <span class="c"># 不限速：能多快发就多快发（闭环压测）</span>
+            warmup=<span class="n">0</span>,
+            timeout_s=args.timeout_s,
+        )
+    )
+    request_results = <span class="k">await</span> runner.<span class="f">run</span>(duplicated, send_fn)
+    speed = <span class="f">compute_speed_metrics</span>(request_results, wall_clock_s=runner.wall_clock_s)
+    failed = [r <span class="k">for</span> r <span class="k">in</span> request_results <span class="k">if</span> <span class="k">not</span> r.is_success]
+    <span class="f">print_speed_summary</span>(speed, args.model, count, title=<span class="s">f"... N={count}"</span>)</pre>
+    <p>这就是压测的"扫频"过程：把并发度从 1 一路加到 32，每个档位跑一批，算一组速度指标。<code class="inline">request_rate=inf</code> 表示"<b>闭环压测</b>"——不人为限速，一个请求回来立刻补下一个，让系统始终被 <code class="inline">max_concurrency</code> 条请求"顶满"，从而测出系统在该并发下的真实上限。</p>
+
+    <h5>3.4 服务端事件 profiler + 健康检查</h5>
+    <p>跑之前先打 <code class="inline">/health</code>，并（默认）调用 <code class="inline">/start_request_profile</code> 让<b>服务器端</b>记录细粒度事件；跑完调用 <code class="inline">/stop_request_profile</code>，再打一次 <code class="inline">/health</code>。注意 <code class="inline">finally</code> 块保证"无论中途是否报错，profiler 一定会被关掉"——这是资源清理的好习惯。最后把 config、profile 信息、前后 health、各档结果一起写进 <code class="inline">rollout_stress_results.json</code>。</p>
+
+    <h4>4. 涉及的知识点（小白展开）</h4>
+
+    <div class="concept">
+      <div class="name">并发（concurrency）vs 并行（parallelism）</div>
+      <span class="three"><b>是什么：</b>并发是"同时有很多任务在进行中"（哪怕 CPU 在它们之间快速切换）；并行是"真的有多个核同时算"。</span>
+      <span class="three"><b>为什么需要：</b>压测要模拟"很多用户同时请求"，关注的是服务能不能同时<i>受理</i>很多请求，而不是本机算得多快。</span>
+      <span class="three"><b>本 PR 怎么用：</b>用 Python 的 <code class="inline">asyncio</code> + <code class="inline">aiohttp</code> 实现"单线程高并发 IO"——程序大部分时间在等服务器回包，等的时候就切去发别的请求，所以一个进程就能压出几十路并发。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">async / await 与异步 IO</div>
+      <span class="three"><b>是什么：</b>一种写法，让"等待网络返回"这种空档不浪费——遇到 <code class="inline">await</code> 就把 CPU 让给别的协程。</span>
+      <span class="three"><b>类比：</b>一个服务员（单线程）同时招呼很多桌：A 桌点完菜（发出请求）他不傻等上菜，转身去 B 桌点单，菜好了再回来端（响应回来）。</span>
+      <span class="three"><b>本 PR 怎么用：</b><code class="inline">send_fn</code> 是 <code class="inline">async</code> 函数，<code class="inline">BenchmarkRunner</code> 用 <code class="inline">asyncio.run</code> 同时跑 <code class="inline">count</code> 个 <code class="inline">send_fn</code>，实现高并发发包。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">p50 / p95 / p99 尾延迟（tail latency）</div>
+      <span class="three"><b>是什么：</b>把所有请求的延迟排序，p50 是中位数（一半请求比它快），p95/p99 是"最慢的 5%/1% 的门槛"。</span>
+      <span class="three"><b>为什么需要：</b>平均值会骗人——平均 100ms 看着不错，但 p99 可能是 5 秒，意味着 1% 的用户体验极差。线上 SLA 通常盯 p95/p99。</span>
+      <span class="three"><b>本 PR 怎么用：</b><code class="inline">compute_speed_metrics</code> 对每个并发档算出这些分位数，方便看"并发拉高后，尾延迟是否恶化"。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">RTF（Real-Time Factor，实时率）</div>
+      <span class="three"><b>是什么：</b>生成 1 秒音频需要花多少计算时间。RTF=0.23 表示生成 1 秒音频只用 0.23 秒，即 ~4 倍实时速度。</span>
+      <span class="three"><b>为什么需要：</b>语音/Omni 的输出是音频，吞吐不能只看 token/s，还要看"能不能比实时更快地产出音频"。RTF&lt;1 才能流式实时播放。</span>
+      <span class="three"><b>本 PR 怎么用：</b>压测脚本对启用音频输出的请求统计速度，RTF 是衡量 TTS/talker 阶段是否够快的关键指标（也贯穿后面 #796 的校准报告）。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">闭环（closed-loop）压测 vs 开环（open-loop）</div>
+      <span class="three"><b>是什么：</b>闭环=固定并发数，一个回来才发下一个（系统永远只有 N 个在飞）；开环=固定到达速率，不管系统处理得过来与否一直发。</span>
+      <span class="three"><b>为什么需要：</b>闭环能干净地测"系统在 N 并发下的稳态能力"；开环能测"过载时会不会雪崩"。</span>
+      <span class="three"><b>本 PR 怎么用：</b><code class="inline">request_rate=float("inf")</code> + <code class="inline">max_concurrency=count</code> 就是经典闭环：用并发度而非速率来施压。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">为什么放进 benchmarks/ 而不是 eval/</div>
+      <span class="three"><b>背景：</b>PR 描述强调它是"serving 压力/诊断工具"，不是"模型能力评测"。作者刻意不想让它被当成标准精度指标。</span>
+      <span class="three"><b>启示：</b>目录结构也是一种"语义契约"——把诊断工具和能力评测分开放，能避免别人误用你的脚本当成 KPI。（注：最终合并版落在 <code class="inline">benchmarks/eval/</code> 下，文件名 <code class="inline">benchmark_omni_rollout_stress.py</code>，与描述里早期路径略有出入，说明评审中调整过位置。）</span>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>可复用的工程思想</b>：①"先做尺子再做优化"——任何性能工作都应先有可复现的测量工具；②工厂函数 + 闭包来固定配置、简化主循环；③<code class="inline">finally</code> 保证 profiler/资源一定被释放；④克制的副作用（音频只解码不落盘）保证测量纯度。</li>
+      <li><b>想深入该补的前置知识</b>：Python <code class="inline">asyncio</code> 协程模型、<code class="inline">aiohttp</code> 客户端；分位数/尾延迟与排队论（Little's Law：并发 ≈ 吞吐 × 延迟）；推理服务的 continuous batching（见 #662 概念区）；以及 RL rollout / Best-of-N 采样为什么会产生"同 prompt 高并发"流量。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============ PR 662 ============ -->
+<details class="card" id="pr662" open>
+  <summary class="head">
+    <h3>#662 · [TTS] 上传自定义音色（uploaded voice）API</h3>
+    <div class="meta">
+      作者 <b>Ratish1</b>　·　<span class="pill green" style="padding:1px 9px">merged</span>　·　+2280 / −44 行 · 27 文件　·
+      <a href="https://github.com/sgl-project/sglang-omni/pull/662">查看 PR ↗</a>
+    </div>
+  </summary>
+  <div class="body">
+
+    <h4>1. PR 概览</h4>
+    <ul>
+      <li><b>标题</b>：[TTS] Add uploaded voice APIs</li>
+      <li><b>编号 / 作者 / 状态</b>：#662 / Ratish1 / 已合并（由 zhaochenyang20 合并）</li>
+      <li><b>改了什么</b>：给 OpenAI 兼容的 TTS 服务加了一整套"<b>上传并复用自定义音色</b>"的能力。用户可以：<code class="inline">POST /v1/audio/voices</code> 上传一段参考音频注册一个音色 → 在 <code class="inline">POST /v1/audio/speech</code> 里用 <code class="inline">voice="我的音色"</code> 复用它 → <code class="inline">GET</code> 列出 → <code class="inline">DELETE</code> 删除。</li>
+    </ul>
+    <div class="callout know"><span class="tag">一句话</span>以前你想用自己的声音让模型说话，得每次请求都把参考音频塞进去；现在你"上传一次、起个名字"，之后只要报名字就行，而且系统会把这个音色对应的"声纹特征"缓存起来，重复使用时不再重算。</div>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>TTS（文字转语音）里有个高级玩法叫"<b>voice cloning / 参考音频克隆</b>"：你给一段某人的录音，模型就能用那个人的音色把任意文字念出来。此前在这个仓库里，要用自定义音色，<b>每次请求</b>都得把参考音频（甚至预处理出来的声纹）一起传过来。痛点有三：</p>
+    <ul>
+      <li><b>重复传输</b>：同一个音色用 100 次，参考音频就得传 100 次，浪费带宽。</li>
+      <li><b>重复计算</b>：每次都要从参考音频里重新算"声纹特征 / 参考编码"，慢且费 GPU。</li>
+      <li><b>各模型各写一套</b>：Higgs、Qwen3-TTS 各有各的参考音频格式，调用方得知道用的是哪个模型、怎么塞——耦合严重。</li>
+    </ul>
+    <div class="callout why"><span class="tag">为什么需要</span>把"音色"从"一次性请求参数"升级成"<b>有生命周期的、可命名的、被服务持久化管理的资源</b>"（上传/列出/删除），同时在内部做缓存复用。这既对齐了 OpenAI 的 <code class="inline">/v1/audio/voices</code> 习惯用法，又把"算一次声纹、用很多次"的性能红利拿到手。</div>
+
+    <h4>3. 具体做了什么改动</h4>
+    <p>这是个跨 27 个文件的较大 PR，但骨架很清晰，核心是<b>新增两个文件 + 在多模型流水线上"接线"</b>：</p>
+    <table>
+      <tr><th>文件</th><th>角色</th></tr>
+      <tr><td><code class="inline">serve/speech_voices.py</code>（新, 556 行）</td><td>音色仓库：上传校验、持久化为 .safetensors、列出/删除、restore-on-startup</td></tr>
+      <tr><td><code class="inline">scheduling/speaker_cache.py</code>（新, 129 行）</td><td>进程级共享的声纹"特征产物" LRU 缓存</td></tr>
+      <tr><td><code class="inline">serve/openai_api.py</code>（+178）</td><td>挂上 GET/POST/DELETE 三个路由</td></tr>
+      <tr><td><code class="inline">serve/speech_service.py</code>（+97）</td><td>请求时把"音色名"翻译成模型要的参考音频</td></tr>
+      <tr><td><code class="inline">models/higgs_tts/*</code>, <code class="inline">models/qwen3_tts/*</code></td><td>把上传音色接进各自的参考音频 / x-vector 路径与缓存</td></tr>
+    </table>
+
+    <h5>3.1 架构：分层 + "下沉"（lowering）</h5>
+    <p>PR 的关键设计是一句话：<b>"上传音色由 HTTP 服务层拥有，在请求到达模型流水线之前，被翻译（lower）成各模型已有的参考音频路径。"</b> 用图表示：</p>
+    <pre>POST /v1/audio/voices ──► SpeakerSampleStore ──► 磁盘 .safetensors
+                                       └────────► 共享声纹缓存
+POST /v1/audio/speech (voice="name") ──► 解析上传音色 ──┬──► Higgs：参考音频 / ref-code 路径
+                                                        └──► Qwen3-TTS：参考音频 / x-vector 路径
+DELETE /v1/audio/voices/name ──► 删存储 + 失效该音色的缓存</pre>
+    <p>"<b>lowering（下沉/降级翻译）</b>"是编译器借来的词：高层抽象（"音色名 my_voice"）在进入底层执行（模型流水线）前，被翻译成底层早就懂的东西（"一段参考音频 ref_audio"）。好处是<b>模型层完全不用知道"上传音色"这个概念</b>——它只看到自己熟悉的参考音频。<code class="inline">SpeechService</code> 因此<b>不需要去解析模型名、不需要给每个 TTS 家族写 if-else</b>。是否需要把 voice 名解析成上传音色，由各模型的 config 用一个能力开关声明。</p>
+    <div class="callout know"><span class="tag">设计模式</span>这是"<b>能力声明（capability flag）+ 适配器</b>"：与其在通用代码里写 <code class="inline">if model == "higgs": ...</code>，不如让每个模型 config 自己声明"我需不需要把命名 voice 解析成上传音色"。新增模型时不用改通用逻辑——这就是"对扩展开放、对修改封闭"（开闭原则）。</div>
+
+    <h5>3.2 持久化：为什么用 .safetensors</h5>
+    <p>每个上传音色被存成<b>一个 <code class="inline">.safetensors</code> 文件</b>（看 <code class="inline">UploadedVoice.to_safetensors_metadata()</code>，把 name/consent/created_at/mime_type/采样率/采样点数/指纹等写进文件元数据）。重启时 <code class="inline">restore-on-startup</code> 会把它们重新加载回注册表。还做了上传校验：</p>
+    <pre><span class="c"># speech_voices.py 里的若干安全/校验常量</span>
+MAX_VOICE_UPLOAD_BYTES = <span class="n">10</span> * <span class="n">1024</span> * <span class="n">1024</span>      <span class="c"># 上传上限 10MB，防止打爆磁盘/内存</span>
+MIN_REFERENCE_AUDIO_SECONDS = <span class="n">1.0</span>            <span class="c"># 参考音频太短克隆不出音色</span>
+MAX_REFERENCE_AUDIO_SECONDS = <span class="n">30.0</span>           <span class="c"># 太长没必要、还拖慢</span>
+VOICE_NAME_PATTERN = re.<span class="f">compile</span>(<span class="s">r"^(?=.*[A-Za-z0-9])[A-Za-z0-9_.-]+$"</span>)  <span class="c"># 音色名白名单，挡路径穿越</span>
+ACCEPTED_VOICE_UPLOAD_MIME_TYPES = <span class="f">frozenset</span>({<span class="s">"audio/wav"</span>, <span class="s">"audio/mpeg"</span>, ...})</pre>
+    <p>逐点看意图：上传是外部输入，<b>每一条都是潜在攻击面</b>。限制大小（防 DoS）、限制时长（业务约束）、用正则白名单约束音色名（防止 <code class="inline">../../etc/passwd</code> 这种路径穿越）、限制 MIME 类型（只收音频）。这些是写"接受用户上传"的接口时的标准防御动作。</p>
+
+    <h5>3.3 共享声纹缓存（speaker_cache.py）——本 PR 最值得学的一块</h5>
+    <pre><span class="k">class</span> <span class="y">SpeakerArtifactCache</span>:
+    <span class="s">"""进程级、有上限的 LRU，缓存被多个 TTS 阶段共享的声纹特征。"""</span>
+    <span class="k">def</span> <span class="f">__init__</span>(self, max_bytes=<span class="n">512</span>*<span class="n">1024</span>*<span class="n">1024</span>):   <span class="c"># 默认 512MB 上限</span>
+        self._cache = <span class="f">StageOutputCache</span>(max_bytes=max_bytes, size_fn=estimate_cache_bytes)
+        self._lock = <span class="f">RLock</span>()                       <span class="c"># 多线程安全</span>
+
+    <span class="k">def</span> <span class="f">get</span>(self, key: SpeakerCacheKey):
+        <span class="k">with</span> self._lock:
+            value = self._cache.<span class="f">get</span>(<span class="f">_encode_key</span>(key))
+            <span class="k">if</span> value <span class="k">is</span> <span class="k">None</span>:
+                self._miss_count += <span class="n">1</span>; <span class="k">return</span> <span class="k">None</span>
+            self._hit_count += <span class="n">1</span>; <span class="k">return</span> value
+
+    <span class="k">def</span> <span class="f">clear_voice</span>(self, voice_name):              <span class="c"># 删/改音色时，精准失效它的所有缓存</span>
+        normalized = voice_name.<span class="f">lower</span>()
+        <span class="k">with</span> self._lock:
+            removed = self._cache.<span class="f">remove_if</span>(
+                <span class="k">lambda</span> key: <span class="f">_encoded_key_voice_name</span>(key).<span class="f">lower</span>() == normalized)
+            self._delete_invalidation_counter += removed</pre>
+    <p>这块在干什么、为什么这么写：</p>
+    <ul>
+      <li><b>缓存 key 是个结构化身份</b>：<code class="inline">SpeakerCacheKey(model_type, voice_name, voice_version, artifact_kind)</code>。注意 <code class="inline">voice_version</code>——同一个名字的音色被<b>覆盖</b>上传后，version 变了，老缓存自然不会被命中（避免"换了音色却用了旧声纹"的脏数据）。<code class="inline">artifact_kind</code> 区分不同种类产物（波形 / ref-code / x-vector）。</li>
+      <li><b>按字节数限容的 LRU</b>：<code class="inline">estimate_cache_bytes</code> 会针对 numpy 数组、torch 张量（<code class="inline">numel*element_size</code>）、dict/list 递归地估算占用内存，超过 512MB 就按"最近最少使用"淘汰。为什么按字节而不是按条数？因为声纹张量大小差异很大，按字节才能真正控制住显存/内存。</li>
+      <li><b>线程安全</b>：用 <code class="inline">RLock</code> 包住读写，因为服务是多线程/多请求并发访问同一个全局缓存。</li>
+      <li><b>精准失效</b>：删除或覆盖音色时调 <code class="inline">clear_voice</code>，<b>只</b>清掉这个音色相关的缓存条目（<code class="inline">remove_if</code> + 从 key 里反解出 voice_name 比对），不会误伤别的音色。PR 描述里强调"per-voice invalidation 让 Higgs 和 Qwen 的缓存被一致地清掉"——这就是它。</li>
+      <li><b>全局单例</b>：文件底部 <code class="inline">_GLOBAL_SPEAKER_CACHE = SpeakerArtifactCache()</code> + <code class="inline">get_speaker_artifact_cache()</code>，保证整个进程<b>共享一份</b>缓存，于是 Higgs 阶段算出的产物、Qwen 阶段也能从同一个缓存受益。</li>
+    </ul>
+
+    <h5>3.4 接进各模型流水线</h5>
+    <p>真正"省算力"的地方在模型层接线：<b>Higgs</b> 把上传音色的元数据接进 waveform / ref-code 缓存，重复用同一音色时跳过"可复用的 prompt 产物"重算；<b>Qwen3-TTS Base</b> 接进参考音频路径，并新增"<b>x-vector-only 模式</b>"——当上传时没有配套转写文本（ref_text）时，只用说话人嵌入向量（x-vector）而不需要 ref_code 张量也能合成。这让"只有一段录音、没有文字稿"的音色也能用。</p>
+
+    <h4>4. 涉及的知识点（小白展开）</h4>
+
+    <div class="concept">
+      <div class="name">SGLang 的多阶段（multi-stage）流水线架构</div>
+      <span class="three"><b>是什么：</b>这个仓库副标题就是"High-Performance Multi-Stage Pipeline Framework for Omni Models"。Omni 模型把一次请求拆成多个"阶段"接力处理：例如 thinker（理解输入、生成文本）→ talker（把文本变成语音 token）→ vocoder/code2wav（把 token 变成波形）。</span>
+      <span class="three"><b>为什么需要：</b>多模态生成天然是流水线——先想内容，再决定怎么发音，再合成声波。分阶段能各自优化、各自缓存、甚至各自用不同并行度。</span>
+      <span class="three"><b>本 PR 怎么用：</b>声纹特征是被<b>多个阶段共享</b>的中间产物，所以缓存放在 <code class="inline">scheduling/</code> 下、命名为 <code class="inline">SpeakerArtifactCache</code>，并复用已有的 <code class="inline">StageOutputCache</code>（阶段输出缓存）作为底座。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">参考音频 / 声纹 / x-vector / speaker embedding</div>
+      <span class="three"><b>是什么：</b>参考音频=一段示例录音；从中可以抽出"<b>说话人嵌入</b>"（speaker embedding，一种代表说话人身份/音色的定长向量），x-vector 是其中一种经典实现。</span>
+      <span class="three"><b>为什么需要：</b>模型不能直接"听懂"原始波形里的身份信息，需要先把音色压成一个向量喂给生成器，它才能"用这个人的嗓子"说话。</span>
+      <span class="three"><b>本 PR 怎么用：</b>把"算一次 embedding/ref-code，缓存起来反复用"作为核心优化；x-vector-only 模式让没有文字稿的录音也能克隆。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">LRU 缓存（Least Recently Used）</div>
+      <span class="three"><b>是什么：</b>一种淘汰策略——内存满了，先扔"最久没被用过"的。</span>
+      <span class="three"><b>类比：</b>书桌只能放 10 本书，新书要放上来时，把最久没翻的那本先收进书柜。</span>
+      <span class="three"><b>本 PR 怎么用：</b><code class="inline">SpeakerArtifactCache</code> 用按字节限容的 LRU 装声纹产物，512MB 满了就淘汰最旧的，避免无限增长把显存/内存吃光。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">缓存失效（cache invalidation）</div>
+      <span class="three"><b>是什么：</b>当底层数据变了，缓存里的旧值必须作废，否则会读到"脏数据"。计算机科学有句名言"缓存失效是两大难题之一"。</span>
+      <span class="three"><b>本 PR 怎么用：</b>两条防线——①<code class="inline">voice_version</code> 进 key，覆盖上传自动让旧 key 失配；②删除/覆盖时 <code class="inline">clear_voice</code> 精准清除该音色全部产物。两者配合保证"换了音色，绝不用旧声纹"。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">.safetensors 文件格式</div>
+      <span class="three"><b>是什么：</b>Hugging Face 推的张量序列化格式，相比 pickle <b>更安全</b>（加载时不会执行任意代码）、可零拷贝映射、还能附带一段键值元数据。</span>
+      <span class="three"><b>本 PR 怎么用：</b>每个上传音色存成一个 .safetensors：张量部分放音频/特征，metadata 部分放 name/consent/采样率/指纹等。重启后能完整还原。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">OpenAI 兼容 API / 资源型接口设计（REST）</div>
+      <span class="three"><b>是什么：</b>用 <code class="inline">POST</code>(创建) / <code class="inline">GET</code>(列出) / <code class="inline">DELETE</code>(删除) 这套 HTTP 动词把"音色"当成可增删查的资源管理，且路由（<code class="inline">/v1/audio/voices</code>, <code class="inline">/v1/audio/speech</code>）对齐 OpenAI 习惯。</span>
+      <span class="three"><b>为什么需要：</b>对齐既有生态，调用方几乎零学习成本就能迁移过来。</span>
+      <span class="three"><b>本 PR 怎么用：</b>把音色从"一次性参数"提升为"有生命周期的资源"，配合服务端持久化，这正是从"功能"到"产品化能力"的跨越。</span>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>可复用的工程思想</b>：①<b>抽象下沉（lowering）</b>——在边界处把高层概念翻译成底层已懂的东西，让底层零改动；②<b>能力开关代替类型判断</b>——让各实现自己声明能力，通用层不写 if-else，新增模型零侵入；③<b>缓存三要素</b>：结构化 key（含 version）、限容淘汰（按真实字节）、精准失效（per-key）；④<b>把用户上传当攻击面</b>：大小/时长/名字/MIME 全校验。</li>
+      <li><b>想深入该补的前置知识</b>：TTS / voice cloning 基础（mel 频谱、vocoder、speaker embedding）；REST 资源建模；并发下的锁与线程安全；HF safetensors；以及 SGLang 的 stage 缓存机制（<code class="inline">StageOutputCache</code>）——它是本 PR 缓存的底座。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============ PR 727 ============ -->
+<details class="card" id="pr727" open>
+  <summary class="head">
+    <h3>#727 · feat(ci)：给 TTS CI 加 MOSS 模型 + 随机抽选机制</h3>
+    <div class="meta">
+      作者 <b>yijiangt</b>　·　<span class="pill green" style="padding:1px 9px">merged</span>　·　+1157 / −224 行 · 12 文件　·
+      <a href="https://github.com/sgl-project/sglang-omni/pull/727">查看 PR ↗</a>
+    </div>
+  </summary>
+  <div class="body">
+
+    <h4>1. PR 概览</h4>
+    <ul>
+      <li><b>标题</b>：feat(ci): add MOSS TTS to TTS CI with random model selection (issue #724)</li>
+      <li><b>编号 / 作者 / 状态</b>：#727 / yijiangt / 已合并（由 zhaochenyang20 合并）</li>
+      <li><b>改了什么</b>：把 TTS 的持续集成（CI）从"只测 Higgs 一个模型"扩展成"<b>支持多个模型，每次 CI 随机抽一个跑</b>"（当前是 Higgs 或 MOSS），从而在<b>不增加单次 CI 成本</b>的前提下扩大覆盖面。</li>
+    </ul>
+    <div class="callout know"><span class="tag">一句话</span>测两个模型如果每次都全测，CI 时间和 GPU 成本翻倍；这个 PR 用"每次随机摇一个测"的办法，保持单次成本不变，长期看两个模型都会被测到。</div>
+
+    <h4>2. 它解决了什么问题</h4>
+    <p>CI（持续集成）是"每次提交代码后自动跑的一批测试"。TTS 的 CI 要在真实 GPU 上把模型起起来、跑完整的 SeedTTS 数据集、测流式和非流式——<b>非常贵、非常慢</b>。现在要新增 MOSS 模型，如果每次提交都把 Higgs + MOSS 都跑一遍，CI 成本直接翻倍，开发者等得更久。</p>
+    <div class="callout why"><span class="tag">为什么需要</span>在"覆盖更多模型"和"控制 CI 成本"之间找平衡。随机抽选是个聪明的折中：单次只跑一个（成本恒定），但因为是随机的，几十次提交累计下来每个模型都被反复测到——用"统计意义上的覆盖"换"每次全覆盖"的高成本。</div>
+
+    <h4>3. 具体做了什么改动</h4>
+    <p>改动落在三层：GitHub Actions 工作流（怎么调度）、测试代码（怎么参数化模型）、阈值配置（每个模型各自的及格线）。</p>
+
+    <h5>3.1 工作流里加一个"摇号"job</h5>
+    <pre><span class="c"># .github/workflows/omni-ci.yaml</span>
+  <span class="f">pick-tts-model</span>:
+    needs: setup
+    runs-on: ubuntu-latest
+    outputs:
+      tts_ci_model: ${{ steps.pick.outputs.tts_ci_model }}
+    steps:
+      - id: pick
+        env:
+          TTS_CI_MODEL_OVERRIDE: ${{ github.event.inputs.tts_ci_model }}
+        run: |
+          models=(higgs moss)
+          override=<span class="s">"${TTS_CI_MODEL_OVERRIDE,,}"</span>      <span class="c"># ,, = 转小写</span>
+          <span class="k">if</span> [[ -n <span class="s">"${override}"</span> ]]; <span class="k">then</span>
+            <span class="c"># 手动指定了就用指定的（且校验必须是合法模型，否则报错退出）</span>
+            ...
+          <span class="k">else</span>
+            selected=<span class="s">"${models[$((RANDOM % ${#models[@]}))]}"</span>   <span class="c"># 否则随机摇一个</span>
+          <span class="k">fi</span>
+          <span class="k">echo</span> <span class="s">"tts_ci_model=${selected}"</span> &gt;&gt; <span class="s">"$GITHUB_OUTPUT"</span></pre>
+    <p>逐点拆解：</p>
+    <ul>
+      <li><b>新增一个 <code class="inline">pick-tts-model</code> job</b>，它依赖 <code class="inline">setup</code>，跑在便宜的 <code class="inline">ubuntu-latest</code>（不占 GPU）。它的唯一职责就是"决定这次测哪个模型"，把结果通过 <code class="inline">outputs</code> 传给下游。</li>
+      <li><b>两种来源</b>：① <code class="inline">workflow_dispatch</code> 手动触发时可传入 <code class="inline">tts_ci_model</code> 指定模型（方便复现某次失败）；② 没指定就用 <code class="inline">$RANDOM % 模型数</code> 随机选。<code class="inline">${VAR,,}</code> 是 bash 把变量转小写的写法。</li>
+      <li><b>手动指定会校验合法性</b>：如果传了个不存在的模型名，直接 <code class="inline">::error::</code> 报错退出——防止手滑跑了个无意义的 CI。</li>
+      <li><b>结果通过 <code class="inline">$GITHUB_OUTPUT</code> 传递</b>：下游 <code class="inline">tts-ci</code> job 用 <code class="inline">with: tts_ci_model: ${{ needs.pick-tts-model.outputs.tts_ci_model }}</code> 接收，再作为 <code class="inline">TTS_CI_MODEL</code> 环境变量传进测试的 2/3/4 阶段。</li>
+    </ul>
+
+    <h5>3.2 用 preset 数据类把"模型差异"参数化</h5>
+    <pre><span class="c"># tests/test_model/tts_ci_config.py（新文件）</span>
+<span class="k">@dataclass</span>(frozen=<span class="k">True</span>)
+<span class="k">class</span> <span class="y">TtsCiModelPreset</span>:
+    model_path: <span class="y">str</span>
+    ref_format: Literal[<span class="s">"flat"</span>, <span class="s">"references"</span>] = <span class="s">"flat"</span>
+    gate_thresholds: <span class="y">bool</span> = <span class="k">True</span>      <span class="c"># 关键：这个模型是否"门控"（不达标就让 CI 失败）</span>
+    num_gpus_per_worker: <span class="y">int</span> = <span class="n">1</span>
+    ...
+
+TTS_CI_PRESETS = {
+    <span class="s">"higgs"</span>: <span class="f">TtsCiPreset</span>(model=..., thresholds=...),   <span class="c"># Higgs：有及格线，会门控</span>
+    <span class="s">"moss"</span>:  <span class="f">TtsCiPreset</span>(...),                       <span class="c"># MOSS：gate_thresholds=False，只测量不阻断</span>
+}</pre>
+    <p>这里把"每个模型的差异"全收进一个 <code class="inline">preset</code> 字典里：模型路径、参考格式、每 worker 几块 GPU、以及最关键的 <code class="inline">gate_thresholds</code>。<b>新增一个模型只需 3 步</b>：往 <code class="inline">TTS_CI_PRESETS</code> 加一条、往工作流 <code class="inline">models=(...)</code> 加个名字、往下载脚本加 HF 仓库 ID。这是教科书式的"<b>用数据驱动代替改逻辑</b>"。</p>
+
+    <h5>3.3 "测量但不门控"（no-gate）模式</h5>
+    <p>对 MOSS（<code class="inline">gate_thresholds=False</code>）：所有指标照常测、照常打印，但前缀打成 <code class="inline">[TTS CI] … (no gate)</code>，且<b>不会因为不达标而让 CI 失败</b>。为什么这么设计？因为一个<b>新接入的模型</b>还没有可靠的基线/阈值，如果一上来就拿它当硬门槛，CI 会频繁误红。先用"只观测"模式跑一阵，攒够稳定数据（像 #796 那样校准出阈值），再把它升级成门控。这是接入新模型的稳妥姿势。</p>
+
+    <div class="callout know"><span class="tag">阈值是怎么来的</span><code class="inline">tts_ci_config.py</code> 里能看到：先有 P95 参考值（如 Higgs 非流式 throughput 14.717 qps），再乘"松弛系数"得到阈值——<code class="inline">THRESHOLD_SLACK_HIGHER=0.75</code>（越大越好的指标，门槛 = P95×0.75，留 25% 余量）、<code class="inline">THRESHOLD_SLACK_LOWER=1.25</code>（越小越好的指标如延迟，门槛 = P95×1.25）。留余量是为了容忍正常的机器抖动，不让 CI 因为偶发波动就误报。</div>
+
+    <h4>4. 涉及的知识点（小白展开）</h4>
+
+    <div class="concept">
+      <div class="name">CI / 持续集成 与 GitHub Actions</div>
+      <span class="three"><b>是什么：</b>CI = 每次提交代码后自动跑测试，尽早发现问题。GitHub Actions 是 GitHub 内置的 CI 系统，用 YAML 描述"哪些 job、什么时候跑、依赖关系"。</span>
+      <span class="three"><b>为什么需要：</b>人工每次手动测既慢又会忘；自动化保证"每次改动都被同一套标准检验"。</span>
+      <span class="three"><b>本 PR 怎么用：</b>新增 <code class="inline">pick-tts-model</code> job 用 <code class="inline">needs</code> 串起依赖、用 <code class="inline">outputs</code> 在 job 间传值，是 Actions 编排的标准手法。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">随机抽样测试（sampling-based CI）</div>
+      <span class="three"><b>是什么：</b>不是每次全测，而是每次随机抽一部分测，靠多次累积达到覆盖。</span>
+      <span class="three"><b>类比：</b>工厂质检不会拆开每一个产品，而是每批随机抽几个；只要抽得够多够随机，长期就能发现问题。</span>
+      <span class="three"><b>本 PR 怎么用：</b><code class="inline">$RANDOM % 模型数</code> 每次摇一个模型，单次成本恒定，长期两个模型都被覆盖。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">门控（gating）vs 观测（no-gate）</div>
+      <span class="three"><b>是什么：</b>门控=指标不达标就让 CI 变红、阻止合并；观测=只测量记录、不阻断。</span>
+      <span class="three"><b>为什么需要：</b>成熟的、有可靠基线的指标才适合做硬门槛；新接入、基线未知的指标先观测，避免误报淹没真问题。</span>
+      <span class="three"><b>本 PR 怎么用：</b>Higgs 门控、MOSS 先 no-gate，等校准出稳定阈值再升级。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">阈值松弛系数（slack / 容差）与 P95 基线</div>
+      <span class="three"><b>是什么：</b>用历史多次运行的 P95（95 分位）当基线，再乘一个余量系数得到 CI 门槛。</span>
+      <span class="three"><b>为什么需要：</b>性能数字天然会抖动；门槛卡太死会频繁误红（flaky），太松又抓不到真退化。留余量是工程上的平衡。</span>
+      <span class="three"><b>本 PR 怎么用：</b>higher-is-better 用 ×0.75、lower-is-better 用 ×1.25。这套机制和当天的 #796 校准报告是同一套体系。</span>
+    </div>
+
+    <div class="concept">
+      <div class="name">数据驱动配置（data-driven / 配置即代码）</div>
+      <span class="three"><b>是什么：</b>把"会变的东西"（模型列表、阈值）抽成数据结构/配置，让"逻辑代码"保持稳定。</span>
+      <span class="three"><b>本 PR 怎么用：</b><code class="inline">TtsCiModelPreset</code> / <code class="inline">TTS_CI_PRESETS</code> 把模型差异收进 dataclass 字典，新增模型只加数据、不改逻辑——降低出错面、易于评审。</span>
+    </div>
+
+    <h4>5. 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>可复用的工程思想</b>：①<b>成本/覆盖的折中</b>——随机抽样把"全测的高成本"换成"统计覆盖"；②<b>新东西先观测后门控</b>——降低引入风险；③<b>用便宜的 job 做决策</b>（摇号在 CPU runner 上，GPU 只留给真测试）；④<b>数据驱动</b>把可变项与逻辑分离。</li>
+      <li><b>想深入该补的前置知识</b>：GitHub Actions 的 <code class="inline">needs</code>/<code class="inline">outputs</code>/可复用 workflow（<code class="inline">workflow_call</code>）；flaky test 与统计显著性；性能基线校准方法（见 #796）；以及 WER / UTMOS / 说话人相似度这些 TTS 评测指标的含义。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============ CI CLUSTER ============ -->
+<details class="card" open>
+  <summary class="head">
+    <h3>🧰 速览：CI / 校准 / 基建类 PR（#796 #795 #794 #793 #806）</h3>
+    <div class="meta">主要由 zhaochenyang20 推动 · 不改运行时模型逻辑 · 属于"测试基础设施"层</div>
+  </summary>
+  <div class="body">
+    <p>这 5 个 PR 不涉及模型/推理逻辑本身，但它们是支撑前面那些功能 PR 能被"可信地测量"的地基。简要说明每个在做什么、为什么有价值：</p>
+
+    <h4>#796 · [CI] Calibration 2026/06/15（阈值重新标定）</h4>
+    <p><b>做了什么</b>：在 2×NVIDIA H20 上把 TTS / Qwen3-ASR / 以及一大批 Omni 评测（MMMU、MMSU、VideoMME、VideoAMME，含 talker 音频与 TP2 变体）各跑 5 遍，取"<b>5 次中最差</b>"（worst-of-5）作为新的 CI 阈值。一次性更新了几十个门槛常量。</p>
+    <p><b>为什么有价值</b>：硬件、依赖版本（sglang 0.5.12 / torch 2.11 / CUDA 13）变化后，旧阈值要么过松（抓不到退化）要么过紧（误红）。用"worst-of-N"标定是个稳健做法——<b>以最差表现为底线</b>，能容忍正常抖动，又不放过真退化。值得注意的是不少 ASR 速度阈值大幅<b>收紧</b>（如 p95 延迟 0.555s→0.166s，紧了 70%），说明底层性能其实变好了，于是把门槛提高以锁住收益。</p>
+    <div class="callout learn"><span class="tag">可学到</span>"worst-of-N 校准"是性能回归测试里对抗抖动的经典套路：跑多遍取最差当基线，配合松弛系数，得到既稳又有意义的门槛。这和 #727 的阈值体系是同一套方法论。</div>
+
+    <h4>#794 · [CI] CI Host Profiles（+556 行）&nbsp;/&nbsp;#795 · Add Pre Check List&nbsp;/&nbsp;#793 · Update Calibration Skills</h4>
+    <p>这三个是 #796 校准能可信进行的"配套基建"：</p>
+    <ul>
+      <li><b>#794 主机画像</b>：把不同 CI 机器（H20/H100/H200…）的环境参数固化成"画像"配置。<b>为什么重要</b>：性能数字只有在<i>注明硬件</i>时才有意义——同一阈值在 H20 和 H200 上完全不可比。主机画像让校准结果可追溯、可复现。</li>
+      <li><b>#795 预检清单（Pre Check List）</b>：跑校准前先核对一份清单（机器、venv、样本数、并发等是否就绪），避免"环境没配对就跑出一堆无效数据"。</li>
+      <li><b>#793 更新校准技能（skills）</b>：更新仓库里 <code class="inline">tune-ci-thresholds</code> 这套"校准工具/技能"的脚本与文档，让校准流程标准化、半自动化。</li>
+    </ul>
+    <div class="callout learn"><span class="tag">可学到</span>"可信的基准测试"本身是一项工程：要有主机画像（在哪测）、预检清单（测之前确认环境）、标定脚本（怎么取阈值）、和 provenance（记录分支/版本/时间）。数字才不会变成"没人敢信的红绿灯"。</div>
+
+    <h4>#806 · [CI]: Add luojiaxuan to CI permissions（+5 行）</h4>
+    <p><b>做了什么</b>：往 <code class="inline">.github/CI_PERMISSIONS.json</code> 里给贡献者 <code class="inline">luojiaxuan</code> 加 <code class="inline">/tag-run-ci-label</code> 和 <code class="inline">/rerun-failed-ci</code> 权限。<b>为什么有价值</b>：GPU CI 很贵，所以只有被授权的人能用斜杠命令触发/重跑 CI——这是<b>把昂贵资源的触发权限做成显式白名单</b>的访问控制实践，纯权限维护，无逻辑改动。</p>
+  </div>
+</details>
+
+<!-- ============ TAKEAWAYS ============ -->
+<section class="overview" style="margin-top:30px">
+  <h2>🎓 今日总串讲：这 8 个 PR 串起来看</h2>
+  <p>把今天的 PR 放在一起，能看到一条很完整的"<b>工程化推理服务</b>"叙事线：</p>
+  <ul>
+    <li><b>功能层</b>（#662）：把"自定义音色"从一次性参数升级成可持久化、可缓存的资源——体现<b>抽象下沉 + 能力开关 + 缓存三要素</b>。</li>
+    <li><b>测量层</b>（#770）：写专门的并发压测仪器去量化"系统在高并发下还行不行"——体现<b>先有尺子再优化、闭环压测、尾延迟</b>。</li>
+    <li><b>验证层</b>（#727 + #796/795/794/793）：把测试做成可扩展（多模型随机抽）、可信（主机画像 + 预检 + worst-of-N 校准 + 松弛系数）的体系。</li>
+    <li><b>治理层</b>（#806）：昂贵资源的触发权限用显式白名单管控。</li>
+  </ul>
+  <p style="color:var(--muted)">一句话收束：今天没有惊天动地的新模型，但每一个 PR 都在回答同一个问题——<b>"如何让一个多模态推理服务，既能加新能力，又能被可信地测量和守护？"</b> 这正是把研究原型变成生产系统的日常功夫。</p>
+
+  <h4 style="border-left-color:var(--accent2)">建议的学习路线（从这里继续深挖）</h4>
+  <ol>
+    <li><b>推理服务基础</b>：continuous batching、KV cache、radix attention、CUDA graph、tensor parallelism（TP）——这些是 SGLang 的核心，本期 PR 多次擦边（TP2、prefill batching、stage cache）。</li>
+    <li><b>多模态/Omni 流水线</b>：thinker→talker→code2wav 的分阶段生成，speaker embedding / vocoder / mel 频谱。</li>
+    <li><b>异步并发</b>：Python asyncio / aiohttp，Little's Law（并发≈吞吐×延迟）。</li>
+    <li><b>测试工程</b>：性能回归的抖动治理、worst-of-N 校准、flaky test、GitHub Actions 编排。</li>
+  </ol>
+</section>
+
+<footer>
+  SGLang Omni 每日 PR 学习日报 · 生成于 2026-06-16 · 数据来源：GitHub <code class="inline">sgl-project/sglang-omni</code><br>
+  覆盖窗口内合并 PR：#770 #662 #727 #796 #795 #794 #793 #806（共 8 个）· 本报告由自动化例程生成，讲解为辅助理解，代码以仓库实际为准。
+</footer>
+
+</div>
+</body>
+</html>
