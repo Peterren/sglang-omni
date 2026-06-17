@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang-Omni 每日 PR 学习日报 · 2026-06-17</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1d212b; --ink:#e6e9ef; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7c8cff; --accent2:#5ad1c2; --warn:#ffb86b; --green:#46d27e;
+    --code-bg:#0b0d12; --kw:#c792ea; --str:#c3e88d; --num:#f78c6c; --com:#5c6370; --fn:#82aaff; --op:#89ddff;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Inter",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.72;font-size:16px}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 22px 100px}
+  header.top{border:1px solid var(--line);background:linear-gradient(160deg,#1a1f2b,#12151c);border-radius:18px;padding:30px 32px;margin-bottom:26px}
+  header.top h1{margin:0 0 6px;font-size:30px;font-weight:800;letter-spacing:.3px}
+  header.top .sub{color:var(--muted);font-size:15px}
+  .badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .badge{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--ink)}
+  .badge b{color:var(--accent2)}
+  .overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:22px 0 8px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .stat .n{font-size:28px;font-weight:800;color:var(--accent)}
+  .stat .l{font-size:13px;color:var(--muted)}
+  .toc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:24px 0}
+  .toc h3{margin:0 0 10px;font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .toc ol{margin:0;padding-left:20px}
+  .toc a{color:var(--ink);text-decoration:none;border-bottom:1px dashed var(--line)}
+  .toc a:hover{color:var(--accent)}
+  .toc .tag{font-size:12px;color:var(--muted)}
+  details.card{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:18px 0;overflow:hidden}
+  details.card[open]{box-shadow:0 0 0 1px var(--accent) inset}
+  summary{list-style:none;cursor:pointer;padding:20px 24px;display:flex;gap:14px;align-items:flex-start;user-select:none}
+  summary::-webkit-details-marker{display:none}
+  summary .chev{margin-left:auto;color:var(--muted);transition:transform .2s;font-size:18px}
+  details[open] summary .chev{transform:rotate(90deg)}
+  summary .pr-num{flex:none;background:var(--accent);color:#0b0d12;font-weight:800;border-radius:10px;padding:4px 11px;font-size:14px}
+  summary .pr-ttl{font-weight:600;font-size:18px}
+  summary .pr-meta{color:var(--muted);font-size:13px;margin-top:3px}
+  .pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;margin-right:6px;vertical-align:middle}
+  .pill.merged{background:#3a2a55;color:#d6b8ff;border:1px solid #5b3f88}
+  .pill.topic{background:#143a36;color:#7ff0df;border:1px solid #1f5d55}
+  .pill.ci{background:#3a3416;color:#ffe08a;border:1px solid #6b5e1f}
+  .body{padding:4px 26px 26px;border-top:1px solid var(--line)}
+  .body h4{font-size:17px;margin:26px 0 8px;color:var(--accent2);display:flex;align-items:center;gap:8px}
+  .body h4 .ix{font-size:13px;background:var(--card2);border:1px solid var(--line);border-radius:7px;padding:1px 8px;color:var(--muted)}
+  .body p{margin:9px 0}
+  .body ul{margin:9px 0;padding-left:22px}
+  .body li{margin:5px 0}
+  a.ext{color:var(--accent)}
+  .kbox{background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--accent2);border-radius:10px;padding:14px 18px;margin:14px 0}
+  .kbox .kt{font-weight:700;color:var(--ink);margin-bottom:4px}
+  .kbox .k3{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.5px}
+  .analogy{background:#15212b;border:1px dashed #2c4a5a;border-radius:10px;padding:10px 16px;margin:10px 0;font-size:14.5px;color:#bfe6f0}
+  .analogy::before{content:"🔍 类比　";color:var(--accent2);font-weight:700}
+  table.perf{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  table.perf th,table.perf td{border:1px solid var(--line);padding:8px 12px;text-align:left}
+  table.perf th{background:var(--card2);color:var(--muted)}
+  table.perf td.good{color:var(--green);font-weight:600}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;font-size:13.3px;line-height:1.6;margin:14px 0}
+  code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre code{color:#cdd6e6}
+  .c-kw{color:var(--kw)} .c-str{color:var(--str)} .c-num{color:var(--num)} .c-com{color:var(--com);font-style:italic} .c-fn{color:var(--fn)} .c-op{color:var(--op)} .c-del{color:#ff8b8b} .c-add{color:#9ff0a8}
+  .inline{background:var(--card2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13px;color:#ffd9a8}
+  .takeaway{background:linear-gradient(160deg,#16241c,#121a16);border:1px solid #224a32;border-radius:12px;padding:14px 20px;margin:16px 0}
+  .takeaway b{color:var(--green)}
+  footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center;border-top:1px solid var(--line);padding-top:22px}
+  .divider{height:1px;background:var(--line);margin:30px 0}
+  .small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>SGLang-Omni · 每日 PR 学习日报</h1>
+  <div class="sub">报告日期：2026-06-17（北京时间）　·　仓库：<a class="ext" href="https://github.com/sgl-project/sglang-omni">sgl-project/sglang-omni</a>　·　统计窗口：过去 24 小时内 merged PR</div>
+  <div class="badges">
+    <span class="badge">合并 PR 总数：<b>6</b></span>
+    <span class="badge">深度讲解：<b>3</b>（Omni / 多模态 / 多阶段）</span>
+    <span class="badge">简要覆盖：<b>3</b>（CI / 工程基建）</span>
+    <span class="badge">主题：<b>TTS 采样优化 · 多阶段显存预算 · 并发压测</b></span>
+  </div>
+</header>
+
+<div class="overview">
+  <div class="stat"><div class="n">6</div><div class="l">24h 内 Merged PR</div></div>
+  <div class="stat"><div class="n">3</div><div class="l">核心架构 / 性能</div></div>
+  <div class="stat"><div class="n">3</div><div class="l">CI / 权限基建</div></div>
+  <div class="stat"><div class="n">2</div><div class="l">涉及 TTS 模型（Higgs / MOSS）</div></div>
+</div>
+
+<div class="toc">
+  <h3>今日目录（讲解深度优先）</h3>
+  <ol>
+    <li><a href="#pr816">#816 [Higgs] 用 sgl_kernel 融合 top-k/top-p 采样</a> <span class="tag">— 推理性能 / 多码本采样 / kernel 融合</span></li>
+    <li><a href="#pr810">#810 [MOSS] 调优 MOSS Local 同卡共置 AR 显存预算</a> <span class="tag">— 多阶段流水线 / 显存管理</span></li>
+    <li><a href="#pr770">#770 [Qwen3-Omni] 并发 / rollout 压测脚本</a> <span class="tag">— 多模态服务压测 / 可观测性</span></li>
+    <li><a href="#ci">#814 / #806 / #727 — CI 与权限基建（合并讲解）</a> <span class="tag">— 工程基建</span></li>
+  </ol>
+  <p class="small">说明：本报告对前 3 个 PR 做“逐块代码 + 概念扫盲”式精讲，后 3 个 CI 类 PR 因技术含量较低，合并为一节简述。讲透 &gt; 讲全。</p>
+</div>
+
+<!-- ============================= PR 816 ============================= -->
+<details class="card" id="pr816" open>
+  <summary>
+    <span class="pr-num">#816</span>
+    <span>
+      <span class="pr-ttl">[Higgs] Fuse top-k/top-p sampling with sgl_kernel renorm</span>
+      <div class="pr-meta"><span class="pill merged">MERGED</span><span class="pill topic">多模态·TTS</span><span class="pill topic">性能优化</span>作者 @BBuf · 合并于 2026-06-17 08:22 UTC · <a class="ext" href="https://github.com/sgl-project/sglang-omni/pull/816">查看 PR</a></div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+
+    <h4><span class="ix">1</span> PR 概览</h4>
+    <ul>
+      <li><b>标题</b>：[Higgs] Fuse top-k/top-p sampling with sgl_kernel renorm</li>
+      <li><b>编号 / 作者 / 状态</b>：#816 · @BBuf · <b>已合并 (merged)</b></li>
+      <li><b>链接</b>：<a class="ext" href="https://github.com/sgl-project/sglang-omni/pull/816">github.com/sgl-project/sglang-omni/pull/816</a></li>
+      <li><b>一句话</b>：把 Higgs Audio v3 这个 TTS 模型在“逐步生成音频 token”时所用的 top-k/top-p 采样，从“全词表排序 + 掩码”的慢实现，换成 sgl_kernel 里写好的两个融合 CUDA kernel（<span class="inline">top_k_renorm_prob</span> / <span class="inline">top_p_renorm_prob</span>），在数值几乎完全等价的前提下把每步解码 GPU 时间降了约 1.7%。</li>
+    </ul>
+
+    <h4><span class="ix">2</span> 它解决了什么问题</h4>
+    <p>Higgs 是一个<b>文本转语音（TTS）</b>模型。它生成音频的方式不是直接吐波形，而是像 LLM 吐文字 token 一样，<b>一步一步地吐“音频 token”</b>（codebook token）。每一步都要从一个概率分布里“抽签”决定下一个 token，这个抽签过程就叫<b>采样（sampling）</b>。</p>
+    <p>作者用性能分析工具（profiler）在 H100 上跑 Higgs 解码，发现一个痛点：每一个解码步，采样器都在做一条<b>“全词表排序”</b>的重活——</p>
+    <ul>
+      <li>对整个词表（vocab，这里 V=1026，而且有 8 个 codebook 同时采样）做 <span class="inline">torch.sort</span> 完整排序；</li>
+      <li>再 <span class="inline">topk(K_MAX)</span> 取前 K 大；</li>
+      <li>再 <span class="inline">cumsum</span>（累加和）+ <span class="inline">scatter</span>（散射写回）来做 top-p 的掩码。</li>
+    </ul>
+    <p>profiler 看到的具体 CUDA kernel 是 <span class="inline">radixSortKVInPlace</span>、<span class="inline">sbtopk::gatherTopK</span>、<span class="inline">softmax_warp_forward</span> 一长串。问题在于：词表很小（才 1026），但这些 kernel 一个接一个地启动，每个都很短，<b>GPU 大部分时间不是在算，而是在“等下一个 kernel 被启动”</b>——这叫 <b>launch-bound（启动开销受限）</b>。就像让一个大厨切一片黄瓜，结果光是“拿刀、放刀、再拿刀”的动作比切本身还久。</p>
+    <div class="analogy">排序是为了找 “前 K 大 / 累计概率到 p”，但其实你<b>根本不需要把所有元素排好序</b>，只需要知道“阈值在哪、谁该保留”。为此付出一次 O(V log V) 的全排序，是杀鸡用牛刀。融合 kernel 直接在一个 kernel 内部用更聪明的算法（partial selection + 重归一化）算出结果，省掉了排序和多次 kernel 往返。</p>
+
+    <h4><span class="ix">3</span> 具体做了什么改动</h4>
+    <p><b>唯一改动的文件</b>：<span class="inline">sglang_omni/models/higgs_tts/sampler.py</span>，函数 <span class="inline">_sample_independent_batched</span>。下面把<b>改动前</b>和<b>改动后</b>对照讲清楚。</p>
+
+    <p class="small">▼ 改动前（旧逻辑：排序 + 掩码）</p>
+<pre><code><span class="c-com"># top-k：对 logits 做 topk，取第 k 大的值作为阈值 kth，</span>
+<span class="c-com"># 小于阈值的位置全部置为 -inf（即丢弃）</span>
+<span class="c-kw">if</span> top_k_buf <span class="c-kw">is not</span> <span class="c-kw">None</span>:
+    top_vals = logits.<span class="c-fn">topk</span>(K_MAX, dim=-<span class="c-num">1</span>).values
+    k_idx = top_k_buf.<span class="c-fn">view</span>(B,<span class="c-num">1</span>,<span class="c-num">1</span>).<span class="c-fn">expand</span>(-<span class="c-num">1</span>,N,<span class="c-num">1</span>).<span class="c-fn">clamp</span>(min=<span class="c-num">1</span>,max=K_MAX) - <span class="c-num">1</span>
+    kth = top_vals.<span class="c-fn">gather</span>(-<span class="c-num">1</span>, k_idx)
+    logits = torch.<span class="c-fn">where</span>(logits &lt; kth, <span class="c-fn">float</span>(<span class="c-str">"-inf"</span>), logits)
+
+<span class="c-com"># top-p（核采样）：先全量排序，算累计概率 cumsum，</span>
+<span class="c-com"># 累计超过 p 的尾部全部丢弃，再 scatter 写回原位置</span>
+<span class="c-kw">if</span> top_p <span class="c-kw">is not</span> <span class="c-kw">None</span>:
+    sorted_logits, sorted_indices = torch.<span class="c-fn">sort</span>(logits, descending=<span class="c-kw">True</span>, dim=-<span class="c-num">1</span>)
+    cum_probs = sorted_logits.<span class="c-fn">softmax</span>(dim=-<span class="c-num">1</span>).<span class="c-fn">cumsum</span>(dim=-<span class="c-num">1</span>)
+    remove = cum_probs &gt; top_p.<span class="c-fn">view</span>(B,<span class="c-num">1</span>,<span class="c-num">1</span>)
+    remove[..., <span class="c-num">1</span>:] = remove[..., :-<span class="c-num">1</span>].<span class="c-fn">clone</span>()   <span class="c-com"># 右移一位，保留刚好越过 p 的那个 token</span>
+    remove[..., <span class="c-num">0</span>] = <span class="c-kw">False</span>
+    scatter = torch.<span class="c-fn">zeros_like</span>(remove)
+    scatter.<span class="c-fn">scatter_</span>(-<span class="c-num">1</span>, sorted_indices, remove)        <span class="c-com"># 把“该删”的标记散射回原始顺序</span>
+    logits = torch.<span class="c-fn">where</span>(scatter, <span class="c-fn">float</span>(<span class="c-str">"-inf"</span>), logits)
+
+probs = logits.<span class="c-fn">softmax</span>(dim=-<span class="c-num">1</span>)
+codes_flat = probs.<span class="c-fn">reshape</span>(B*N, V).<span class="c-fn">multinomial</span>(num_samples=<span class="c-num">1</span>).<span class="c-fn">squeeze</span>(-<span class="c-num">1</span>)
+</code></pre>
+
+    <p class="small">▼ 改动后（新逻辑：先 softmax 成概率，再调融合 kernel 重归一化）</p>
+<pre><code><span class="c-com"># 关键：先把 logits 变成概率分布，强制 contiguous + fp32（kernel 硬性要求）</span>
+probs = logits.<span class="c-fn">float</span>().<span class="c-fn">softmax</span>(dim=-<span class="c-num">1</span>).<span class="c-fn">reshape</span>(B*N, V).<span class="c-fn">contiguous</span>()
+
+<span class="c-kw">if</span> top_k_buf <span class="c-kw">is not</span> <span class="c-kw">None</span>:
+    tk = top_k_buf.<span class="c-fn">view</span>(B,<span class="c-num">1</span>).<span class="c-fn">expand</span>(B,N).<span class="c-fn">reshape</span>(B*N) \
+            .<span class="c-fn">clamp</span>(min=<span class="c-num">1</span>,max=V).<span class="c-fn">to</span>(torch.int32).<span class="c-fn">contiguous</span>()
+    probs = <span class="c-fn">_fused_top_k_renorm</span>(probs, tk)        <span class="c-com"># 一个 kernel 搞定 top-k + 重归一化</span>
+
+<span class="c-kw">if</span> top_p <span class="c-kw">is not</span> <span class="c-kw">None</span>:
+    tp = top_p.<span class="c-fn">view</span>(B,<span class="c-num">1</span>).<span class="c-fn">expand</span>(B,N).<span class="c-fn">reshape</span>(B*N).<span class="c-fn">to</span>(torch.float32).<span class="c-fn">contiguous</span>()
+    probs = <span class="c-fn">_fused_top_p_renorm</span>(probs, tp)        <span class="c-com"># 一个 kernel 搞定 top-p + 重归一化</span>
+
+codes_flat = probs.<span class="c-fn">multinomial</span>(num_samples=<span class="c-num">1</span>).<span class="c-fn">squeeze</span>(-<span class="c-num">1</span>)   <span class="c-com"># 抽签（保持不变）</span>
+</code></pre>
+
+    <p><b>逐块解读两者的差别：</b></p>
+    <ul>
+      <li><b>旧逻辑在 logits 空间操作</b>：用排序找阈值、用 <span class="inline">-inf</span> 掩码、最后才 softmax。中间产生 <span class="inline">sorted_logits</span>、<span class="inline">sorted_indices</span>、<span class="inline">scatter</span> 等一堆临时大张量，且每个 PyTorch 算子都是一次独立 kernel 启动。</li>
+      <li><b>新逻辑在 probability 空间操作</b>：先 softmax 成概率，然后直接交给 <span class="inline">_fused_top_k_renorm</span> / <span class="inline">_fused_top_p_renorm</span>。这两个是 sgl_kernel（背后是 FlashInfer）提供的 CUDA kernel，它们内部一次性完成“筛选 + 把剩下的概率重新归一化到和为 1”，不再需要 PyTorch 层面的排序和散射。</li>
+      <li><b>为什么叫 renorm（重归一化）</b>：当你把一部分 token 的概率砍掉后，剩下概率之和不再是 1，必须重新除以新的总和，<span class="inline">multinomial</span> 抽签才正确。融合 kernel 把“砍 + 归一化”合并成了一步。</li>
+      <li><b>三个工程细节（很关键，新手最容易踩坑）</b>：
+        <ul>
+          <li><span class="inline">.contiguous()</span> 和 <span class="inline">.float()</span>：FlashInfer 的 renorm kernel <b>硬性要求输入是连续内存的 fp32 张量</b>。PR 描述里特别强调“非连续张量会静默地破坏结果”——即不报错但算错，这是最阴险的 bug，所以必须显式 contiguous。</li>
+          <li><span class="inline">.to(torch.int32)</span>：top_k 参数要转成 int32，因为 kernel 接口签名是这么定义的。</li>
+          <li><b>greedy / argmax 短路</b>和 <b>CUDA graph 安全的 multinomial</b> 保持原样没动——作者只换了中间这段，最大程度减少风险面。</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h4><span class="ix">4</span> 涉及的知识点（扫盲精讲）</h4>
+
+    <div class="kbox"><div class="k3">框架 / 领域</div><div class="kt">TTS 的自回归 token 生成 &amp; codebook（码本）</div>
+      <p><b>是什么</b>：现代神经 TTS（如 Higgs、MOSS）不直接生成波形，而是先用一个“音频编解码器（neural audio codec，如 EnCodec/SNAC 类）”把声音离散化成一串整数 token（就像把图片压成 JPEG 的系数）。模型自回归地预测这些 token，最后再用解码器（vocoder）还原成 24kHz 波形。<b>codebook</b> 就是这些离散 token 的“字典”；Higgs 用 8 个 codebook 并行（multi-codebook），所以一步要同时为 8 路各采一个 token。</p>
+      <p><b>为什么需要</b>：把连续音频离散化后，就能完全复用 LLM 那一套“预测下一个 token”的成熟基础设施（KV cache、batching、采样）。</p>
+      <p><b>本 PR 里怎么用</b>：被优化的 <span class="inline">_sample_independent_batched</span> 就是“为这 8 路 codebook 各自独立采样”的函数，形状 <span class="inline">B×N×V</span> 里 N 就是 codebook 数。</p>
+    </div>
+
+    <div class="kbox"><div class="k3">采样算法</div><div class="kt">top-k / top-p（核采样）与温度（temperature）</div>
+      <p><b>是什么</b>：模型每步输出一个对全词表的打分（logits）。直接按概率抽签容易抽到长尾垃圾 token；于是用三道“质量闸门”：<b>temperature</b> 调节分布陡峭程度（越低越保守）；<b>top-k</b> 只保留概率最高的 k 个候选；<b>top-p（nucleus）</b> 保留“累计概率达到 p”的最小候选集。</p>
+      <p><b>为什么需要</b>：在 TTS 里直接关系到音质——采样太“野”会爆音、跑调；太“死”会机械、单调。</p>
+      <p><b>本 PR 里怎么用</b>：算法语义完全不变，只是把实现从“排序版”换成“融合 kernel 版”。作者特别说明：唯一理论差异在 <span class="inline">cumsum == top_p</span> 的精确边界上，旧代码用 <span class="inline">cum &gt; p</span> 再右移，新 kernel 用标准 <span class="inline">cum &gt;= p</span> 约定；对连续 logits 这是“测度为零”事件（几乎不可能精确相等），实测 225 种配置里从未触发。</p>
+    </div>
+
+    <div class="kbox"><div class="k3">性能工程</div><div class="kt">Kernel 融合（fusion）与 launch-bound</div>
+      <p><b>是什么</b>：GPU 每执行一个算子就要“启动一个 kernel”，启动本身有固定开销（几微秒）。当单个算子的计算量很小，启动开销就会主导总时间——这就是 <b>launch-bound</b>。<b>Kernel 融合</b>是把多个小算子合并成一个大 kernel，用一次启动完成多步计算。</p>
+      <p><b>为什么需要</b>：Higgs 的词表只有 1026，每个排序/掩码算子算得飞快但启动一堆，典型的“启动比计算贵”。</p>
+      <p><b>本 PR 里怎么用</b>：把 sort+topk+cumsum+scatter+softmax 这一长串，压成 softmax + 1~2 个 renorm kernel。profiler 显示采样 kernel 块从 ~64µs/步 降到 ~32µs/步（砍半）。</p>
+      <div class="analogy">就像点外卖：与其分别下 5 个单（5 次配送费），不如合并成 1 单。计算（菜）没变，省的是“配送费”（kernel 启动）。</div>
+    </div>
+
+    <div class="kbox"><div class="k3">推理基建</div><div class="kt">sgl_kernel / FlashInfer 与 CUDA Graph</div>
+      <p><b>是什么</b>：<span class="inline">sgl_kernel</span> 是 SGLang 自带的高性能算子库，底层很多来自 <b>FlashInfer</b>（专为 LLM 推理写的 CUDA kernel 集合）。<b>CUDA Graph</b> 则是把一串固定的 GPU 操作“录制”成一张图，之后整图一次性重放，进一步消除 CPU 端逐 kernel 启动的开销。</p>
+      <p><b>为什么需要</b>：解码阶段每步操作高度重复，CUDA Graph 能把上百次 launch 压成一次重放，是 LLM/TTS 解码提速的标配。</p>
+      <p><b>本 PR 里怎么用</b>：作者验证了替换后“CUDA graph 捕获不受影响、端到端仍输出有效 24kHz 语音、无 graph break”。所谓 <b>graph break</b> 指引入了不能被图捕获的动态操作（如数据相关的控制流），会迫使图断开、退回慢路径——所以保持 multinomial 那段“graph-safe”很重要。</p>
+    </div>
+
+    <h4><span class="ix">5</span> 性能数据 &amp; 我能学到什么</h4>
+    <table class="perf">
+      <tr><th>指标（H100, n=2, 固定请求）</th><th>baseline</th><th>本 PR</th><th>变化</th></tr>
+      <tr><td>每步解码 GPU 时间 (µs/step)</td><td>4152.1</td><td>4082.8</td><td class="good">−1.67%</td></tr>
+      <tr><td>采样 kernel 块 (µs/step)</td><td>~64</td><td>~32</td><td class="good">≈ 砍半</td></tr>
+      <tr><td>最大概率差（vs 旧实现）</td><td colspan="2">4.8e-7（fp32 精度级）</td><td class="good">数值等价</td></tr>
+    </table>
+    <div class="takeaway">
+      <p><b>可复用的工程思想：</b></p>
+      <ul>
+        <li><b>先 profile 再优化</b>：作者不是凭感觉，而是用 profiler 定位到“采样器在 launch-bound”，再针对性下手。优化的第一步永远是测量。</li>
+        <li><b>等价替换 + 严格验证</b>：用 225 种 (B × temperature × top_k × top_p) 组合做扫描，证明 max prob diff ~5e-7、保留集合完全一致，把“性能优化引入正确性回归”的风险压到最低。这是工业级优化 PR 的范式。</li>
+        <li><b>最小改动面</b>：只动中间一段，greedy 短路 / multinomial / CUDA graph 一律不碰。</li>
+        <li><b>魔鬼在细节</b>：contiguous + fp32 这种“不满足会静默算错”的隐性契约，必须在代码和注释里显式处理。</li>
+      </ul>
+      <p><b>想深入该补的前置知识</b>：GPU 执行模型（SM / warp / kernel launch 开销）、softmax 与采样数值稳定性、FlashInfer 的 top-k/top-p renorm 实现、CUDA Graph 的捕获条件与 graph break 触发场景。</p>
+    </div>
+  </div>
+</details>
+
+<!-- ============================= PR 810 ============================= -->
+<details class="card" id="pr810">
+  <summary>
+    <span class="pr-num">#810</span>
+    <span>
+      <span class="pr-ttl">[MOSS] Tune MOSS Local colocated AR memory budgeting</span>
+      <div class="pr-meta"><span class="pill merged">MERGED</span><span class="pill topic">多阶段流水线</span><span class="pill topic">显存管理</span>作者 @Ratish1 · 合并于 2026-06-16 15:56 UTC · <a class="ext" href="https://github.com/sgl-project/sglang-omni/pull/810">查看 PR</a></div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+
+    <h4><span class="ix">1</span> PR 概览</h4>
+    <ul>
+      <li><b>编号 / 作者 / 状态</b>：#810 · @Ratish1 · <b>已合并 (merged)</b></li>
+      <li><b>链接</b>：<a class="ext" href="https://github.com/sgl-project/sglang-omni/pull/810">github.com/sgl-project/sglang-omni/pull/810</a></li>
+      <li><b>一句话</b>：MOSS Local 这个 TTS 流水线在单卡上把“预处理 + 自回归(AR) + 声码器(vocoder)”三个阶段挤在同一张 GPU 上跑（colocated，共置）。本 PR 给中间最吃显存的 AR 阶段一套<b>更精确、显式的显存预算方案</b>——用“进程级显存核算”代替 SGLang 默认的“整卡空闲显存”估算，并预留一小块给后面加载的 codec，端到端吞吐 +8.9%、WER 还略降。</li>
+    </ul>
+
+    <h4><span class="ix">2</span> 它解决了什么问题</h4>
+    <p>先理解<b>多阶段流水线（multi-stage pipeline）</b>：MOSS Local 把一次 TTS 请求拆成三段串行处理——</p>
+    <ul>
+      <li><b>preprocessing（预处理）</b>：处理文本、参考音色等，会加载一个 codec（编解码器）。</li>
+      <li><b>tts_engine / AR（自回归）</b>：核心大模型，逐 token 生成音频 token，<b>最吃显存</b>（要放权重 + KV cache）。</li>
+      <li><b>vocoder（声码器）</b>：把 token 还原成波形，又要加载一个 codec 实例。</li>
+    </ul>
+    <p>在单卡部署里，这三段<b>共用同一张 GPU（colocated）</b>。痛点来了：SGLang 引擎启动时要决定“我能用多少显存放 KV cache”，它默认的做法是<b>看整张卡当前还剩多少空闲显存</b>，按比例 <span class="inline">mem_fraction_static</span> 切一块。但在共置场景下，这个“整卡空闲”是<b>不准的</b>——预处理的 codec 已经占了一块、后面 vocoder 的 codec 还没加载但迟早要占。如果 AR 阶段贪心地按“当前空闲”吃满，等 vocoder 来加载 codec 时就<b>OOM（显存爆掉）</b>。</p>
+    <p>旧代码的做法是“拍脑袋”给个静态数：<span class="inline">mem_fraction_static = 0.6（多卡）或 0.5（单卡）</span>——保守、浪费，而且没有理论依据。本 PR 要做的是：把这套预算<b>显式化、结构化、并接入更准的“进程级显存核算”</b>。</p>
+    <div class="analogy">三个室友合租一间房（一张 GPU）。老办法是老二（AR）进门看“现在地上还空多少”就铺多大的床，结果老三（vocoder）回来发现没地方睡了（OOM）。新办法是事先按合同分配：总共用 90% 的房间，给老三的家具预留 5%，老二自己实际用 85%——并且用“房产证上的精确面积（进程级核算）”而不是“目测空地”。</p>
+
+    <h4><span class="ix">3</span> 具体做了什么改动</h4>
+    <p>改动两个核心文件 + 一个测试文件：</p>
+    <p><b>(A) <span class="inline">config.py</span> — 把预算参数显式化、区分共置/分卡两种拓扑</b></p>
+<pre><code><span class="c-com"># 新增三个显式常量，取代散落的魔数</span>
+_COLOCATED_TOTAL_GPU_MEMORY_FRACTION = <span class="c-num">0.90</span>   <span class="c-com"># 该阶段总共可用整卡的 90%</span>
+_COLOCATED_CODEC_MEM_RESERVE        = <span class="c-num">0.05</span>   <span class="c-com"># 给后续 vocoder codec 预留 5%</span>
+_AR_MEM_FRACTION_STATIC             = <span class="c-num">0.85</span>   <span class="c-com"># 分卡场景下 AR 的静态预算</span>
+
+<span class="c-kw">def</span> <span class="c-fn">_stages</span>(*, codec_device: str, colocated: bool):
+    tts_engine_runtime = <span class="c-fn">StageRuntimeConfig</span>(
+        resources=<span class="c-fn">StageResourceConfig</span>(
+            <span class="c-com"># 共置：传入“总预算”，让引擎用进程级核算自己profile</span>
+            total_gpu_memory_fraction=(_COLOCATED_TOTAL_GPU_MEMORY_FRACTION <span class="c-kw">if</span> colocated <span class="c-kw">else</span> <span class="c-kw">None</span>)
+        ),
+        sglang_server_args=<span class="c-fn">SGLangServerArgsConfig</span>(
+            <span class="c-com"># 分卡：沿用旧的静态 0.85；共置：交给 total_gpu_memory_fraction 这条新路</span>
+            mem_fraction_static=(<span class="c-kw">None</span> <span class="c-kw">if</span> colocated <span class="c-kw">else</span> _AR_MEM_FRACTION_STATIC)
+        ),
+    )
+    tts_engine_args = {<span class="c-str">"gpu_id"</span>: <span class="c-num">0</span>, <span class="c-str">"dtype"</span>: <span class="c-str">"bfloat16"</span>}
+    <span class="c-kw">if</span> colocated:
+        tts_engine_args[<span class="c-str">"codec_mem_reserve"</span>] = _COLOCATED_CODEC_MEM_RESERVE
+    ...
+</code></pre>
+    <p>解读：默认单卡管线（<span class="inline">MossTTSLocalPipelineConfig</span> / …Colocated…）走 <span class="inline">colocated=True</span> 这条新路；两卡变体（…Split…，codec 放到第二张卡 <span class="inline">cuda:1</span>）走 <span class="inline">colocated=False</span> 保持旧的静态预算。一份 <span class="inline">_stages()</span> 工厂函数，靠一个布尔开关产出两种拓扑配置——避免代码重复。</p>
+
+    <p><b>(B) <span class="inline">stages.py</span> — 新增预算计算函数 <span class="inline">_apply_colocated_ar_memory_budget</span></b></p>
+<pre><code><span class="c-kw">def</span> <span class="c-fn">_apply_colocated_ar_memory_budget</span>(overrides, *, total_gpu_memory_fraction, codec_mem_reserve):
+    <span class="c-kw">if</span> total_gpu_memory_fraction <span class="c-kw">is</span> <span class="c-kw">None</span>:           <span class="c-com"># 分卡/旧路：不参与，返回空预算</span>
+        <span class="c-kw">return</span> <span class="c-fn">_ArMemoryBudget</span>(<span class="c-kw">None</span>, <span class="c-num">0.0</span>)
+    <span class="c-kw">if</span> <span class="c-kw">not</span> <span class="c-num">0.0</span> &lt;= codec_mem_reserve &lt; <span class="c-num">1.0</span>:
+        <span class="c-kw">raise</span> <span class="c-fn">ValueError</span>(<span class="c-str">"codec_mem_reserve must be in [0, 1)"</span>)
+
+    <span class="c-com"># 有效预算 = 总预算 - 给 codec 的预留。0.90 - 0.05 = 0.85</span>
+    effective = <span class="c-fn">round</span>(total_gpu_memory_fraction - codec_mem_reserve, <span class="c-num">3</span>)
+    <span class="c-kw">if</span> effective &lt; <span class="c-num">0.1</span>:                          <span class="c-com"># 安全下限，预留太多会让 AR 没法跑</span>
+        <span class="c-kw">raise</span> <span class="c-fn">ValueError</span>(<span class="c-str">"... below the safe floor 0.1 ..."</span>)
+
+    <span class="c-com"># 若用户显式给了 mem_fraction_static，尊重它，但不许超过总预算</span>
+    explicit = overrides.<span class="c-fn">get</span>(<span class="c-str">"mem_fraction_static"</span>)
+    <span class="c-kw">if</span> explicit <span class="c-kw">is not</span> <span class="c-kw">None</span>:
+        <span class="c-kw">if</span> explicit &gt; total_gpu_memory_fraction:
+            <span class="c-kw">raise</span> <span class="c-fn">ValueError</span>(<span class="c-str">"... cannot exceed total_gpu_memory_fraction ..."</span>)
+        effective = explicit
+        applied_reserve = <span class="c-fn">round</span>(total_gpu_memory_fraction - effective, <span class="c-num">3</span>)
+    <span class="c-kw">else</span>:
+        overrides[<span class="c-str">"mem_fraction_static"</span>] = effective    <span class="c-com"># 默认就写回 0.85</span>
+    <span class="c-kw">return</span> <span class="c-fn">_ArMemoryBudget</span>(effective, applied_reserve)
+</code></pre>
+
+    <p><b>(C) 工厂函数里接入“进程级核算”并提供安全回退</b></p>
+<pre><code>profile_total = memory_budget.effective_total_gpu_memory_fraction
+<span class="c-kw">if</span> profile_total <span class="c-kw">is not</span> <span class="c-kw">None</span>:
+    <span class="c-kw">from</span> sglang_omni.utils.gpu_memory <span class="c-kw">import</span> get_process_gpu_memory_bytes
+    <span class="c-com"># 如果这台机器拿不到“本进程占了多少显存”这个数，就别用进程级预算，</span>
+    <span class="c-com"># 退回 SGLang 上游默认的“整卡空闲”profiling，避免用了不安全的预算</span>
+    <span class="c-kw">if</span> <span class="c-fn">get_process_gpu_memory_bytes</span>(gpu_id) <span class="c-kw">is</span> <span class="c-kw">None</span>:
+        logger.<span class="c-fn">warning</span>(<span class="c-str">"process memory accounting unavailable; falling back ..."</span>)
+        profile_total = <span class="c-kw">None</span>
+...
+<span class="c-fn">create_sglang_infrastructure</span>(..., total_gpu_memory_fraction=profile_total)  <span class="c-com"># 把有效预算透传进引擎</span>
+</code></pre>
+    <p>解读三层逻辑：① 算出有效预算 0.85；② 把它<b>透传</b>给 <span class="inline">create_sglang_infrastructure</span>，让 SGLang 在“进程级显存”可用时按这个比例 profile；③ 如果环境拿不到进程级数据（比如某些容器/驱动），<b>优雅降级</b>回上游默认估算，绝不在不确定时硬上一个危险预算。这套“尝试更优 → 不行就安全回退”的写法非常值得学。</p>
+
+    <h4><span class="ix">4</span> 涉及的知识点（扫盲精讲）</h4>
+
+    <div class="kbox"><div class="k3">系统架构</div><div class="kt">多阶段流水线 colocated（共置）vs split（分卡）</div>
+      <p><b>是什么</b>：一个 Omni/TTS 系统由多个模型阶段组成。<b>共置</b>=全部塞进一张 GPU（省卡、省成本，但显存紧张、互相争用）；<b>分卡</b>=把不同阶段放到不同 GPU（宽裕但费卡）。</p>
+      <p><b>为什么需要</b>：生产部署要在“成本”和“稳定性”间权衡。单卡共置最便宜，但显存预算稍有不慎就 OOM——正是本 PR 要根治的。</p>
+      <p><b>本 PR 里怎么用</b>：用一个 <span class="inline">colocated</span> 布尔，让同一份 stage 工厂同时支持两种拓扑，并只给共置路打上更精细的预算。</p>
+    </div>
+
+    <div class="kbox"><div class="k3">推理基建（核心）</div><div class="kt">KV cache 与 <span class="inline">mem_fraction_static</span> / 显存 profiling</div>
+      <p><b>是什么</b>：自回归生成时，每个已生成 token 的 Key/Value 向量要缓存起来供后续步骤注意力复用，这就是 <b>KV cache</b>，它随序列变长而增大，是推理显存的大头。SGLang 启动时会做一次“显存 profiling”：先加载模型权重，剩下的显存按 <span class="inline">mem_fraction_static</span> 预先<b>静态分配</b>成一个大 KV cache 池（避免运行时反复申请/碎片化）。</p>
+      <p><b>为什么需要</b>：预分配一个固定池能让显存可控、避免运行中 OOM，也利于做 continuous batching。但“按整卡空闲算”在共置场景会高估可用量。</p>
+      <p><b>本 PR 里怎么用</b>：把“整卡空闲”估算换成“进程级核算（只算本进程实际占用）+ 显式预留 codec”，让 KV cache 池的大小既不浪费也不踩 OOM。</p>
+    </div>
+
+    <div class="kbox"><div class="k3">显存核算</div><div class="kt">进程级显存核算（process-scoped accounting）vs 整卡空闲</div>
+      <p><b>是什么</b>：“整卡空闲”= 看 <span class="inline">nvidia-smi</span> 那种全卡剩余；“进程级”= 精确知道<b>当前这个 Python 进程</b>自己占了多少。共置时同卡上别的阶段也在占显存，只有进程级数才能让 AR 准确知道“我还能安全吃多少”。</p>
+      <p><b>本 PR 里怎么用</b>：通过 <span class="inline">get_process_gpu_memory_bytes(gpu_id)</span> 判断该机制是否可用；可用就走精确预算，不可用就 warning + 回退。</p>
+    </div>
+
+    <div class="kbox"><div class="k3">设计模式</div><div class="kt">不可变值对象 + 显式校验 + 优雅降级</div>
+      <p><b>是什么</b>：用 <span class="inline">@dataclass(frozen=True)</span> 的 <span class="inline">_ArMemoryBudget</span> 把“算出来的预算结果”打包成一个只读对象传递；所有边界（reserve∈[0,1)、effective≥0.1、explicit≤total）都显式 <span class="inline">raise ValueError</span> 校验；环境不支持时不崩溃而是降级。</p>
+      <p><b>为什么需要</b>：显存预算错了会直接 OOM 崩服务，属于“失败代价很高”的配置，必须把非法值<b>在启动期、配置期就拦下来</b>，而不是运行到一半才炸。</p>
+    </div>
+
+    <h4><span class="ix">5</span> 性能数据 &amp; 我能学到什么</h4>
+    <table class="perf">
+      <tr><th>指标（SeedTTS 英文, 1088 样本, 并发 8）</th><th>upstream/main</th><th>本 PR</th><th>变化</th></tr>
+      <tr><td>吞吐 Throughput (req/s)</td><td>4.772</td><td>5.199</td><td class="good">+8.9%</td></tr>
+      <tr><td>RTF 均值（越低越好）</td><td>0.4014</td><td>0.3677</td><td class="good">−8.4%</td></tr>
+      <tr><td>延迟 p99 (s)</td><td>3.131</td><td>2.660</td><td class="good">−15.0%</td></tr>
+      <tr><td>输出吞吐 (tok/s)</td><td>262.5</td><td>286.0</td><td class="good">+9.0%</td></tr>
+      <tr><td>WER 语料级（越低越好）</td><td>2.29%</td><td>2.08%</td><td class="good">−0.21pp</td></tr>
+    </table>
+    <p class="small"><b>RTF</b>（Real-Time Factor，实时率）= 合成耗时 / 音频时长，&lt;1 表示比实时还快；<b>WER</b>（Word Error Rate，词错误率）= 把合成语音再转写回文字与原文的差异，衡量音质/可懂度。两者同时变好说明：把显存预算调对后，能塞下更大的 KV cache → 支持更高并发 → 吞吐涨，而音质不退反进。</p>
+    <div class="takeaway">
+      <p><b>可复用的工程思想：</b></p>
+      <ul>
+        <li><b>“魔数”要变“具名常量 + 显式预算公式”</b>：旧的 0.5/0.6 拍脑袋值升级成 <span class="inline">total − reserve = effective</span> 的可解释公式。</li>
+        <li><b>配置层做强校验，失败要趁早</b>：把会导致 OOM 的非法预算在配置期 <span class="inline">raise</span>，而不是运行期崩。</li>
+        <li><b>“能力探测 + 优雅降级”</b>：先探测进程级核算是否可用，不可用就回退到安全默认，保证在各种环境都不崩。</li>
+        <li><b>一份工厂、布尔开关产出多拓扑</b>：colocated/split 复用同一段 <span class="inline">_stages</span>，减少分叉。</li>
+        <li><b>改配置也要写单测</b>：PR 为“默认/分卡 wiring、预算透传、无进程核算回退、显式预算校验”都加了单测。</li>
+      </ul>
+      <p><b>想深入该补的前置知识</b>：GPU 显存分配器与碎片、KV cache 容量如何决定最大并发与 batch、continuous batching 原理、bf16 权重的显存占用估算、多进程共享单卡的显存隔离。</p>
+    </div>
+  </div>
+</details>
+
+<!-- ============================= PR 770 ============================= -->
+<details class="card" id="pr770">
+  <summary>
+    <span class="pr-num">#770</span>
+    <span>
+      <span class="pr-ttl">[Qwen3-Omni] benchmarks: concurrency / rollout stress runner</span>
+      <div class="pr-meta"><span class="pill merged">MERGED</span><span class="pill topic">多模态·Qwen3-Omni</span><span class="pill topic">压测·可观测性</span>作者 @luojiaxuan · 合并于 2026-06-16 04:45 UTC · <a class="ext" href="https://github.com/sgl-project/sglang-omni/pull/770">查看 PR</a></div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+
+    <h4><span class="ix">1</span> PR 概览</h4>
+    <ul>
+      <li><b>编号 / 作者 / 状态</b>：#770 · @luojiaxuan · <b>已合并 (merged)</b></li>
+      <li><b>链接</b>：<a class="ext" href="https://github.com/sgl-project/sglang-omni/pull/770">github.com/sgl-project/sglang-omni/pull/770</a></li>
+      <li><b>一句话</b>：新增一个<b>独立的并发/rollout 压测脚本</b>（<span class="inline">benchmark_omni_rollout_stress.py</span>），用<b>同一个多模态提示词</b>在 1→2→4→8→16→32 不同并发级别下反复轰炸 Qwen3-Omni 服务，记录每档的 req/s、输出 tok/s、p50/p95/p99 延迟，外加服务端 profiler 事件——<b>纯诊断工具，不改任何运行时代码</b>。</li>
+    </ul>
+
+    <h4><span class="ix">2</span> 它解决了什么问题</h4>
+    <p>Qwen3-Omni 是一个<b>全模态（Omni）大模型</b>：能吃文本+图像+音频，还能吐文本+语音。要把它放到生产里服务，工程师必须回答一个问题：<b>“当很多请求同时打进来，它会怎么表现？吞吐能不能线性涨？延迟会不会爆？”</b> 这正是 issue #760（并发服务表现）要刻画的。</p>
+    <p>痛点：在此之前缺一个<b>可复现的、标准化的压测手段</b>来量化“并发扩展性”。尤其是 <b>rollout 场景</b>——同一个 prompt 被复制 N 份并发跑（强化学习采样、多候选生成里极常见），这种“同提示多路并发”有它独特的缓存/调度行为，需要专门工具刻画 before/after 数字。</p>
+    <p>作者特意强调它放在 <span class="inline">benchmarks/stress_tests/</span>（压测/诊断）而非 <span class="inline">benchmarks/eval/</span>（能力评测），<b>避免被误当成标准精度指标</b>——这是很清醒的工程边界意识。（注：合并入库时落在了 <span class="inline">benchmarks/eval/benchmark_omni_rollout_stress.py</span>。）</p>
+
+    <h4><span class="ix">3</span> 具体做了什么改动</h4>
+    <p>纯新增一个文件，约 333 行。核心是一个 <span class="inline">asyncio</span> 异步压测器。逐块看关键逻辑：</p>
+
+    <p><b>(A) 把同一个样本复制 N 份，制造“同提示多路并发”</b></p>
+<pre><code><span class="c-kw">def</span> <span class="c-fn">_duplicate_prompt</span>(sample: MMMUSample, count: int):
+    <span class="c-kw">return</span> [
+        <span class="c-fn">replace</span>(sample, sample_id=<span class="c-str">f"{sample.sample_id}:rollout-n{count}-{index}"</span>)
+        <span class="c-kw">for</span> index <span class="c-kw">in</span> <span class="c-fn">range</span>(count)
+    ]
+</code></pre>
+    <p>解读：<span class="inline">dataclasses.replace</span> 复制一份样本只改 <span class="inline">sample_id</span>（保证每路有唯一 ID 便于追踪），prompt 内容完全相同——这就模拟出 rollout 那种“同一输入并发多路”。</p>
+
+    <p><b>(B) 单个请求如何发：构造多模态 payload + 解码音频校验</b></p>
+<pre><code>payload = {
+    <span class="c-str">"model"</span>: model_name,
+    <span class="c-str">"messages"</span>: [{<span class="c-str">"role"</span>: <span class="c-str">"user"</span>, <span class="c-str">"content"</span>: sample.prompt}],
+    <span class="c-str">"images"</span>: [<span class="c-fn">image_to_data_uri</span>(img) <span class="c-kw">for</span> img <span class="c-kw">in</span> sample.images],  <span class="c-com"># 图像转 data URI</span>
+    <span class="c-str">"modalities"</span>: [<span class="c-str">"text"</span>, <span class="c-str">"audio"</span>],   <span class="c-com"># 要求同时输出文本和语音</span>
+    <span class="c-str">"max_tokens"</span>: max_tokens, <span class="c-str">"stream"</span>: <span class="c-kw">False</span>,
+    <span class="c-str">"user"</span>: rollout_group_id,            <span class="c-com"># 同组打同一个 user 标记</span>
+}
+<span class="c-kw">if</span> enable_audio:
+    payload[<span class="c-str">"audio"</span>] = {<span class="c-str">"format"</span>: <span class="c-str">"wav"</span>}
+...
+<span class="c-com"># 拿到响应后，把 base64 音频解码一次——只为暴露传输/编码损坏，</span>
+<span class="c-com"># 又不必为每路 rollout 真写一个 WAV 文件（省 IO）</span>
+base64.<span class="c-fn">b64decode</span>(audio_b64)
+</code></pre>
+    <p>解读：这段体现了对<b>全模态输出</b>的正确处理——请求里 <span class="inline">modalities=["text","audio"]</span> 表示要模型既回文本又回语音；返回的语音是 base64 编码的 WAV，作者只 <span class="inline">b64decode</span> 一次做“健康检查”（坏数据会在这里抛错），但不落盘，把压测的 IO 噪声降到最低。这是压测脚本的讲究：<b>测的是服务，不要让客户端自己成为瓶颈</b>。</p>
+
+    <p><b>(C) 主循环：逐档并发级别压测 + 收集指标</b></p>
+<pre><code><span class="c-kw">for</span> count <span class="c-kw">in</span> args.rollout_counts:          <span class="c-com"># 1,2,4,8,16,32 逐档加压</span>
+    duplicated = <span class="c-fn">_duplicate_prompt</span>(base_sample, count)
+    runner = <span class="c-fn">BenchmarkRunner</span>(<span class="c-fn">RunConfig</span>(
+        max_concurrency=count,
+        request_rate=<span class="c-fn">float</span>(<span class="c-str">"inf"</span>),       <span class="c-com"># 闭环：不限速，一有空位立刻补请求</span>
+        warmup=<span class="c-num">0</span>,
+    ))
+    request_results = <span class="c-kw">await</span> runner.<span class="c-fn">run</span>(duplicated, send_fn)
+    speed = <span class="c-fn">compute_speed_metrics</span>(request_results, wall_clock_s=runner.wall_clock_s)
+    <span class="c-fn">print_speed_summary</span>(speed, args.model, count, ...)   <span class="c-com"># 打印 req/s、tok/s、p50/p95/p99</span>
+</code></pre>
+    <p>解读：<span class="inline">request_rate=inf</span> + <span class="inline">max_concurrency=count</span> 构成一个<b>闭环（closed-loop）</b>压测——不是按固定速率发请求（开环），而是“维持 count 个并发在飞，一个完成立刻补一个”，这样测出的是服务在<b>给定并发压力下的饱和吞吐</b>。</p>
+
+    <p><b>(D) 包裹服务端 profiler：定位瓶颈在哪一段</b></p>
+<pre><code><span class="c-kw">if</span> <span class="c-kw">not</span> args.no_profile:
+    <span class="c-kw">await</span> <span class="c-fn">_start_request_profile</span>(session, base_url, run_id=run_id, event_dir=event_dir)
+<span class="c-kw">try</span>:
+    ... <span class="c-com"># 跑所有并发档</span>
+<span class="c-kw">finally</span>:
+    <span class="c-kw">if</span> <span class="c-kw">not</span> args.no_profile:
+        <span class="c-kw">await</span> <span class="c-fn">_stop_request_profile</span>(session, base_url, run_id=run_id)  <span class="c-com"># finally 保证一定关</span>
+</code></pre>
+    <p>解读：通过 HTTP 调服务端的 <span class="inline">/start_request_profile</span> 和 <span class="inline">/stop_request_profile</span>，让<b>服务端</b>在压测期间录制内部事件（哪段排队、哪段算）。注意用 <span class="inline">try/finally</span> 保证即使压测中途异常，profiler 也一定被关掉——否则会一直录、泄漏资源。压测前后还各打一次 <span class="inline">/health</span>，对比服务有没有被压挂。</p>
+
+    <h4><span class="ix">4</span> 涉及的知识点（扫盲精讲）</h4>
+
+    <div class="kbox"><div class="k3">领域概念</div><div class="kt">Qwen3-Omni 与“全模态（any-to-any）”服务</div>
+      <p><b>是什么</b>：Omni 模型能接收多种模态（文+图+音）并生成多种模态（文+语音）。在 SGLang-Omni 里，它常是一个<b>多阶段</b>系统：thinker（理解+生成文本）→ talker（把文本转成语音 token）→ codec/vocoder（出波形）。</p>
+      <p><b>本 PR 里怎么用</b>：payload 里 <span class="inline">modalities=["text","audio"]</span>、带 <span class="inline">images</span>、带 <span class="inline">talker_max_new_tokens</span>，正是在压测这条“图文进、文+语音出”的全链路。</p>
+    </div>
+
+    <div class="kbox"><div class="k3">服务压测</div><div class="kt">闭环(closed-loop) vs 开环(open-loop)、并发 vs 速率</div>
+      <p><b>是什么</b>：<b>开环</b>按固定 QPS 发请求（模拟真实用户到达，关心“能否扛住 X QPS”）；<b>闭环</b>维持固定在飞并发数（关心“满负荷下的极限吞吐/扩展性”）。</p>
+      <p><b>为什么需要</b>：要刻画“并发扩展性曲线”，闭环最直接——逐档抬高并发，看吞吐是否线性增长、延迟何时拐点爆炸。</p>
+      <p><b>本 PR 里怎么用</b>：<span class="inline">request_rate=inf</span> + <span class="inline">max_concurrency=count</span> = 闭环；扫 1/2/4/8/16/32 得到扩展性曲线。</p>
+    </div>
+
+    <div class="kbox"><div class="k3">rollout</div><div class="kt">同提示多路 rollout 与 KV / 前缀缓存</div>
+      <p><b>是什么</b>：rollout 指同一输入并发跑多条生成（RL 训练采样、best-of-n 都靠它）。同提示意味着<b>共享前缀</b>，理论上可被 SGLang 的 RadixAttention / 前缀缓存复用，省掉重复的 prefill 计算。</p>
+      <p><b>为什么需要压它</b>：同提示多路是否真能高效复用前缀、调度会不会打架，直接决定 RL 数据生成的成本。</p>
+      <p><b>本 PR 里怎么用</b>：<span class="inline">_duplicate_prompt</span> 造出 N 份同提示并打同一 <span class="inline">user/rollout_group_id</span>，专门压这种流量。</p>
+    </div>
+
+    <div class="kbox"><div class="k3">指标</div><div class="kt">p50/p95/p99 尾延迟、req/s、tok/s 与 profiler</div>
+      <p><b>是什么</b>：均值会骗人，<b>p95/p99 尾延迟</b>才反映“最差那批用户的体验”；<span class="inline">req/s</span> 是吞吐，<span class="inline">tok/s</span> 是生成速度。<b>profiler 事件</b>则把端到端时间拆成“排队/prefill/decode”各段，定位瓶颈。</p>
+      <p><b>本 PR 里怎么用</b>：每档都 <span class="inline">compute_speed_metrics</span> + <span class="inline">print_speed_summary</span> 输出这些数，结果连同 health/profile 存成 <span class="inline">rollout_stress_results.json</span> 供前后对比。</p>
+    </div>
+
+    <div class="kbox"><div class="k3">异步编程</div><div class="kt">asyncio + aiohttp 做高并发客户端</div>
+      <p><b>是什么</b>：压测客户端要同时维持几十路在飞请求，用线程会很重；<span class="inline">asyncio</span> 协程 + <span class="inline">aiohttp</span> 异步 HTTP 能用单线程高效管理大量并发连接（IO 等待时切去做别的）。</p>
+      <p><b>本 PR 里怎么用</b>：<span class="inline">send_fn</span> 是 <span class="inline">async</span> 协程，<span class="inline">BenchmarkRunner</span> 用 <span class="inline">max_concurrency</span> 控制同时在飞的协程数；超时用 <span class="inline">aiohttp.ClientTimeout</span> 兜底。</p>
+    </div>
+
+    <h4><span class="ix">5</span> 我能学到什么</h4>
+    <div class="takeaway">
+      <p><b>可复用的工程思想：</b></p>
+      <ul>
+        <li><b>诊断工具与评测工具要分家</b>：放在 <span class="inline">stress_tests/</span> 而非 <span class="inline">eval/</span>，避免把压测数字误读成模型精度——清晰的目录语义就是清晰的工程契约。</li>
+        <li><b>不改运行时、只加观测</b>：本 PR “零运行时代码改动”，把测量和被测系统解耦，风险极低却能产出决策依据。</li>
+        <li><b>客户端别成为瓶颈</b>：音频只 decode 不落盘、用 asyncio 而非线程，确保测的是服务端而非客户端。</li>
+        <li><b>资源用 try/finally 收尾</b>：profiler 一定关、health 前后各探一次——压测脚本的健壮性细节。</li>
+        <li><b>大 PR 拆小</b>：这是 #769 拆成的三连之一（#770 工具 / #771 prefill 批处理+TP 修复 / #772 准入+遥测），单一职责、易 review。</li>
+      </ul>
+      <p><b>想深入该补的前置知识</b>：RadixAttention / 前缀缓存如何复用同提示、continuous batching 调度、开环 vs 闭环压测方法论、Little's Law（并发=吞吐×延迟）、asyncio 事件循环、Qwen3-Omni 的 thinker-talker 多阶段结构。</p>
+    </div>
+  </div>
+</details>
+
+<!-- ============================= CI 合并节 ============================= -->
+<details class="card" id="ci">
+  <summary>
+    <span class="pr-num">CI</span>
+    <span>
+      <span class="pr-ttl">#814 / #806 / #727 — CI 与权限基建（合并简述）</span>
+      <div class="pr-meta"><span class="pill merged">MERGED ×3</span><span class="pill ci">工程基建</span>技术含量较低，合并为一节</div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+    <p>这三个 PR 都属于 <b>CI / 权限基建</b>，不触及模型或推理逻辑，故合并简述：</p>
+    <ul>
+      <li><b>#727 · feat(ci): add MOSS TTS to TTS CI with random model selection</b>（@yijiangt，关联 issue #724）：把 TTS CI 从“只测 Higgs”扩展成<b>多模型随机抽一个测</b>（Higgs 或 MOSS），保持每次提交的 CI 成本不变。新增 <span class="inline">pick-tts-model</span> 任务随机选模型，引入 <span class="inline">TtsCiModelPreset</span> 预设；MOSS 走 <span class="inline">gate_thresholds=False</span>（只测量打印、不卡 CI）。<b>学习点</b>：在固定算力预算下用“随机抽样”扩大覆盖面，是 CI 设计的实用技巧；新增模型只需改 3 处，扩展性好。</li>
+      <li><b>#814 · [CI] Enable Labels for TTS CI</b>（@zhaochenyang20）：让 TTS CI 支持 label 触发（打 <span class="inline">run-ci</span> 等标签才在自建 GPU runner 上跑），节省宝贵的 GPU CI 资源。</li>
+      <li><b>#806 · [CI] Add luojiaxuan to CI permissions</b>（@luojiaxuan）：在 <span class="inline">.github/CI_PERMISSIONS.json</span> 给某贡献者授予 <span class="inline">/tag-run-ci-label</span> 和 <span class="inline">/rerun-failed-ci</span> 权限，并用脚本校验 JSON 合法性。</li>
+    </ul>
+    <p class="small">这三者共同反映 SGLang-Omni 的一个工程现实：<b>GPU CI 很贵</b>，所以围绕“标签触发、随机抽测、细粒度权限”做了一整套省钱又可控的 CI 治理。</p>
+  </div>
+</details>
+
+<div class="divider"></div>
+
+<div class="takeaway">
+  <p><b>今日整体洞察（把 6 个 PR 串起来看）：</b>这一天的合并清晰地勾勒出 SGLang-Omni 的两条主线——
+  <b>① 推理性能与显存的精打细算</b>（#816 用 kernel 融合省采样开销、#810 用进程级核算把单卡共置的显存预算调对）；
+  <b>② 可观测性与 CI 治理</b>（#770 给 Qwen3-Omni 补并发压测工具、#727/#814/#806 把昂贵的 GPU CI 管得更省更细）。
+  两条线背后是同一个工程哲学：<b>先测量、再优化；改动要等价且最小、配置要强校验、能力探测后优雅降级</b>。对一个服务多种 TTS/Omni 模型的多阶段推理框架来说，这正是把“能跑”推向“跑得稳、跑得省”的日常功夫。</p>
+</div>
+
+<footer>
+  本报告由自动化日报例程于 2026-06-17 生成 · 数据源：GitHub sgl-project/sglang-omni · 仅供学习参考<br>
+  讲解深度优先于覆盖广度：3 个核心 PR 精讲 + 3 个 CI PR 简述。
+</footer>
+
+</div>
+</body>
+</html>
