@@ -68,6 +68,50 @@ def reverse_delay_pattern(delayed_LN: torch.Tensor) -> torch.Tensor:
     return out
 
 
+def delay_pattern_action_mask(
+    delayed_LN: torch.Tensor,
+    *,
+    eoc_id: int = EOC_ID,
+) -> torch.Tensor:
+    """``[L, N]`` boolean mask: ``True`` at trainable real-audio actions.
+
+    Under the delay pattern, codebook ``c`` carries real (sampled) audio at
+    delayed rows ``c <= r < c + T``, where ``T`` is the raw, un-delayed audio
+    length. Leading rows ``r < c`` are forced BOC scaffolding (overwritten, never
+    sampled) and trailing rows ``r >= c + T`` are EOC wind-down padding; neither
+    is a trainable RL action. The action set is therefore the ``T x N``
+    parallelogram, matching the inverse of :func:`apply_delay_pattern`.
+
+    ``T`` is recovered as the first row where codebook 0 emits ``eoc_id``: cb0 is
+    un-delayed (offset 0), so its EOC marks the raw length. If cb0 never emits EOC
+    (e.g. length-truncated generation), ``T = L`` and every post-delay position
+    counts as an action.
+
+    The terminal cb0 EOC at row ``T`` is itself excluded (it is the stop marker,
+    not an audio action); revisit this if the stop decision should be trained.
+
+    Args:
+        delayed_LN: Generated codes in delayed layout, ``[L, N]`` with ``L >= 1``.
+        eoc_id: End-of-codebook sentinel used to locate the cb0 stop row.
+
+    Returns:
+        ``[L, N]`` ``torch.bool`` mask on ``delayed_LN.device``.
+    """
+    if delayed_LN.ndim != 2:
+        raise ValueError(
+            f"delayed_LN must be 2-D [L, N], got shape {tuple(delayed_LN.shape)}"
+        )
+    L, N = delayed_LN.shape
+    device = delayed_LN.device
+
+    cb0_eoc_rows = (delayed_LN[:, 0] == eoc_id).nonzero(as_tuple=False)
+    t_raw = int(cb0_eoc_rows[0].item()) if cb0_eoc_rows.numel() > 0 else L
+
+    r = torch.arange(L, device=device).unsqueeze(1)  # [L, 1]
+    c = torch.arange(N, device=device).unsqueeze(0)  # [1, N]
+    return (c <= r) & (r < c + t_raw)
+
+
 def truncate_rope_to_bf16(model: torch.nn.Module) -> None:
     """bf16-truncate sglang's fp32 ``cos_sin_cache`` in-place (stored as fp32)
     to match Higgs's bf16 training-time RoPE.
@@ -151,6 +195,7 @@ __all__ = [
     "BOC_ID",
     "EOC_ID",
     "apply_delay_pattern",
+    "delay_pattern_action_mask",
     "get_or_load_codec",
     "load_audio_to_24k",
     "resolve_checkpoint",

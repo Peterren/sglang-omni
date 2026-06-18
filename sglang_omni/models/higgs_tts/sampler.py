@@ -268,6 +268,61 @@ def _sample_independent_batched(
     return torch.where(greedy_B1, argmax_BN, sampled_BN).to(torch.long)
 
 
+def selected_token_logprobs(
+    logits_BNV: torch.Tensor,
+    codes_BN: torch.Tensor,
+    *,
+    temperature: torch.Tensor,
+    top_k_buf: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """Per-``(row, codebook)`` log-prob of the *selected* code, for RL rollout.
+
+    Convention mirrors SGLang's text rollout path exactly so that rollout
+    ``logp_old`` and train-time recomputed ``logp`` are the same function of the
+    logits (the replay-equivalence gate). For a sampled row the policy log-prob is
+    the **full-vocab** ``log_softmax(logits / temperature)`` evaluated at the
+    selected code -- top-k / top-p are sampling-time filters and do **not** truncate
+    the returned distribution (see ``sglang/srt/layers/sampler.py``: the
+    ``rl_on_policy_target`` branch returns ``log_softmax`` of the
+    temperature-scaled logits). Greedy rows (``temperature <= 1e-5`` or
+    ``top_k == 1``) use ``log_softmax`` of the **raw** logits, matching SGLang's
+    ``is_all_greedy`` branch.
+
+    ``codes_BN`` must be the actually-sampled codes (valid indices in
+    ``[0, V)``); pass the sampler output *before* the delay/EOC overwrite so the
+    log-prob reflects the true sampled token. Delay-triangle / wind-down / done
+    positions are non-actions and must be excluded by the action mask, not here.
+
+    Branchless (computes both greedy and sampled distributions, then
+    ``torch.where``) so it is safe to call inside a captured CUDA graph.
+
+    Args:
+        logits_BNV: Fused multi-codebook head logits, ``[B, N, V]``.
+        codes_BN: Selected code ids, ``[B, N]``, integer.
+        temperature: Per-row sampling temperature, ``[B]``.
+        top_k_buf: Optional per-row top-k, ``[B]``; only ``top_k == 1`` matters
+            here (it forces the greedy convention, as in the sampler).
+
+    Returns:
+        ``[B, N]`` float32 selected-action log-probs.
+    """
+    B, N, V = logits_BNV.shape
+    logits = logits_BNV.float()
+
+    safe_temp = temperature.clamp(min=_GREEDY_TEMP_THRESHOLD).view(B, 1, 1)
+    logprobs_sampled = torch.log_softmax(logits / safe_temp, dim=-1)
+    logprobs_greedy = torch.log_softmax(logits, dim=-1)
+
+    greedy_B1 = (temperature <= _GREEDY_TEMP_THRESHOLD).view(B, 1)
+    if top_k_buf is not None:
+        greedy_B1 = greedy_B1 | (top_k_buf == 1).view(B, 1)
+
+    logprobs_full = torch.where(
+        greedy_B1.unsqueeze(-1), logprobs_greedy, logprobs_sampled
+    )
+    return logprobs_full.gather(-1, codes_BN.long().unsqueeze(-1)).squeeze(-1)
+
+
 def batched_step(
     logits_BNV: torch.Tensor,
     state: HiggsBatchedSamplerState,
@@ -396,5 +451,6 @@ __all__ = [
     "HiggsSamplerState",
     "batched_step",
     "batched_step_direct",
+    "selected_token_logprobs",
     "step",
 ]
