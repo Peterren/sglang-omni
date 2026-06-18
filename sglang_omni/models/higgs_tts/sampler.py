@@ -34,11 +34,6 @@ class HiggsSamplerState:
     last_codes: torch.Tensor | None = None
 
 
-# ---------------------------------------------------------------------------
-# Batched (CUDA-Graph-compatible) sampler state
-# ---------------------------------------------------------------------------
-
-
 class HiggsBatchedSamplerState:
     """Per-request sampler state stored as ``[max_bs, ...]`` GPU tensors.
 
@@ -208,11 +203,6 @@ def step(
     return codes_N
 
 
-# ---------------------------------------------------------------------------
-# Batched (CUDA-Graph-friendly) sampler step
-# ---------------------------------------------------------------------------
-
-
 def _sample_independent_batched(
     logits_BNV: torch.Tensor,
     *,
@@ -275,38 +265,8 @@ def selected_token_logprobs(
     temperature: torch.Tensor,
     top_k_buf: torch.Tensor | None = None,
 ) -> torch.Tensor:
-    """Per-``(row, codebook)`` log-prob of the *selected* code, for RL rollout.
-
-    Convention mirrors SGLang's text rollout path exactly so that rollout
-    ``logp_old`` and train-time recomputed ``logp`` are the same function of the
-    logits (the replay-equivalence gate). For a sampled row the policy log-prob is
-    the **full-vocab** ``log_softmax(logits / temperature)`` evaluated at the
-    selected code -- top-k / top-p are sampling-time filters and do **not** truncate
-    the returned distribution (see ``sglang/srt/layers/sampler.py``: the
-    ``rl_on_policy_target`` branch returns ``log_softmax`` of the
-    temperature-scaled logits). Greedy rows (``temperature <= 1e-5`` or
-    ``top_k == 1``) use ``log_softmax`` of the **raw** logits, matching SGLang's
-    ``is_all_greedy`` branch.
-
-    ``codes_BN`` must be the actually-sampled codes (valid indices in
-    ``[0, V)``); pass the sampler output *before* the delay/EOC overwrite so the
-    log-prob reflects the true sampled token. Delay-triangle / wind-down / done
-    positions are non-actions and must be excluded by the action mask, not here.
-
-    Branchless (computes both greedy and sampled distributions, then
-    ``torch.where``) so it is safe to call inside a captured CUDA graph.
-
-    Args:
-        logits_BNV: Fused multi-codebook head logits, ``[B, N, V]``.
-        codes_BN: Selected code ids, ``[B, N]``, integer.
-        temperature: Per-row sampling temperature, ``[B]``.
-        top_k_buf: Optional per-row top-k, ``[B]``; only ``top_k == 1`` matters
-            here (it forces the greedy convention, as in the sampler).
-
-    Returns:
-        ``[B, N]`` float32 selected-action log-probs.
-    """
-    B, N, V = logits_BNV.shape
+    """Selected-action log-prob ``[B, N]`` of the sampled codes"""
+    B = logits_BNV.shape[0]
     logits = logits_BNV.float()
 
     safe_temp = temperature.clamp(min=_GREEDY_TEMP_THRESHOLD).view(B, 1, 1)
@@ -333,10 +293,13 @@ def batched_step(
     top_k_buf: torch.Tensor | None = None,
     boc_id: int = BOC_ID,
     eoc_id: int = EOC_ID,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Eager-path wrapper: gather pool state by ``row_indices``, call
     :func:`batched_step_direct`, scatter the new state back. Done rows
     return :data:`STOP_CODE` with state untouched.
+
+    Returns ``(out_codes, logprobs_BN)`` -- see :func:`batched_step_direct` for
+    the selected-action logprob semantics.
     """
     delay_count = state.delay_count[row_indices]
     eoc_countdown = state.eoc_countdown[row_indices]
@@ -349,6 +312,7 @@ def batched_step(
         new_eoc_countdown,
         new_generation_done,
         new_last_codes,
+        logprobs_BN,
     ) = batched_step_direct(
         logits_BNV,
         delay_count,
@@ -367,7 +331,7 @@ def batched_step(
     state.generation_done[row_indices] = new_generation_done
     state.last_codes[row_indices] = new_last_codes
 
-    return out_codes
+    return out_codes, logprobs_BN
 
 
 def batched_step_direct(
@@ -382,12 +346,18 @@ def batched_step_direct(
     top_k_buf: torch.Tensor | None = None,
     boc_id: int = BOC_ID,
     eoc_id: int = EOC_ID,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[
+    torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor
+]:
     """CG-friendly state machine: state in/out as direct ``[B, ...]`` tensors,
     no ``state``/``row_indices`` indirection. Caller persists the returned
     new state. See :func:`batched_step` for arg semantics.
+
+    Also returns ``logprobs_BN``: the selected-action logprob of each sampled
+    code, gathered before the delay/EOC overwrite (so masked positions carry a
+    meaningless value). Always computed -- cheap and branchless for CG capture.
     """
-    B, N, V = logits_BNV.shape
+    B, N, _ = logits_BNV.shape
     device = logits_BNV.device
 
     delay_count = delay_count.to(torch.long)
@@ -398,6 +368,9 @@ def batched_step_direct(
         temperature=temperature,
         top_p=top_p,
         top_k_buf=top_k_buf,
+    )
+    logprobs_BN = selected_token_logprobs(
+        logits_BNV, codes_BN, temperature=temperature, top_k_buf=top_k_buf
     )
 
     cb_idx = torch.arange(N, device=device).unsqueeze(0).expand(B, N)
@@ -441,6 +414,7 @@ def batched_step_direct(
         new_eoc_countdown,
         new_generation_done,
         new_last_codes,
+        logprobs_BN,
     )
 
 
