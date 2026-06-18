@@ -56,6 +56,8 @@ def _build_runner(
     runner._async_enabled = async_enabled
     runner._staging_slot = 0
     runner._host_staging_buffers = []
+    runner._lp_host_buffers = None
+    runner._lp_slot = 0
     runner._async_query_hit = 0
     runner._async_query_miss = 0
     runner.model = SimpleNamespace(
@@ -66,6 +68,7 @@ def _build_runner(
         _cg_active_last_codes=torch.zeros((n, n_codebooks), dtype=torch.long),
         _cg_was_done=torch.tensor(was_done),
         _cg_codes_BN=torch.tensor(codes_BN),
+        _cg_logprobs_BN=torch.zeros((n, n_codebooks), dtype=torch.float32),
         _cg_collect_staging=torch.zeros((n, n_codebooks + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(n, dtype=torch.int32),
@@ -81,7 +84,9 @@ def _build_runner(
         for i in range(n)
     ]
     datas = [
-        SimpleNamespace(req=reqs[i], output_codes=[], generation_done=False)
+        SimpleNamespace(
+            req=reqs[i], output_codes=[], output_logprobs=[], generation_done=False
+        )
         for i in range(n)
     ]
     sched = [SimpleNamespace(request_id=f"req{i}", data=datas[i]) for i in range(n)]
@@ -280,6 +285,8 @@ def test_async_real_pinned_path_matches_sync():
         runner._async_enabled = async_enabled
         runner._staging_slot = 0
         runner._host_staging_buffers = []
+        runner._lp_host_buffers = None
+        runner._lp_slot = 0
         runner._async_query_hit = 0
         runner._async_query_miss = 0
         runner.model = SimpleNamespace(
@@ -294,6 +301,7 @@ def test_async_real_pinned_path_matches_sync():
             _cg_codes_BN=torch.tensor(
                 [[1, 1, 1], [7, 8, 9], [20, 1, 2], [EOC_ID, 3, 4]], device=dev
             ),
+            _cg_logprobs_BN=torch.zeros((n, 3), dtype=torch.float32, device=dev),
             _cg_collect_staging=torch.zeros((n, 3 + 2), dtype=torch.long, device=dev),
             _sampler_pool=SimpleNamespace(
                 delay_count=torch.zeros(n, dtype=torch.int32, device=dev),
@@ -307,7 +315,9 @@ def test_async_real_pinned_path_matches_sync():
             for c in (1, 0, 0, 0)
         ]
         datas = [
-            SimpleNamespace(req=reqs[i], output_codes=[], generation_done=False)
+            SimpleNamespace(
+                req=reqs[i], output_codes=[], output_logprobs=[], generation_done=False
+            )
             for i in range(n)
         ]
         sched = [SimpleNamespace(request_id=f"req{i}", data=datas[i]) for i in range(n)]

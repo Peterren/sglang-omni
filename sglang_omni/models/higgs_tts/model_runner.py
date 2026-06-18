@@ -33,6 +33,26 @@ class HiggsTTSModelRunner(ModelRunner):
         super().__init__(tp_worker, output_processor)
         self._outbox: Any | None = None
         self._vocoder_target = "vocoder"
+        # Pinned host buffers for the async-decode logprob D2H, ping-ponged like
+        # the base runner's _host_staging_buffers (resolve(N) reads while
+        # launch(N+1) writes the other).
+        self._lp_host_buffers: list[torch.Tensor] | None = None
+        self._lp_slot = 0
+
+    def _next_lp_host_staging(self, device_buf: torch.Tensor) -> torch.Tensor:
+        if self._lp_host_buffers is None:
+            self._lp_host_buffers = [
+                torch.empty(
+                    device_buf.shape,
+                    dtype=device_buf.dtype,
+                    device="cpu",
+                    pin_memory=True,
+                )
+                for _ in range(2)
+            ]
+        buf = self._lp_host_buffers[self._lp_slot]
+        self._lp_slot ^= 1
+        return buf
 
     def set_stream_outbox(self, outbox: Any) -> None:
         self._outbox = outbox
@@ -81,6 +101,8 @@ class HiggsTTSModelRunner(ModelRunner):
         staging = self._decode_pack_gpu(n_real)
         host_buf = self._next_host_staging(self.model._cg_collect_staging)
         host_buf[:n_real].copy_(staging[:n_real], non_blocking=True)
+        lp_host = self._next_lp_host_staging(self.model._cg_logprobs_BN)
+        lp_host[:n_real].copy_(self.model._cg_logprobs_BN[:n_real], non_blocking=True)
         # Set next_token_ids (cb0) from GPU state now, with NO host sync, so the
         # AR input chain (next step's input_ids = this step's output_ids) is
         # available at launch — the host collect (post_decode_resolve) lags by
@@ -92,7 +114,7 @@ class HiggsTTSModelRunner(ModelRunner):
         result.next_token_ids = (
             self.model._cg_codes_BN[:n_real, 0].clamp_min(0).to(torch.long).clone()
         )
-        return host_buf
+        return host_buf, lp_host
 
     def post_decode_resolve(
         self, host_buf, result, forward_batch, schedule_batch, requests
@@ -105,8 +127,10 @@ class HiggsTTSModelRunner(ModelRunner):
         if len(requests) == 0:
             return
         n_real = len(requests)
+        host_buf, lp_host = host_buf
         self._decode_collect_host(
             host_buf[:n_real],
+            lp_host[:n_real],
             result,
             requests,
             next_token_device=None,
@@ -227,8 +251,10 @@ class HiggsTTSModelRunner(ModelRunner):
             )
         staging = self._decode_pack_gpu(n_real)
         combined_cpu = staging[:n_real].cpu()  # one blocking D2H (sync path)
+        logprobs_cpu = self.model._cg_logprobs_BN[:n_real].cpu()
         self._decode_collect_host(
             combined_cpu,
+            logprobs_cpu,
             result,
             requests,
             next_token_device=result.logits_output.next_token_logits.device,
@@ -258,6 +284,7 @@ class HiggsTTSModelRunner(ModelRunner):
     def _decode_collect_host(
         self,
         combined_cpu: torch.Tensor,
+        logprobs_cpu: torch.Tensor,
         result: Any,
         requests: list,
         *,
@@ -299,6 +326,7 @@ class HiggsTTSModelRunner(ModelRunner):
                 continue
             codes_N = codes_BN_cpu[b].to(torch.long).clone()
             data.output_codes.append(codes_N)
+            data.output_logprobs.append(logprobs_cpu[b].to(torch.float32).clone())
             data.generation_done = bool(gen_done_after_cpu[b])
             self._emit_code_chunk(sched_req, codes_N)
             self._mark_sampler_finished(req, data.generation_done)
@@ -375,6 +403,9 @@ class HiggsTTSModelRunner(ModelRunner):
                 continue
             codes_N = codes_log[-1]
             data.output_codes.append(codes_N.detach().cpu().clone())
+            lp_log = model._output_logprobs.get(rid)
+            if lp_log:
+                data.output_logprobs.append(lp_log[-1].detach().cpu().clone())
             data.generation_done = bool(model._sampler_pool.generation_done[row].item())
             self._emit_code_chunk(sched_req, data.output_codes[-1])
             self._mark_sampler_finished(req, data.generation_done)

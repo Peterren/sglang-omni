@@ -463,6 +463,7 @@ def test_higgs_model_runner_marks_sampler_finish() -> None:
     runner.model = SimpleNamespace(
         _rid_to_row={"req": 0},
         _output_codes={"req": [torch.tensor([EOC_ID, 1, 2])]},
+        _output_logprobs={"req": [torch.zeros(3)]},
         _sampler_pool=SimpleNamespace(generation_done=torch.tensor([True])),
     )
     req = SimpleNamespace(
@@ -470,7 +471,9 @@ def test_higgs_model_runner_marks_sampler_finish() -> None:
         finished_reason=None,
         finished=lambda: False,
     )
-    data = SimpleNamespace(req=req, output_codes=[], generation_done=False)
+    data = SimpleNamespace(
+        req=req, output_codes=[], output_logprobs=[], generation_done=False
+    )
     result = SimpleNamespace(
         logits_output=SimpleNamespace(next_token_logits=torch.zeros(1, 4))
     )
@@ -492,6 +495,7 @@ def test_higgs_model_runner_emits_latched_stream_metadata() -> None:
     runner.model = SimpleNamespace(
         _rid_to_row={"req": 0},
         _output_codes={"req": [torch.tensor([EOC_ID, 1, 2])]},
+        _output_logprobs={"req": [torch.zeros(3)]},
         _sampler_pool=SimpleNamespace(generation_done=torch.tensor([True])),
     )
     req = SimpleNamespace(
@@ -502,6 +506,7 @@ def test_higgs_model_runner_emits_latched_stream_metadata() -> None:
     data = SimpleNamespace(
         req=req,
         output_codes=[],
+        output_logprobs=[],
         generation_done=False,
         stream_metadata={
             "modality": "audio_codes",
@@ -567,6 +572,7 @@ def test_higgs_model_runner_marks_sampler_finish_cg() -> None:
         _cg_active_last_codes=torch.tensor([[1, 2, 3]]),
         _cg_was_done=torch.tensor([False]),
         _cg_codes_BN=torch.tensor([[EOC_ID, 1, 2]]),
+        _cg_logprobs_BN=torch.zeros((1, 3), dtype=torch.float32),
         _cg_collect_staging=torch.zeros((1, 3 + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(1, dtype=torch.int32),
@@ -576,7 +582,9 @@ def test_higgs_model_runner_marks_sampler_finish_cg() -> None:
         ),
     )
     req = SimpleNamespace(is_chunked=0, finished_reason=None, finished=lambda: False)
-    data = SimpleNamespace(req=req, output_codes=[], generation_done=False)
+    data = SimpleNamespace(
+        req=req, output_codes=[], output_logprobs=[], generation_done=False
+    )
     result = SimpleNamespace(
         logits_output=SimpleNamespace(next_token_logits=torch.zeros(1, 4))
     )
@@ -611,6 +619,7 @@ def test_higgs_model_runner_collect_cg_mixed_batch() -> None:
         _cg_active_last_codes=torch.zeros((n, k), dtype=torch.long),
         _cg_was_done=torch.tensor([False, True, False, False]),
         _cg_codes_BN=torch.tensor([[1, 1, 1], [7, 8, 9], [20, 1, 2], [EOC_ID, 3, 4]]),
+        _cg_logprobs_BN=torch.zeros((n, k), dtype=torch.float32),
         _cg_collect_staging=torch.zeros((n, k + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(n, dtype=torch.int32),
@@ -627,7 +636,10 @@ def test_higgs_model_runner_collect_cg_mixed_batch() -> None:
         SimpleNamespace(is_chunked=0, finished_reason=None, finished=lambda: False),
     ]
     datas = [
-        SimpleNamespace(req=r, output_codes=[], generation_done=False) for r in reqs
+        SimpleNamespace(
+            req=r, output_codes=[], output_logprobs=[], generation_done=False
+        )
+        for r in reqs
     ]
     result = SimpleNamespace(
         logits_output=SimpleNamespace(next_token_logits=torch.zeros(n, 4))
@@ -658,6 +670,7 @@ def test_higgs_model_runner_skips_already_finished_eager_request() -> None:
     runner.model = SimpleNamespace(
         _rid_to_row={"req": 0},
         _output_codes={"req": [torch.tensor([EOC_ID, 1, 2])]},
+        _output_logprobs={"req": [torch.zeros(3)]},
         _sampler_pool=SimpleNamespace(generation_done=torch.tensor([True])),
     )
     req = SimpleNamespace(
