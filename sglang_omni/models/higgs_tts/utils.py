@@ -73,8 +73,7 @@ def delay_pattern_action_mask(
     *,
     eoc_id: int = EOC_ID,
 ) -> torch.Tensor:
-    """``[L, N]`` boolean mask: ``True`` at trainable real-audio actions.
-    """
+    """``[L, N]`` boolean mask: ``True`` at trainable real-audio actions."""
     if delayed_LN.ndim != 2:
         raise ValueError(
             f"delayed_LN must be 2-D [L, N], got shape {tuple(delayed_LN.shape)}"

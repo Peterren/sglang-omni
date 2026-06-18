@@ -196,9 +196,12 @@ class HiggsStreamingVocoderScheduler(StreamingSimpleScheduler):
             "modality": "audio",
             "sample_rate": self._sample_rate,
         }
-        usage = self._build_usage(HiggsTtsState.from_dict(payload.data))
+        final_state = HiggsTtsState.from_dict(payload.data)
+        usage = self._build_usage(final_state)
         if usage is not None:
             final_data["usage"] = usage
+        if final_state.omni_rollout is not None:
+            final_data["omni_rollout"] = final_state.omni_rollout
         messages.append(
             OutgoingMessage(
                 request_id=request_id,
@@ -485,6 +488,8 @@ class HiggsStreamingVocoderScheduler(StreamingSimpleScheduler):
         usage = self._build_usage(state)
         if usage is not None:
             data["usage"] = usage
+        if state.omni_rollout is not None:
+            data["omni_rollout"] = state.omni_rollout
         payload.data = data
         return payload
 
