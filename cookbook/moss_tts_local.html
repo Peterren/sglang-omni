@@ -587,8 +587,8 @@ the transcript materially improves cloning quality.</p>
 </section>
 <section id="streaming">
 <h3>Streaming<a class="headerlink" href="#streaming" title="Link to this heading">#</a></h3>
-<p>Set <code class="docutils literal notranslate"><span class="pre">&quot;stream&quot;:</span> <span class="pre">true</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;response_format&quot;:</span> <span class="pre">&quot;pcm&quot;</span></code> to receive raw 48 kHz mono PCM
-chunks in real time. Pipe the stream through <code class="docutils literal notranslate"><span class="pre">ffmpeg</span></code> when you want a playable WAV file:</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">&quot;stream&quot;:</span> <span class="pre">true</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;response_format&quot;:</span> <span class="pre">&quot;pcm&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;stream_format&quot;:</span> <span class="pre">&quot;audio&quot;</span></code> to receive raw
+48 kHz mono PCM chunks in real time. Pipe the stream through <code class="docutils literal notranslate"><span class="pre">ffmpeg</span></code> when you want a playable WAV file:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-N<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/v1/audio/speech<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
@@ -596,7 +596,8 @@ chunks in real time. Pipe the stream through <code class="docutils literal notra
 <span class="s1">    &quot;ref_audio&quot;: &quot;https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav&quot;,</span>
 <span class="s1">    &quot;ref_text&quot;: &quot;We asked over twenty different people, and they all said it was his.&quot;,</span>
 <span class="s1">    &quot;stream&quot;: true,</span>
-<span class="s1">    &quot;response_format&quot;: &quot;pcm&quot;</span>
+<span class="s1">    &quot;response_format&quot;: &quot;pcm&quot;,</span>
+<span class="s1">    &quot;stream_format&quot;: &quot;audio&quot;</span>
 <span class="s1">  }&#39;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span><span class="p">|</span><span class="w"> </span>ffmpeg<span class="w"> </span>-f<span class="w"> </span>s16le<span class="w"> </span>-ar<span class="w"> </span><span class="m">48000</span><span class="w"> </span>-ac<span class="w"> </span><span class="m">1</span><span class="w"> </span>-i<span class="w"> </span>pipe:0<span class="w"> </span>output_stream.wav
 </pre></div>
@@ -671,39 +672,43 @@ free-text style directive, and an optional <code class="docutils literal notrans
 <td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
 <td><p>Stream raw PCM audio chunks (with <code class="docutils literal notranslate"><span class="pre">response_format:</span> <span class="pre">pcm</span></code>)</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">language</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stream_format</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sse</span></code></p></td>
+<td><p>Set to <code class="docutils literal notranslate"><span class="pre">audio</span></code> when piping raw PCM bytes directly into an audio decoder</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">language</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">null</span></code></p></td>
 <td><p>Optional target-language hint; omit to let the model infer</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">instructions</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">instructions</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">null</span></code></p></td>
 <td><p>Optional free-text style directive</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">token_count</span></code> / <code class="docutils literal notranslate"><span class="pre">duration_tokens</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">token_count</span></code> / <code class="docutils literal notranslate"><span class="pre">duration_tokens</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">null</span></code></p></td>
 <td><p>Target duration in codec frames; must be <code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">0</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_new_tokens</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_new_tokens</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">4096</span></code></p></td>
 <td><p>Maximum generated frames; an explicit value must be <code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">0</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">temperature</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">temperature</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1.0</span></code> text / <code class="docutils literal notranslate"><span class="pre">1.7</span></code> audio</p></td>
 <td><p>Sampling temperature; a single <code class="docutils literal notranslate"><span class="pre">temperature</span></code> overrides both channels</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">top_p</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">top_p</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1.0</span></code> text / <code class="docutils literal notranslate"><span class="pre">0.8</span></code> audio</p></td>
 <td><p>Top-p sampling; a single <code class="docutils literal notranslate"><span class="pre">top_p</span></code> overrides both channels</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">top_k</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">top_k</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">50</span></code> text / <code class="docutils literal notranslate"><span class="pre">25</span></code> audio</p></td>
 <td><p>Top-k sampling; a single <code class="docutils literal notranslate"><span class="pre">top_k</span></code> overrides both channels</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">repetition_penalty</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">repetition_penalty</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
 <td><p>Audio repetition penalty</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">null</span></code></p></td>
 <td><p>Non-negative integer; see <a class="reference internal" href="#seed-reproducibility"><span class="std std-ref">Seed Reproducibility</span></a></p></td>
 </tr>
