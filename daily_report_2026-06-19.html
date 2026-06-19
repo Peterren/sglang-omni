@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang-Omni 每日 PR 学习日报 · 2026-06-19</title>
+<style>
+  :root{
+    --bg:#0f1117; --card:#171a21; --card2:#1d212b; --ink:#e6e9ef; --muted:#9aa4b2;
+    --accent:#7c83ff; --accent2:#38d9a9; --warn:#ffb454; --line:#2a2f3a;
+    --code-bg:#11141b; --kw:#c792ea; --str:#c3e88d; --com:#5c6370; --fn:#82aaff; --num:#f78c6c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.75;font-size:16px;}
+  .wrap{max-width:1000px;margin:0 auto;padding:32px 22px 80px;}
+  header.top{border:1px solid var(--line);background:linear-gradient(135deg,#1b1f2a,#13161d);
+    border-radius:18px;padding:30px 30px 22px;margin-bottom:26px;}
+  header.top h1{margin:0 0 6px;font-size:27px;letter-spacing:.3px;}
+  header.top .sub{color:var(--muted);font-size:14.5px;}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}
+  .pill{font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);
+    background:#11151d;color:var(--muted);}
+  .pill.a{color:#cfd3ff;border-color:#3a3f7a;background:#191c34;}
+  .pill.b{color:#bff3e0;border-color:#1f5d4c;background:#102019;}
+  .stats{display:flex;flex-wrap:wrap;gap:14px;margin-top:20px;}
+  .stat{flex:1;min-width:150px;background:var(--card2);border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;}
+  .stat .n{font-size:24px;font-weight:700;color:var(--accent);}
+  .stat .n.g{color:var(--accent2);}
+  .stat .l{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .toc{margin:22px 0 8px;padding:16px 20px;background:var(--card);border:1px solid var(--line);border-radius:14px;}
+  .toc h3{margin:0 0 10px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .toc ol{margin:0;padding-left:20px;}
+  .toc li{margin:5px 0;}
+  .toc a{color:#cdd2ff;text-decoration:none;}
+  .toc a:hover{text-decoration:underline;}
+
+  details.card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    margin:20px 0;overflow:hidden;}
+  details.card[open]{box-shadow:0 0 0 1px #2c3350 inset;}
+  summary{cursor:pointer;list-style:none;padding:20px 24px;display:flex;gap:14px;align-items:flex-start;}
+  summary::-webkit-details-marker{display:none;}
+  .num-badge{flex:none;width:34px;height:34px;border-radius:10px;background:#23284a;color:#c9cdff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;border:1px solid #383f73;}
+  .sm-title{font-size:18.5px;font-weight:650;margin:0;}
+  .sm-meta{color:var(--muted);font-size:13px;margin-top:5px;display:flex;flex-wrap:wrap;gap:6px 14px;}
+  .tag{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;border:1px solid var(--line);}
+  .tag.merged{color:#bff3e0;border-color:#1f5d4c;background:#102019;}
+  .tag.core{color:#cfd3ff;border-color:#3a3f7a;background:#191c34;}
+  .tag.docs{color:#ffd9a8;border-color:#6b4f25;background:#241a0e;}
+  .chev{margin-left:auto;color:var(--muted);font-size:13px;align-self:center;flex:none;}
+  details[open] .chev .c1{display:none}
+  details:not([open]) .chev .c2{display:none}
+
+  .body{padding:4px 26px 26px;border-top:1px solid var(--line);}
+  h4.sec{font-size:15.5px;margin:26px 0 10px;padding-left:11px;border-left:3px solid var(--accent);color:#dfe3ff;}
+  h4.sec.k{border-left-color:var(--accent2);color:#d6fff0;}
+  p{margin:10px 0;}
+  .lead{color:#d3d8e2;}
+  ul,ol{padding-left:22px;}
+  li{margin:6px 0;}
+  code.inl{background:#222734;border:1px solid #2c3340;border-radius:5px;padding:1px 6px;
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:13.5px;color:#ffd9b0;}
+  pre{background:var(--code-bg);border:1px solid #232838;border-radius:12px;padding:15px 16px;overflow-x:auto;
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:13px;line-height:1.6;margin:14px 0;}
+  pre .c{color:var(--com);font-style:italic;}
+  pre .k{color:var(--kw);}
+  pre .s{color:var(--str);}
+  pre .f{color:var(--fn);}
+  pre .n{color:var(--num);}
+  .file{font-size:12px;color:var(--muted);margin:16px 0 -6px;font-family:Consolas,monospace;}
+  .note{background:#15212a;border:1px solid #224050;border-radius:10px;padding:12px 16px;margin:14px 0;font-size:14.5px;}
+  .note.warn{background:#241a0e;border-color:#6b4f25;}
+  .kbox{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:4px 18px 14px;margin:14px 0;}
+  .kbox .kh{font-weight:650;color:#a9efd6;margin:14px 0 4px;font-size:15px;}
+  .three{display:grid;grid-template-columns:90px 1fr;gap:4px 12px;margin:8px 0;font-size:14.5px;}
+  .three .lab{color:var(--accent2);font-weight:600;}
+  .analogy{color:#ffd9a8;}
+  table.scope{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+  table.scope th,table.scope td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  table.scope th{background:#1c2230;color:#cdd2ff;}
+  a.lnk{color:#8ea0ff;}
+  footer{margin-top:40px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:20px;}
+  .divlight{height:1px;background:var(--line);margin:8px 0 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>📘 SGLang-Omni 每日 PR 学习日报</h1>
+  <div class="sub">日期：2026-06-19 ｜ 仓库：<a class="lnk" href="https://github.com/sgl-project/sglang-omni">sgl-project/sglang-omni</a> ｜ 统计窗口：过去 24 小时内 <b>merged</b> 的 PR</div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">4</div><div class="l">窗口内合并的 PR 总数</div></div>
+    <div class="stat"><div class="n g">2</div><div class="l">核心深度讲解（Omni / 多阶段）</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">文档类（MOSS-TTS，简述）</div></div>
+    <div class="stat"><div class="n g">25+</div><div class="l">展开讲解的知识点</div></div>
+  </div>
+
+  <div class="pills">
+    <span class="pill a">主题：可复现采样 / Seed</span>
+    <span class="pill a">主题：RL Rollout 基础设施</span>
+    <span class="pill b">架构：Thinker–Talker 两阶段</span>
+    <span class="pill b">架构：离散 TTS 采样器</span>
+    <span class="pill">概念：Tensor Parallelism</span>
+    <span class="pill">概念：CUDA Graph</span>
+    <span class="pill">概念：logprobs / 自回归解码</span>
+  </div>
+</header>
+
+<div class="note">
+  <b>编辑说明（讲解深度优先于覆盖广度）：</b>本期把两个真正与 <b>Omni / 多模态 / 多阶段架构</b> 强相关的 PR
+  （<b>#824 统一采样种子</b> 与 <b>#785 RL Rollout 端点</b>）讲透；另外两个是 <b>MOSS-TTS 文档</b> PR（#819、#792），
+  与多模态相关但属于纯文档改动，放在末尾简述，不展开。
+</div>
+
+<div class="toc">
+  <h3>今日目录</h3>
+  <ol>
+    <li><a href="#pr824">#824 · feat(sampling)：把 seed 从 API 一路打通到 model runner，统一全部 AR 采样模型的可复现性</a> <span class="tag core">核心</span></li>
+    <li><a href="#pr785">#785 · [RL] 新增 Miles 兼容的 <code class="inl">/generate</code> rollout 端点</a> <span class="tag core">核心</span></li>
+    <li><a href="#pr819">#819 · [Docs] 修正 MOSS-TTS-Local 流式命令格式</a> <span class="tag docs">文档</span></li>
+    <li><a href="#pr792">#792 · docs：新增 MOSS-TTS-Local cookbook</a> <span class="tag docs">文档</span></li>
+  </ol>
+</div>
+
+<!-- ============================== PR 824 ============================== -->
+<details class="card" id="pr824" open>
+  <summary>
+    <span class="num-badge">1</span>
+    <span>
+      <p class="sm-title">把随机种子 <code class="inl">seed</code> 从采样 API 一路打通到 Model Runner，统一所有自回归采样模型的可复现性</p>
+      <div class="sm-meta">
+        <span class="tag merged">MERGED</span>
+        <span class="tag core">Omni / 多阶段 / 采样</span>
+        <span>#824</span>
+        <span>作者 @JingwenGu0829</span>
+        <span><a class="lnk" href="https://github.com/sgl-project/sglang-omni/pull/824">查看 PR ↗</a></span>
+      </div>
+    </span>
+    <span class="chev"><span class="c1">▼ 展开</span><span class="c2">▲ 收起</span></span>
+  </summary>
+
+  <div class="body">
+
+    <h4 class="sec">1 · 一句话概括</h4>
+    <p class="lead">在 SGLang-Omni 里，把「请求带来的随机种子 <code class="inl">seed</code>」做成<strong>所有自回归（AR）采样模型统一遵守</strong>的契约——
+    新增一个可复用的基类钩子，让标准文本路径、几个自定义的离散 TTS 采样器、以及 Qwen3-Omni 的 talker 全部按同一套规则用种子采样，
+    从而让 <b>Qwen3-Omni 的「思考(文本)+说话(音频)」整条 omni 流水线第一次做到端到端可复现</b>。</p>
+
+    <h4 class="sec">2 · 它解决了什么问题</h4>
+    <p>「可复现」是这个 PR 的全部动机。先讲清楚<strong>痛点</strong>：</p>
+    <ul>
+      <li><b>之前 seed 处理是「各搞各的」（fragmented）。</b>同一个仓库里，有的模型自己手写了一套 seed 逻辑，
+        标准文本路径<strong>悄悄把 seed 丢掉了</strong>（用户传了 seed 也没用），而离散 TTS 的自定义采样器干脆完全无视 seed。</li>
+      <li><b>标准文本路径为什么会丢 seed？</b>底层 SGLang 把「用种子采样」藏在一个叫
+        <code class="inl">enable_deterministic_inference</code> 的开关后面。种子虽然被填进了 <code class="inl">SamplingParams</code>，
+        但没开那个全局开关，它就被这道「门」拦下、丢弃了。</li>
+      <li><b>Qwen3-Omni 的 talker 写得「半对」。</b>它其实是 seed-aware 的，但用的是
+        <code class="inl">int(seed) if seed else 0</code> ——意思是「没给 seed 就固定用 0」。固定 0 会让所有未指定种子的请求都走同一条采样轨迹，这并不是真正的「随机」。</li>
+    </ul>
+    <p><b>为什么非要可复现？</b>因为强化学习（RL）训练强依赖它：要<strong>回放一条轨迹</strong>、要<strong>用一个 seed 做 group sampling（一组样本各自一个种子）</strong>、
+    要做<strong>训练/采样 logprob 对齐</strong>，都要求「同样的输入 + 同样的 seed → 同样的输出」。在改动前，一次完整的 Qwen3-Omni rollout（thinker 出文本 + talker 出音频）
+    <strong>无法复现</strong>，因为光是 thinker 这一段就把 seed 丢了。</p>
+
+    <div class="note"><b>一句话理解需求：</b>RL 训练就像「做科学实验」，必须能<strong>把同一次实验一模一样地再跑一遍</strong>。
+    seed 就是实验的「初始条件」。如果框架偷偷把初始条件丢掉或写死，实验就没法复现，RL 那套「采样→评分→更新」的闭环就不成立。</div>
+
+    <h4 class="sec">3 · 具体做了什么改动</h4>
+    <p>改动可分成<strong>四块</strong>，核心是「抽出一个共享的 seed 工具 + 在基类装一个钩子 + 把几个特立独行的采样器接上同一套方案」。</p>
+
+    <p><b>① 新增共享工具 <code class="inl">sglang_omni/sampling/seed.py</code></b>（全新文件）——所有人共用的「种子生成规则」：</p>
+    <div class="file">sglang_omni/sampling/seed.py（新增）</div>
+<pre><span class="c"># multinomial_with_seed 要求种子是一个正的 int32</span>
+SAMPLING_SEED_MASK = <span class="n">0x7FFFFFFF</span>
+
+<span class="k">def</span> <span class="f">new_random_sampling_seed</span>() -> int:
+    <span class="c"># 给「调用方没指定种子的行」临时造一个全新的随机正 int32 种子</span>
+    <span class="k">return</span> int.from_bytes(os.urandom(<span class="n">4</span>), <span class="s">"little"</span>) & SAMPLING_SEED_MASK
+
+<span class="k">def</span> <span class="f">derive_sampling_seed</span>(namespace, public_seed, label=<span class="k">None</span>) -> int:
+    <span class="c"># 从「公开的请求状态」派生出一个稳定、可重复的子种子（blake2b 哈希）</span>
+    parts = [namespace, str(public_seed)]
+    <span class="k">if</span> label <span class="k">is not None</span>: parts.append(label)
+    digest = hashlib.blake2b(<span class="s">":"</span>.join(parts).encode(), digest_size=<span class="n">8</span>).digest()
+    <span class="k">return</span> int.from_bytes(digest, <span class="s">"little"</span>) & SAMPLING_SEED_MASK
+
+<span class="k">def</span> <span class="f">resolve_row_seed</span>(public_seed) -> int:
+    <span class="c"># 有用户种子就「掩码」成合法 int32；没有就给个全新随机种子（保持随机）</span>
+    <span class="k">if</span> public_seed <span class="k">is None</span>: <span class="k">return</span> new_random_sampling_seed()
+    <span class="k">return</span> int(public_seed) & SAMPLING_SEED_MASK
+</pre>
+    <p>逐块解释：</p>
+    <ul>
+      <li><code class="inl">SAMPLING_SEED_MASK = 0x7FFFFFFF</code>：这是 31 个 1 的二进制掩码（即 int32 的最大正数）。
+        底层算子要求种子是<strong>正的 32 位整数</strong>，所以任何来路的数字都先 <code class="inl">& MASK</code> 砍到这个范围、并去掉符号位。</li>
+      <li><code class="inl">derive_sampling_seed</code>：用 <strong>blake2b 哈希</strong> 把「命名空间 + 公开种子 + 标签」搅成一个稳定的整数。
+        关键词是「稳定」——同样的输入永远得到同样的输出，且<strong>不依赖随机数发生器的状态</strong>。下面会讲它为什么对多卡并行至关重要。</li>
+      <li><code class="inl">resolve_row_seed</code>：每一行（每个请求）的最终种子。有种子就规范化，没种子就真随机。</li>
+    </ul>
+
+    <p><b>② 在基类 <code class="inl">ModelRunner</code> 装一个钩子 <code class="inl">_install_sampling_seeds</code></b>——这是整个 PR 的「枢纽」。
+    它在每个解码步采样前跑一次，把每一行的种子塞进 <code class="inl">forward_batch.sampling_info.sampling_seed</code>，
+    SGLang 一旦发现这个字段非空，就会自动路由到「带种子的采样算子」<code class="inl">multinomial_with_seed</code>：</p>
+    <div class="file">sglang_omni/model_runner/base.py</div>
+<pre><span class="k">def</span> <span class="f">_install_sampling_seeds</span>(self, forward_batch, requests):
+    sampling_info = forward_batch.sampling_info
+    <span class="k">if</span> sampling_info.sampling_seed <span class="k">is not None</span>:
+        <span class="c"># 子类（如 Qwen3-TTS）已经自己装好了 → 不重复装</span>
+        self._validate_seeded_sampling_supported(sampling_info); <span class="k">return</span>
+    sampling_params = [sr.data.req.sampling_params <span class="k">for</span> sr <span class="k">in</span> requests]
+    <span class="k">if</span> all(sp.sampling_seed <span class="k">is None</span> <span class="k">for</span> sp <span class="k">in</span> sampling_params):
+        <span class="k">return</span>  <span class="c"># 整个 batch 没人带种子 → 严格 no-op，正常服务完全不受影响</span>
+    self._validate_seeded_sampling_supported(sampling_info)
+    row_seeds = []
+    <span class="k">for</span> row_idx, (sp, request) <span class="k">in</span> enumerate(zip(sampling_params, requests)):
+        seed = sp.sampling_seed
+        <span class="k">if</span> seed <span class="k">is None</span>:
+            <span class="c"># 混合 batch 里没带种子的行：用「请求 id 派生」的回退种子，</span>
+            <span class="c"># 而不是各卡各自随机 —— 保证 TP 各 rank 对这一行的种子一致</span>
+            seed = _rank_shared_unseeded_sampling_seed(request, row_idx)
+        <span class="k">elif</span> <span class="k">not</span> (<span class="n">0</span> &lt;= seed &lt;= SAMPLING_SEED_MASK):
+            seed = resolve_row_seed(seed); sp.sampling_seed = seed  <span class="c"># 掩码并缓存</span>
+        row_seeds.append(seed)
+    sampling_info.sampling_seed = torch.tensor(
+        row_seeds, dtype=torch.long, device=sampling_info.device)
+</pre>
+    <p>逐行讲（假设完全看不懂）：</p>
+    <ol>
+      <li><b>先看 <code class="inl">sampling_info.sampling_seed is not None</code>：</b>如果种子字段已经被填了，说明某个子类（比如 Qwen3-TTS 这种「手搓派」）
+        已经自己处理过了，基类<strong>就不抢活</strong>，直接返回。这是「子类优先、基类兜底」的设计。</li>
+      <li><b><code class="inl">if all(... is None)</code>：</b>如果这一批请求里<strong>一个都没带种子</strong>，直接 <code class="inl">return</code>。
+        这就是 PR 反复强调的 <b>strict no-op（严格空操作）</b>——线上正常推理（没人要复现）时，这段代码什么都不做，<strong>零额外开销</strong>。</li>
+      <li><b>逐行造种子：</b>带了合法种子就用；带了「超范围」的种子就 <code class="inl">resolve_row_seed</code> 掩码并写回缓存；
+        <strong>没带种子的行</strong>用 <code class="inl">_rank_shared_unseeded_sampling_seed</code>（基于 request id 派生）造一个回退种子。</li>
+      <li><b>最后一行 <code class="inl">torch.tensor(row_seeds, ...)</code>：</b>把这一批每行的种子打包成一个张量挂到 <code class="inl">sampling_info</code> 上，
+        交给底层采样器。</li>
+    </ol>
+    <p>那个「回退种子」为什么不直接 <code class="inl">os.urandom</code> 随机？这是本 PR 最精妙的一处。
+    <code class="inl">_rank_shared_unseeded_sampling_seed</code> 从 request 里一层层找出 <code class="inl">request_id</code>（实在找不到就用 <code class="inl">row-{idx}</code>），
+    再 <code class="inl">derive_sampling_seed</code> 哈希出种子。原因在「知识点」里展开讲 Tensor Parallelism。</p>
+
+    <p><b>③ 接上自定义离散 TTS 采样器（Higgs、Fish S2-Pro）。</b>这两个模型原本用最朴素的 <code class="inl">torch.multinomial</code> 抽样，完全无视 seed。
+    现在改成「带种子的行用 <code class="inl">multinomial_with_seed</code>，没种子的行<strong>原封不动</strong>走老路径」。看 Fish 的核心改动：</p>
+    <div class="file">sglang_omni/models/fishaudio_s2_pro/sglang_model.py</div>
+<pre><span class="c"># 改动前：直接 multinomial，跟种子无关</span>
+<span class="c"># semantic_token = top_k_indices.gather(-1, torch.multinomial(probs, 1)).squeeze(-1)</span>
+
+<span class="c"># 改动后：</span>
+seeds = self._sampling_seeds[:bs]
+unseeded_choice = torch.multinomial(probs, num_samples=<span class="n">1</span>)            <span class="c"># 老路径</span>
+seeded_choice   = multinomial_with_seed(
+    torch.log(probs), seeds.clamp_min(<span class="n">0</span>), self._step_count[:bs])  <span class="c"># 新路径(种子+步号)</span>
+choice = torch.where((seeds &gt;= <span class="n">0</span>).unsqueeze(-1), seeded_choice, unseeded_choice)
+semantic_token = top_k_indices.gather(-<span class="n">1</span>, choice).squeeze(-<span class="n">1</span>)
+</pre>
+    <p>这里的 <code class="inl">torch.where(条件, A, B)</code> 是「逐元素三目运算符」：种子 ≥ 0（带了种子）就取 <code class="inl">seeded_choice</code>，
+    否则取 <code class="inl">unseeded_choice</code>。<strong>关键设计</strong>：用 <code class="inl">-1</code> 作为「没种子」的哨兵值（sentinel），
+    保证未指定种子的解码<strong>逐字节等同于改动前</strong>（PR 用 sha256 验证过音频字节完全一致）。
+    Higgs 的做法一样，只是 <code class="inl">position</code> 编码成 <code class="inl">step·N + codebook</code>（多了 codebook 维度，下面讲 RVQ 时解释）。</p>
+
+    <p><b>④ 把 Qwen3-Omni talker 统一到同一套方案。</b>talker 因为要做 CUDA Graph 捕获，必须保留它自己<strong>静态的</strong>
+    <code class="inl">SamplingBatchInfo</code>（形状固定不能变），所以基类钩子不接管它——但<strong>种子的「取值规则」统一了</strong>：</p>
+    <div class="file">sglang_omni/models/qwen3_omni/components/talker.py</div>
+<pre><span class="c"># 改动前： sampling_seeds.append(int(seed) if seed is not None else 0)</span>
+<span class="c">#          ↑ 没种子就固定 0，是个 bug</span>
+
+<span class="c"># 改动后：</span>
+seed = sp.sampling_seed
+<span class="k">if</span> seed <span class="k">is None</span>:
+    <span class="c"># 没种子 → 用 request id 派生（每个 TP rank 算出来都一样），而不是 os.urandom</span>
+    seed = derive_sampling_seed(<span class="s">"sglang-omni-unseeded-row"</span>, req.rid)
+<span class="k">elif</span> <span class="k">not</span> (<span class="n">0</span> &lt;= seed &lt;= SAMPLING_SEED_MASK):
+    seed = resolve_row_seed(seed); sp.sampling_seed = seed
+sampling_seeds.append(seed)
+</pre>
+
+    <p><b>受影响模型的全景（PR 自带的 scope 表，简化版）：</b></p>
+    <table class="scope">
+      <tr><th>路径</th><th>模型</th><th>状态</th></tr>
+      <tr><td>标准 SGLang 采样器（走新基类钩子）</td><td>Qwen3-Omni thinker、Ming-Omni thinker、LLaDA2-Uni、Voxtral text-LM</td><td>修复：种子曾被 <code class="inl">enable_deterministic_inference</code> 拦下，现在直接装到 <code class="inl">sampling_info</code></td></tr>
+      <tr><td>自定义离散采样器（本 PR 接线）</td><td>Higgs TTS、Fish S2-Pro</td><td>修复：改用 <code class="inl">multinomial_with_seed</code></td></tr>
+      <tr><td>自定义采样器统一到共享方案</td><td>Qwen3-Omni talker</td><td>修复：从「没种子=0」改成共享规则</td></tr>
+      <tr><td>本来就对（手搓，未动）</td><td>MOSS-TTS / MOSS-TTS-Local / Qwen3-TTS</td><td>不变（基类钩子检测到已装则跳过）</td></tr>
+      <tr><td>不在范围（连续 / flow-matching）</td><td>Voxtral acoustic、Ming-Omni talker</td><td>N/A（没有离散 token 种子）</td></tr>
+    </table>
+
+    <h4 class="sec k">4 · 涉及的知识点（重点展开）</h4>
+
+    <div class="kbox">
+      <div class="kh">① 采样 (Sampling)、temperature 与 greedy/argmax</div>
+      <div class="three"><span class="lab">它是什么</span><span>大模型每一步并不是直接「确定输出哪个词」，而是输出一个<strong>概率分布</strong>（每个候选 token 一个概率）。「采样」就是按这个概率掷骰子选一个。<code class="inl">temperature</code>（温度）控制骰子有多「随机」：温度高→分布被拉平→更随机有创意；温度=0→退化成永远选概率最高的那个，这叫 <b>greedy / argmax</b>，是<strong>确定性的</strong>，不需要 seed。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>有随机性才有多样性；但有随机性就意味着「同样输入跑两次结果不同」。要复现，就得固定随机源——种子。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>只有 <code class="inl">temperature&gt;0</code>（真在采样）时 seed 才有意义。PR 的验证表里专门分了「temp=0 不应有任何变化（no-op）」和「temp&gt;0 种子必须生效」两组实验。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">② <code class="inl">multinomial_with_seed</code>：与「批次组成」解耦的有种子采样</div>
+      <div class="three"><span class="lab">它是什么</span><span>普通 <code class="inl">torch.multinomial</code> 依赖一个<strong>全局共享</strong>的随机数发生器（RNG）。SGLang 的 <code class="inl">multinomial_with_seed(logprobs, 每行种子, 每行位置)</code> 不同：它把「<strong>每一行自己的种子</strong>」和「<strong>每一行当前的位置/步号</strong>」组合起来当随机源，<strong>这一行抽到什么，只取决于它自己的 (seed, position)</strong>。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>用全局 RNG 时，第 5 行抽到什么，会受「同一批里前面 4 行抽过几次」影响。也就是说，<strong>同一个请求，跟不同的人拼在一个 batch 里，结果会变</strong>——这叫「批次组成相关」，对复现是灾难。per-row seed 让结果<strong>与批次组成无关（batch-composition independent）</strong>。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>整套设计都建立在它之上：基类把 per-row 种子张量塞进 <code class="inl">sampling_info</code>；Higgs/Fish 把 <code class="inl">position</code> 编成「AR 步号」（Higgs 还乘上 codebook 维度），所以无论 batch 怎么拼，<code class="inl">seed=1234</code> 永远给同样的音频。</span></div>
+      <div class="three analogy"><span class="lab">类比</span><span>就像给每个学生发一本<strong>自己专属的密码本</strong>，第 N 页对应第 N 步。不管班里坐了多少人、谁先翻、谁后翻，每个学生翻到自己第 N 页看到的内容都是固定的。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">③ Model Runner / 基类钩子 / SGLang 的 sampling_info、forward_batch</div>
+      <div class="three"><span class="lab">它是什么</span><span><b>Model Runner</b> 是 SGLang 里真正「驱动模型在 GPU 上跑一步前向 + 采样」的组件。<code class="inl">forward_batch</code> 是「这一步要算的一整批请求」的打包对象；<code class="inl">sampling_info</code>（即 <code class="inl">SamplingBatchInfo</code>）是其中专管采样参数（temperature/top_p/top_k/种子……）的那部分。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>把「装种子」这件事放在<strong>基类</strong>的一个统一入口（钩子）里做，所有子模型自动获得能力，避免每个模型各写一遍、写错一遍。这是典型的 <b>Template Method（模板方法）/ 钩子</b> 设计模式：基类定义流程骨架，留一个可被覆盖的「挂载点」。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span><code class="inl">_install_sampling_seeds</code> 在 <code class="inl">_sample_next_token_ids</code> 采样前被调用一次；子类若已自己装了种子（<code class="inl">sampling_seed is not None</code>），基类礼让跳过。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">④ Tensor Parallelism（TP）与「各 rank 必须同步」——为什么不能 os.urandom</div>
+      <div class="three"><span class="lab">它是什么</span><span>一个大模型放不进单卡时，会把每一层的权重<strong>切成几片，分给多张 GPU</strong>，每张卡叫一个 <b>rank</b>，它们并行算同一个 batch、再用 all-reduce 把结果拼起来。这叫张量并行。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>采样这一步，<strong>每个 rank 都会各自算一遍</strong>（为省一次通信）。如果某行「没种子」时各卡用 <code class="inl">os.urandom</code> 各掷各的骰子，<strong>不同卡会选出不同的 token</strong>——模型状态当场分裂（desync），输出直接崩坏。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>所以未指定种子的行，用 <code class="inl">derive_sampling_seed(..., request_id)</code> 从「<strong>所有 rank 都看得到的同一个 request id</strong>」哈希出种子——每张卡算出来必然一致，既保持了「随机感」（不同请求不同），又保证了 rank 间同步。这就是为什么是哈希派生而不是真随机。</span></div>
+      <div class="three analogy"><span class="lab">类比</span><span>几个分处异地的人要「随机」却又必须选出<strong>同一个</strong>数字：不能各自扔骰子（会不一样），而要约定「拿今天的日期去算同一个哈希」——人人算得到同一个结果，但对外仍显得随机。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">⑤ CUDA Graph 捕获——为什么 talker 必须保留静态 SamplingBatchInfo</div>
+      <div class="three"><span class="lab">它是什么</span><span>GPU 每发一个 kernel 都有「CPU 下发指令」的固定开销。<b>CUDA Graph</b> 把「一整串 GPU 操作」录制成一张图，之后<strong>一键重放</strong>，省掉反复下发的开销，对逐 token 解码这种「小而密」的场景提速明显。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>能被「录制重放」的前提是：每次重放，输入张量的<strong>形状、地址都不能变</strong>（只能原地改数值）。所以采样信息必须是一块<strong>预先分配、形状固定</strong>的静态缓冲区。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>talker 用了 CUDA Graph，它的 <code class="inl">SamplingBatchInfo</code> 是静态的，<strong>不能</strong>被基类那套「动态新建张量」的钩子接管——所以本 PR 只改 talker 往那块静态缓冲里<strong>写的种子数值</strong>，不动它的结构。这解释了为什么 talker 要单独处理。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">⑥ Thinker–Talker 两阶段 Omni 架构（多阶段）+ code2wav</div>
+      <div class="three"><span class="lab">它是什么</span><span>Qwen3-Omni 把「能听会说」拆成两个自回归阶段：<b>thinker</b> 负责理解输入、生成<strong>文本</strong>（思考）；<b>talker</b> 接着把文本变成<strong>音频离散 token</strong>（说话）；最后 <b>code2wav</b> 把音频 token 还原成波形。PR 里甚至把它们分到不同 GPU（thinker GPU0 / talker+code2wav GPU1），即 <b>disaggregated（分离式部署）</b>。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>「理解+生文本」和「文本→语音」是两类不同的计算，拆开能各自优化、各自扩容。但<strong>两段都各自采样</strong>，意味着要复现「一句完整的语音回答」，必须<strong>两段都吃同一套种子规则</strong>。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>之前 thinker 把种子丢了，所以即便 talker 接住种子，整条链也不可复现。本 PR 让 thinker（走基类钩子）和 talker（统一取值规则）<strong>种子一致</strong>，于是「thinker 文本 + talker 音频」端到端可复现——验证里同一个 <code class="inl">seed=1234</code> 跑两次音频哈希完全相同。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">⑦ 离散 TTS、Codebook / RVQ、AR step、delay pattern</div>
+      <div class="three"><span class="lab">它是什么</span><span>现代 TTS 常把音频压成一串<strong>离散整数 token</strong>（像「音频的字」）。<b>RVQ（残差矢量量化）</b>用<strong>多个 codebook</strong> 层层逼近：第 1 本管粗轮廓，后面几本管细节残差。每个解码步（<b>AR step</b>）要为<strong>多个 codebook 各抽一个 token</strong>。Higgs/MOSS 这类还有 <b>delay pattern</b>（不同 codebook 错开几步生成）。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>把连续音频离散化后，就能像「预测下一个词」一样用自回归 Transformer 生成语音；多 codebook 是为了在有限词表下表达高保真音频。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>Higgs 给每次抽样的 <code class="inl">position = step·N + codebook</code>（N 是 codebook 个数）——这样<strong>同一步里不同 codebook、不同步之间</strong>的随机源都各不相同且可复现。Fish 的 <code class="inl">position</code> 就是 <code class="inl">step_count</code>。代码里还维护 <code class="inl">step_count</code> 随「活跃行」自增，并在 <code class="inl">reset_row</code> 时清零，避免复用脏状态。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">⑧ 工程细节：哨兵值 (sentinel)、no-op、严格字段访问、掩码</div>
+      <div class="three"><span class="lab">它是什么</span><span><b>哨兵值</b>：用一个不可能的正常值（这里是 <code class="inl">-1</code>）表示「没有」。<b>no-op</b>：不产生任何效果的操作。<b>掩码</b>：用按位与把数字砍进合法范围。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>用 <code class="inl">-1</code> 哨兵区分「带种子/未带种子」，能让未带种子的行<strong>逐字节走老路径</strong>，从而保证「不破坏现有行为」这条铁律可被字节级验证。严格字段访问（不用防御性 <code class="inl">getattr</code> 兜默认）则让「契约字段缺失」时<strong>立刻大声报错</strong>，而不是悄悄跑出错误结果。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>Higgs/Fish 的 <code class="inl">NO_SEED=-1</code>、基类的 <code class="inl">all(... is None) → return</code>、talker 取消旧的 <code class="inl">getattr</code> 改严格访问，都是这套思路。PR 还专门加了单测验证「未种子时 no-op」「混合 batch 各行不串味」。</span></div>
+    </div>
+
+    <h4 class="sec k">5 · 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>「把横切关注点上提到基类」</b>：seed 是个典型的横切关注点（cross-cutting concern），到处都要、又容易各写各错。抽成共享工具 + 基类钩子，是消除重复、统一契约的范本。</li>
+      <li><b>「正确性的可验证性」优先于「优雅」</b>：用 <code class="inl">-1</code> 哨兵保留老路径，看似不漂亮，却换来「未种子行逐字节等同改动前」这种<strong>可用 sha256 客观验证</strong>的强保证。改动越底层，越要让「无变化」可被证明。</li>
+      <li><b>分布式确定性的核心矛盾</b>：「随机」和「多卡一致」天然冲突，解法是<strong>用共享的确定性输入哈希出伪随机</strong>。这套思路在任何多 worker / 多 rank 系统里都通用。</li>
+      <li><b>前置知识建议</b>：(1) 自回归解码与采样（temperature/top-k/top-p）；(2) PyTorch 张量与 <code class="inl">torch.where</code> 向量化写法；(3) Tensor Parallelism 与集合通信 all-reduce；(4) CUDA Graph 的「静态形状」约束；(5) 神经音频编解码器（EnCodec / RVQ）。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============================== PR 785 ============================== -->
+<details class="card" id="pr785" open>
+  <summary>
+    <span class="num-badge">2</span>
+    <span>
+      <p class="sm-title">新增 Miles 兼容的 <code class="inl">/generate</code> RL-rollout 端点，把 rollout 产物端到端打通</p>
+      <div class="sm-meta">
+        <span class="tag merged">MERGED</span>
+        <span class="tag core">RL / Omni / 推理服务</span>
+        <span>#785</span>
+        <span>作者 @yxs</span>
+        <span><a class="lnk" href="https://github.com/sgl-project/sglang-omni/pull/785">查看 PR ↗</a></span>
+      </div>
+    </span>
+    <span class="chev"><span class="c1">▼ 展开</span><span class="c2">▲ 收起</span></span>
+  </summary>
+
+  <div class="body">
+
+    <h4 class="sec">1 · 一句话概括</h4>
+    <p class="lead">给推理服务和 router 加一个 <code class="inl">POST /generate</code> 端点，长得跟 RL 训练框架 <b>Miles</b> 约定的格式一致：
+    训练器一次调用就能驱动一次生成，并<strong>原样读回它做策略更新所需要的东西</strong>——每个采样 token 的 logprob、<code class="inl">weight_version</code> 等，
+    同时支持「直接喂预先 tokenize 好的 <code class="inl">input_ids</code>」。</p>
+
+    <h4 class="sec">2 · 它解决了什么问题</h4>
+    <p>这是为 <b>RL（强化学习）训练 Qwen3-Omni</b> 铺基础设施。RL 的训练循环是：<strong>用当前策略生成一批回答（rollout）→ 打分 → 用这些数据更新策略</strong>。
+    要让外部 RL 训练器（Miles）能把 SGLang-Omni 当「生成引擎」用，必须解决几个老代码的缺口：</p>
+    <ul>
+      <li><b>没有 Miles 要的端点格式。</b>Miles 期望一个 <code class="inl">/generate</code> 接口，请求里直接给 <code class="inl">input_ids</code>，
+        响应里回 <code class="inl">meta_info.output_token_logprobs</code>。老服务没有这个契约。</li>
+      <li><b>预先 tokenize 的 <code class="inl">input_ids</code> 进不去。</b>Qwen3-Omni 的预处理之前<strong>只认 messages</strong>（聊天消息列表），
+        你要是直接塞 token id，它会在 <code class="inl">normalize_messages</code> 那里 500 报错。</li>
+      <li><b>为什么必须能直接喂 token id？</b>因为 Miles 训练时用的是<strong>它自己 tokenize 出来的那串 token</strong>。
+        如果生成端在服务器再 tokenize 一遍，两边的 token 可能<strong>对不齐（drift）</strong>——而 RL 要求「训练用的 token」和「采样用的 token」必须严格一致，否则梯度算错。</li>
+      <li><b>logprob 不能事后从 logits 重算。</b>策略更新需要的是「<strong>当时那个策略真正采样这个 token 时的 logprob</strong>」，
+        它带着 temperature 等语义。事后拿原始 logits 重算会得到不一样的值，破坏 on-policy 假设。</li>
+    </ul>
+
+    <h4 class="sec">3 · 具体做了什么改动</h4>
+    <p>改动面较广（serve / client / model_runner / preprocessor / router 都碰了），抓四条主线：</p>
+
+    <p><b>① 在 <code class="inl">openai_api.py</code> 注册 <code class="inl">/generate</code> 端点 + 请求/响应契约。</b>
+    请求支持三选一的 prompt 形式（<code class="inl">input_ids</code> / <code class="inl">messages</code> / <code class="inl">prompt</code>）加采样与 rollout 开关；
+    响应是 <code class="inl">text + meta_info</code>。核心是把内部结果搬进 Miles 约定的字段，并做<strong>严格的一致性校验</strong>：</p>
+    <div class="file">sglang_omni/serve/openai_api.py（_build_generate_response 摘录）</div>
+<pre>completion_tokens = usage.completion_tokens <span class="k">if</span> usage <span class="k">else</span> <span class="n">0</span>  <span class="c"># 永远是 int，不会是 null</span>
+finish_reason = GenerateFinishReason(
+    type=finish_type,
+    length=completion_tokens <span class="k">if</span> finish_type == <span class="s">"length"</span> <span class="k">else</span> <span class="k">None</span>)
+
+<span class="c"># 说要 logprob 却没拿到 → 直接 500，绝不静默返回错误数据</span>
+<span class="k">if</span> req.return_logprob <span class="k">and</span> result.output_token_logprobs <span class="k">is None</span>:
+    <span class="k">raise</span> HTTPException(<span class="n">500</span>, <span class="s">"backend did not return output_token_logprobs ..."</span>)
+<span class="c"># logprob 条数必须 == 生成 token 数，否则也是 500</span>
+<span class="k">if</span> req.return_logprob <span class="k">and</span> len(result.output_token_logprobs) != completion_tokens:
+    <span class="k">raise</span> HTTPException(<span class="n">500</span>, <span class="s">"... length mismatch ..."</span>)
+
+meta_info = GenerateMetaInfo(
+    finish_reason=finish_reason,
+    prompt_tokens=prompt_tokens, completion_tokens=completion_tokens,
+    weight_version=result.weight_version,
+    request_metadata=req.metadata,        <span class="c"># 原样回显训练器传来的 metadata</span>
+    output_token_logprobs=result.output_token_logprobs <span class="k">if</span> req.return_logprob <span class="k">else</span> <span class="k">None</span>,
+    omni_rollout=result.omni_rollout <span class="k">if</span> req.return_omni_rollout <span class="k">else</span> <span class="k">None</span>)
+</pre>
+    <p>注意两个工程取舍：<strong>计数字段永远序列化成 int（未知时为 0），绝不为 null</strong>——因为 RL 端会累加（<code class="inl">cached_tokens += ...</code>），
+    碰上 <code class="inl">None</code> 会抛 <code class="inl">int + None</code>。而 <code class="inl">output_token_logprobs</code> 是 <code class="inl">[logprob, token_id]</code> 一项一个 token，刻意对齐 SGLang 原生 <code class="inl">meta_info</code> 格式。</p>
+
+    <p><b>② 在基类 model_runner 里「从采样器记录 logprob」。</b>这是正确性的关键：<strong>不重算，直接抄采样器算好的值</strong>。</p>
+    <div class="file">sglang_omni/model_runner/base.py</div>
+<pre>wants_rollout_logprob = any(sr.data.return_logprob <span class="k">for</span> sr <span class="k">in</span> requests)
+<span class="k">if</span> wants_rollout_logprob:
+    self._enable_sampler_logprobs(forward_batch, len(requests))  <span class="c"># 打开采样器记 logprob 的开关</span>
+next_token_ids = self.tp_worker.model_runner.sample(logits_output, forward_batch)
+<span class="k">if</span> wants_rollout_logprob:
+    next_token_logprobs = logits_output.next_token_logprobs   <span class="c"># 采样器算好的「被选中 token 的 logprob」</span>
+    <span class="k">if</span> next_token_logprobs <span class="k">is None</span>:
+        <span class="k">raise</span> RuntimeError(<span class="s">"Sampler did not populate next_token_logprobs ..."</span>)
+    self._record_rollout_logprobs(next_token_logprobs, next_token_ids, requests)
+</pre>
+    <p><code class="inl">_record_rollout_logprobs</code> 再把每行的 <code class="inl">[logprob, token_id]</code> 追加到该请求的列表里，并<strong>断言三者长度一致</strong>
+    （<code class="inl">logprobs == token_ids == requests</code>），不一致立刻报「batch-size mismatch」。配套的 <code class="inl">sampled_logprobs_to_list</code>（在 <code class="inl">scheduling/types.py</code>）
+    负责把采样器输出的张量稳妥转成 <code class="inl">list[float]</code>，它的 docstring 明说：「采样器拥有 logprob 的语义（temperature、original-logprob 模式），rollout 代码应保留这些值而不是从 logits 重算」。</p>
+
+    <p><b>③ 给 Qwen3-Omni 预处理加「预 tokenize 分支」。</b>识别到输入是一串纯 int（token id）就<strong>绕开 chat 模板 + HF processor</strong>，
+    直接构造 thinker 状态：</p>
+    <div class="file">sglang_omni/models/qwen3_omni/components/preprocessor.py</div>
+<pre><span class="k">def</span> <span class="f">_is_pretokenized_prompt</span>(inputs):
+    <span class="c"># 是「非空 list 且每个元素都是 int」→ 判定为预 tokenize 的 prompt</span>
+    <span class="k">return</span> isinstance(inputs, list) <span class="k">and</span> bool(inputs) <span class="k">and</span> all(isinstance(t, int) <span class="k">for</span> t <span class="k">in</span> inputs)
+
+<span class="k">def</span> <span class="f">_preprocess_pretokenized</span>(self, payload, token_ids):
+    input_ids = torch.tensor(token_ids, dtype=torch.long)
+    attention_mask = torch.ones_like(input_ids)
+    validate_prompt_seq_len(input_ids, ...)           <span class="c"># 仍做长度校验</span>
+    <span class="k">return</span> self._finalize_state(
+        payload, input_ids=input_ids, attention_mask=attention_mask,
+        prompt_text=<span class="s">""</span>, full_mm_inputs={},
+        encoder_inputs={<span class="s">"image_encoder"</span>:{<span class="s">"_skip"</span>:<span class="k">True</span>,<span class="s">"_result"</span>:{}},
+                        <span class="s">"audio_encoder"</span>:{<span class="s">"_skip"</span>:<span class="k">True</span>,<span class="s">"_result"</span>:{}}})  <span class="c"># 跳过编码器</span>
+</pre>
+    <p>顺手做了一次<strong>小重构</strong>：把「组装 thinker 状态」的逻辑抽成 <code class="inl">_finalize_state</code>，让正常 messages 路径和新预 tokenize 路径
+    <strong>共用同一处状态组装代码（single source of shape）</strong>，避免两条路径未来跑偏。注意：<strong>多模态</strong>（带图/音）仍走 messages 路径，
+    预 tokenize 分支只处理纯文本。</p>
+
+    <p><b>④ client 与 router 端到端透传 rollout 产物。</b>client 在聚合流式结果时新增对 <code class="inl">output_token_logprobs / omni_rollout / weight_version</code> 的收集，
+    并特别保留「<strong>空列表 <code class="inl">[]</code>」与「<code class="inl">null</code>」的区别</strong>——零生成 token 是合法值（空列表），不能和「没捕获到 logprob」（null）混为一谈。
+    router 则做<strong>不透明转发（opaque forwarding）</strong>：原样把 metadata 等带过去再带回来。</p>
+
+    <div class="note warn"><b>留了一个「半成品」是有意为之：</b><code class="inl">omni_rollout</code> 字段已经端到端「布好线」，但本 PR <strong>暂不填充</strong>
+    （forward-declared only）——多模态的「可训练动作容器」是下一步。Miles 这边先传 <code class="inl">return_omni_rollout=false</code>。这是「先打通管道、再灌内容」的渐进式交付。</div>
+
+    <h4 class="sec k">4 · 涉及的知识点（重点展开）</h4>
+
+    <div class="kbox">
+      <div class="kh">① RL Rollout / 策略更新 / on-policy</div>
+      <div class="three"><span class="lab">它是什么</span><span><b>Rollout</b>＝让当前模型（策略 policy）实际生成一批回答的过程。RL 训练循环＝<strong>rollout 生成 → 用奖励打分 → 更新策略</strong>，再循环。<b>on-policy</b> 指「用来更新的数据，必须来自当前这个策略」。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>更新策略时要计算「这个 token 在当前策略下的概率」相对「采样时的概率」的比值（如 PPO 的重要性采样比）。所以必须把<strong>采样当时的 logprob</strong> 准确记下来。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>整个端点就是为「让 Miles 驱动 rollout 并读回 logprob」服务；坚持「logprob 来自采样器、不重算」正是为守住 on-policy 的正确性。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">② logprob（对数概率）与「为什么不能重算」</div>
+      <div class="three"><span class="lab">它是什么</span><span>模型对某个 token 给出的概率取对数。概率越接近 1，logprob 越接近 0；越小则越负。所以 PR 校验里「所有 logprob ≤ 0」是合理性检查。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>采样器算的 logprob 已经包含了 temperature、top-p 截断、original-logprob 模式等语义。事后拿干净 logits 重算，得到的是「另一个分布」的 logprob，与真实采样分布不符。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span><code class="inl">_enable_sampler_logprobs</code> 打开开关让采样器顺带吐出 <code class="inl">next_token_logprobs</code>，<code class="inl">sampled_logprobs_to_list</code> 原样搬运。验证里确认 <code class="inl">len(logprobs)==completion_tokens</code> 且能 decode 回各自的文本（不串行）。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">③ Tokenizer / chat 模板 / token drift</div>
+      <div class="three"><span class="lab">它是什么</span><span><b>Tokenizer</b> 把文本切成整数 token。<b>chat 模板</b>是把 messages（role+content）拼成模型实际看到的字符串的规则（含特殊标记）。同一段话，模板/版本/特殊符号略有差异，切出的 token 序列就可能不同——这种偏差叫 <b>drift</b>。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>RL 训练器和推理引擎若各自 tokenize，token 序列一旦 drift，训练计算梯度用的序列就和实际采样的序列对不上，训练直接错。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>新增预 tokenize 分支，让 Miles 把「它训练用的那串 token」原样喂进 thinker，<strong>绕过 chat 模板和 HF processor</strong>，从根上消除 drift。验证：同一 prompt 分别以 <code class="inl">input_ids</code> 和 <code class="inl">messages</code> 送入，贪心解码得到<strong>完全相同</strong>的 token 序列。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">④ HF processor / 多模态编码器（image/audio encoder）与 thinker 状态</div>
+      <div class="three"><span class="lab">它是什么</span><span><b>HF processor</b> 是 HuggingFace 的多模态预处理器：把图片/音频转成张量特征，再交给对应的 <b>encoder</b>（视觉/音频编码器）抽成 embedding，和文本 token 一起喂给 thinker。<b>thinker 状态</b>就是「这次推理 thinker 需要的全部输入」的打包。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>Omni 模型要同时吃文本/图/音，所以预处理阶段要把各模态分别编码好。但纯文本 rollout 用不到图音编码器。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span>预 tokenize 分支把 <code class="inl">image_encoder / audio_encoder</code> 标成 <code class="inl">_skip:True</code>（跳过），只构造文本 thinker 状态——既省算力，又精确表达「这是纯文本 rollout」。多模态输入仍回到完整 messages 路径。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">⑤ 批次对齐 / continuous batching（不串味）</div>
+      <div class="three"><span class="lab">它是什么</span><span>推理引擎为了吞吐，会把<strong>多个不同请求塞进同一个 batch</strong> 同时算（SGLang 的 continuous batching 还会动态加入/移除请求）。「对齐」指每一行的输出、logprob 必须严格归属到它<strong>自己</strong>那个请求。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>一旦行错位，A 请求会拿到 B 请求的 logprob/token，RL 数据被污染却毫无报错——是最危险的隐形 bug。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span><code class="inl">_record_rollout_logprobs</code> 用 <code class="inl">enumerate(requests)</code> 按行索引精确回填，并断言三者长度一致。PR 专门做了「8 个并发不同 prompt，各自 logprob decode 回各自文本」的验证。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">⑥ weight_version 与 router 的不透明转发</div>
+      <div class="three"><span class="lab">它是什么</span><span><b>weight_version</b> 标记「这次生成用的是哪一版模型权重」。RL 里权重不停更新，必须知道某条 rollout 数据是哪版策略产出的。<b>不透明转发</b>＝router 不解析、不改动某些字段（如 metadata），原样转给后端再原样带回。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>训练器要据 <code class="inl">weight_version</code> 判断数据新鲜度（off-policy 程度）；metadata（如 <code class="inl">rollout_id</code>）是训练器自己的簿记，router 不该乱碰。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span><code class="inl">route_metadata.py</code> / <code class="inl">app.py</code> 把这些字段沿链路透传；响应里 <code class="inl">request_metadata</code> 原样回显，<code class="inl">weight_version</code> 一路带回 meta_info。</span></div>
+    </div>
+
+    <div class="kbox">
+      <div class="kh">⑦ 渐进式交付：forward-declared 字段</div>
+      <div class="three"><span class="lab">它是什么</span><span>先把一个字段的「管道」（请求→调度→响应的传递路径）全部布好，但暂时不产生真实内容。等下一个 PR 再填。</span></div>
+      <div class="three"><span class="lab">为什么需要</span><span>大功能拆小步走：先让接口契约稳定、让上下游能联调，降低一次性大改的风险与 review 难度。</span></div>
+      <div class="three"><span class="lab">本 PR 里</span><span><code class="inl">omni_rollout</code>（多模态可训练动作容器）就是这样——字段、透传、校验都在了，但本期不填充，Miles 先传 <code class="inl">return_omni_rollout=false</code>。</span></div>
+    </div>
+
+    <h4 class="sec k">5 · 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>「契约即正确性」</b>：这个 PR 一大半工作不是算法，而是<strong>把字段类型、长度、空值语义全部钉死</strong>（int 永不为 null、空列表≠null、logprob 条数必须等于 token 数、不符就 500）。给别的系统当依赖时，严格契约比「能跑」重要得多。</li>
+      <li><b>「在数据产生的源头取真值」</b>：logprob 一定要在采样器那一刻记录，而不是事后重算。任何「事后重建」都可能引入与真实过程的偏差——这是可观测性/数据管线的通用原则。</li>
+      <li><b>消除重复以防漂移</b>：把两条预处理路径收敛到 <code class="inl">_finalize_state</code> 一处，是「single source of truth」的小而美实践。</li>
+      <li><b>前置知识建议</b>：(1) PPO / GRPO 等 RL 算法里 logprob、重要性采样比的作用；(2) OpenAI 风格 HTTP 推理 API 与 SSE 流式协议；(3) tokenizer / chat template 的细节；(4) SGLang 的 scheduler、continuous batching、router 架构；(5) Qwen3-Omni 的 thinker–talker 多阶段流水线。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ============================== PR 819 ============================== -->
+<details class="card" id="pr819">
+  <summary>
+    <span class="num-badge">3</span>
+    <span>
+      <p class="sm-title">[Docs] 修正 MOSS-TTS-Local 流式命令格式</p>
+      <div class="sm-meta">
+        <span class="tag merged">MERGED</span>
+        <span class="tag docs">文档</span>
+        <span>#819</span>
+        <span>作者 @SandyLuXY</span>
+        <span><a class="lnk" href="https://github.com/sgl-project/sglang-omni/pull/819">查看 PR ↗</a></span>
+      </div>
+    </span>
+    <span class="chev"><span class="c1">▼ 展开</span><span class="c2">▲ 收起</span></span>
+  </summary>
+  <div class="body">
+    <p><b>一句话：</b>修文档——MOSS-TTS-Local 的流式示例把响应直接管道给 <code class="inl">ffmpeg -f s16le</code> 时，
+    必须显式加上 <code class="inl">"stream_format":"audio"</code>，否则会输出「噪声样」的 WAV 并触发 ffmpeg 的 PCM 解码错误（即便命令退出码是 0）。</p>
+    <p><b>解决的问题：</b>原 cookbook 漏了这个参数。作者实测两次「不加」会得到 <code class="inl">mean_abs≈0.59</code> 的噪声样输出、ffmpeg 报 <code class="inl">Invalid PCM packet</code>；
+    「加上」后 <code class="inl">mean_abs≈0.06</code> 的正常语音、无解码错误。改动只动 <code class="inl">docs/cookbook/moss_tts_local.md</code>：流式段要求 <code class="inl">"stream":true</code> + <code class="inl">"response_format":"pcm"</code> + <code class="inl">"stream_format":"audio"</code>，并在参数表里补充 <code class="inl">stream_format</code> 说明。</p>
+    <p><b>顺带的知识点：</b><b>PCM</b>（脉冲编码调制）是最原始的未压缩音频字节流；<code class="inl">s16le</code>＝16-bit 小端有符号整数。
+    流式 TTS 直接吐裸 PCM 字节，需要告诉服务端「按音频流封装」（<code class="inl">stream_format:audio</code>），下游 ffmpeg 才能正确把字节解析成音频帧，否则把控制/封装信息当成样本，就成了噪声。</p>
+  </div>
+</details>
+
+<!-- ============================== PR 792 ============================== -->
+<details class="card" id="pr792">
+  <summary>
+    <span class="num-badge">4</span>
+    <span>
+      <p class="sm-title">docs：新增 MOSS-TTS-Local cookbook</p>
+      <div class="sm-meta">
+        <span class="tag merged">MERGED</span>
+        <span class="tag docs">文档</span>
+        <span>#792</span>
+        <span>作者 @MelodyyyYin</span>
+        <span><a class="lnk" href="https://github.com/sgl-project/sglang-omni/pull/792">查看 PR ↗</a></span>
+      </div>
+    </span>
+    <span class="chev"><span class="c1">▼ 展开</span><span class="c2">▲ 收起</span></span>
+  </summary>
+  <div class="body">
+    <p><b>一句话：</b>为 <code class="inl">MOSS-TTS-Local-Transformer-v1.5</code> 新增一份面向用户的 cookbook 文档，并注册到文档目录树。纯文档，一个新文件 + 一行 toctree。</p>
+    <p><b>内容要点（也是几个有用的领域概念）：</b></p>
+    <ul>
+      <li><b>frame-local decoding（无 delay pattern）</b>：与普通 MOSS-TTS 不同，MOSS-TTS-Local 在<strong>每一帧内部</strong>解码，不用「错位延迟」的 codebook 生成方式——结构更简单。（对照 #824 里讲的 delay pattern。）</li>
+      <li><b>RVQ-12 音频码本</b>：12 层残差矢量量化（接 #824 里的 RVQ 概念，12 本 codebook）。</li>
+      <li><b>48kHz 立体声输出、并发 16 时 RTF&lt;1</b>：<b>RTF</b>（Real-Time Factor，实时率）＝合成耗时/音频时长，&lt;1 表示比实时还快，能跟得上流式播放。</li>
+      <li><b>部署</b>：checkpoint 能自动解析出 <code class="inl">MossTTSLocalModel</code>，所以 <code class="inl">serve</code> 只需 <code class="inl">--model-path</code>（像 Higgs TTS 一样无需 <code class="inl">--config</code>）；默认 AR 引擎与 codec/vocoder 分到两张卡，故 <code class="inl">CUDA_VISIBLE_DEVICES=0,1</code>。</li>
+    </ul>
+    <p><b>工程态度可借鉴：</b>作者强调「每条事实都对照源码核验」，并<strong>主动删掉了仓库里无据可查的「12.5 Hz 帧率」说法</strong>——文档以可验证为准，不臆造数字。</p>
+  </div>
+</details>
+
+<footer>
+  本日报由自动化例程于 2026-06-19 生成 · 数据源：GitHub <code>sgl-project/sglang-omni</code> ·
+  统计口径：过去 24 小时窗口内 merged 的 PR（共 4 个，深度讲解 2 个核心、简述 2 个文档）。<br>
+  讲解基于各 PR 的实际 diff 与描述撰写，代码片段为便于阅读做了精简/高亮处理，完整代码以仓库为准。
+</footer>
+
+</div>
+</body>
+</html>
