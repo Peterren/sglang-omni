@@ -33,9 +33,7 @@ class HiggsTTSModelRunner(ModelRunner):
         super().__init__(tp_worker, output_processor)
         self._outbox: Any | None = None
         self._vocoder_target = "vocoder"
-        # Pinned host buffers for the async-decode logprob D2H, ping-ponged like
-        # the base runner's _host_staging_buffers (resolve(N) reads while
-        # launch(N+1) writes the other).
+        # Ping-pong pinned host buffers for the async-decode logprob D2H.
         self._lp_host_buffers: list[torch.Tensor] | None = None
         self._lp_slot = 0
 
@@ -410,9 +408,7 @@ class HiggsTTSModelRunner(ModelRunner):
                 continue
             codes_N = codes_log[-1]
             data.output_codes.append(codes_N.detach().cpu().clone())
-            # Codes and logprobs are appended in tandem (decode_codebooks_batch);
-            # if a code exists its logprob must too, so index directly (fail loud
-            # on misalignment rather than silently dropping a logprob).
+            # Indexed directly (not guarded): logprobs are appended with codes.
             data.output_logprobs.append(
                 model._output_logprobs[rid][-1].detach().cpu().clone()
             )

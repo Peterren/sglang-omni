@@ -1063,9 +1063,7 @@ def _build_generate_response(
         type=finish_type,
         length=completion_tokens if finish_type == "length" else None,
     )
-    # output_token_logprobs is the AR text-token field; an audio-only rollout
-    # carries its logprobs in omni_rollout instead, so only error when neither is
-    # present.
+    # Audio-only rollouts carry logprobs in omni_rollout, not output_token_logprobs.
     if (
         req.return_logprob
         and result.output_token_logprobs is None

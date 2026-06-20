@@ -154,8 +154,7 @@ class HiggsTTSModel(nn.Module):
         self._rid_to_row: dict[str, int] = {}
         self._free_rows: list[int] = list(range(self._max_batch_size))
         self._output_codes: dict[str, list[torch.Tensor]] = {}
-        # Parallel to ``_output_codes``: per-step selected-action logprobs for the
-        # eager prefill path (the CG decode path stages them via ``_cg_logprobs_BN``).
+        # Per-step selected-action logprobs (eager prefill path).
         self._output_logprobs: dict[str, list[torch.Tensor]] = {}
 
         cg_device = self.backbone.model.embed_tokens.weight.device
@@ -175,8 +174,7 @@ class HiggsTTSModel(nn.Module):
         self._cg_codes_BN = torch.zeros(
             pool_size, num_codebooks, dtype=torch.long, device=cg_device
         )
-        # Selected-action logprobs for the current decode step, written by
-        # ``decode_codebooks_batch_cg`` and D2H'd by the runner's collect.
+        # Selected-action logprobs for the current decode step (CG path).
         self._cg_logprobs_BN = torch.zeros(
             pool_size, num_codebooks, dtype=torch.float32, device=cg_device
         )
