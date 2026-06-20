@@ -267,18 +267,6 @@ class HiggsTTSModel(nn.Module):
             )
         return torch.stack(codes, dim=0).to(torch.long)
 
-    def get_output_logprobs(self, req_id: str) -> torch.Tensor:
-        """``[T, N]`` selected-action logprobs for ``req_id`` (eager path),
-        aligned row-for-row with :meth:`get_output_codes`."""
-        logprobs = self._output_logprobs.get(req_id)
-        if not logprobs:
-            return torch.empty(
-                (0, self._num_codebooks),
-                dtype=torch.float32,
-                device=self.multimodal_embedding.modality_embedding_0.weight.device,
-            )
-        return torch.stack(logprobs, dim=0).to(torch.float32)
-
     @torch.no_grad()
     def decode_codebooks_batch(
         self,

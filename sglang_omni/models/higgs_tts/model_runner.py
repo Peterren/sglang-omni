@@ -410,9 +410,12 @@ class HiggsTTSModelRunner(ModelRunner):
                 continue
             codes_N = codes_log[-1]
             data.output_codes.append(codes_N.detach().cpu().clone())
-            lp_log = model._output_logprobs.get(rid)
-            if lp_log:
-                data.output_logprobs.append(lp_log[-1].detach().cpu().clone())
+            # Codes and logprobs are appended in tandem (decode_codebooks_batch);
+            # if a code exists its logprob must too, so index directly (fail loud
+            # on misalignment rather than silently dropping a logprob).
+            data.output_logprobs.append(
+                model._output_logprobs[rid][-1].detach().cpu().clone()
+            )
             data.generation_done = bool(model._sampler_pool.generation_done[row].item())
             self._emit_code_chunk(sched_req, data.output_codes[-1])
             self._mark_sampler_finished(req, data.generation_done)
