@@ -59,7 +59,6 @@ def test_is_a_valid_log_distribution():
     torch.manual_seed(1)
     B = 3
     logits = torch.randn(B, N, V, device=DEVICE)
-    temperature = torch.full((B,), 1.3, device=DEVICE)
 
     # Selected logprob for EVERY vocab id must reconstruct a normalized dist.
     all_codes = torch.arange(V, device=DEVICE)
