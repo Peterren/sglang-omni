@@ -16,6 +16,10 @@ import torch
 from sglang_omni.models.voxtral_tts.io import VoxtralTTSState
 from sglang_omni.models.voxtral_tts.pipeline.state_io import load_state, store_state
 from sglang_omni.proto import StagePayload
+from sglang_omni.scheduling.generation_batch_policy import (
+    build_power_of_two_cuda_graph_bs,
+    sync_cuda_graph_bs_with_max_bs,
+)
 from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
 from sglang_omni.utils.audio_payload import audio_waveform_payload
 
@@ -198,6 +202,8 @@ def create_generation_executor(
     gpu_id = int(device.split(":")[-1]) if ":" in device else 0
 
     overrides: dict[str, Any] = {
+        "cuda_graph_bs": build_power_of_two_cuda_graph_bs(16),
+        "cuda_graph_max_bs": 16,
         "dtype": "bfloat16",
         "disable_cuda_graph": False,
         "disable_overlap_schedule": True,
@@ -211,6 +217,7 @@ def create_generation_executor(
     }
     if server_args_overrides:
         overrides.update(server_args_overrides)
+        sync_cuda_graph_bs_with_max_bs(overrides, server_args_overrides)
 
     server_args = build_sglang_server_args(
         checkpoint_dir,

@@ -330,6 +330,8 @@ def test_s2pro_engine_disables_generic_compile_after_local_compile(
             enable_torch_compile=kwargs["enable_torch_compile"],
             torch_compile_max_bs=kwargs["torch_compile_max_bs"],
             max_running_requests=kwargs["max_running_requests"],
+            cuda_graph_max_bs=kwargs["cuda_graph_max_bs"],
+            cuda_graph_bs=kwargs["cuda_graph_bs"],
             page_size=1,
             chunked_prefill_size=kwargs["chunked_prefill_size"],
             max_prefill_tokens=16384,
@@ -412,12 +414,17 @@ def test_s2pro_engine_disables_generic_compile_after_local_compile(
     scheduler = stages.create_sglang_tts_engine_executor("model", device="cuda:0")
 
     assert build_kwargs["enable_torch_compile"] is True
+    assert build_kwargs["max_running_requests"] == 64
+    assert build_kwargs["cuda_graph_max_bs"] == 64
+    assert build_kwargs["cuda_graph_bs"] == [1, 2, 4, 8, 16, 32, 64]
     assert build_kwargs["torch_compile_max_bs"] == 16
     assert infrastructure_saw_graph_disabled == [True]
     assert compile_calls == [(scheduler.model_runner.args[0].model_runner.model, 16)]
     assert init_graph_calls == [True]
     assert scheduler.server_args.disable_cuda_graph is False
     assert scheduler.server_args.enable_torch_compile is False
+    assert scheduler.server_args.cuda_graph_max_bs == 64
+    assert scheduler.server_args.cuda_graph_bs == [1, 2, 4, 8, 16, 32, 64]
     assert scheduler.server_args.torch_compile_max_bs == 16
 
 
