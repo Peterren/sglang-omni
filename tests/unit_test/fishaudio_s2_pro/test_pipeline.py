@@ -327,7 +327,9 @@ def _run_s2pro_engine_with_fake_buffers(
         text_model._audio_decoder = audio_decoder
         audio_decoder.kv_cache_max_batch_size = audio_buffer_bs
 
-    fake_bootstrap.bootstrap_text_model_for_decode = fake_bootstrap_text_model_for_decode
+    fake_bootstrap.bootstrap_text_model_for_decode = (
+        fake_bootstrap_text_model_for_decode
+    )
 
     def fake_build_sglang_server_args(
         model_path: str,
