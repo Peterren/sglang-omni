@@ -35,7 +35,7 @@ from sglang_omni.preprocessing.cache_key import (
     reference_path_cache_key as _reference_path_cache_key,
 )
 from sglang_omni.scheduling.generation_batch_policy import (
-    build_power_of_two_cuda_graph_bs,
+    build_default_cuda_graph_bs,
     sync_cuda_graph_bs_with_max_bs,
     validate_generation_batch_policy,
 )
@@ -540,7 +540,7 @@ def create_sglang_tts_engine_executor(
 
     overrides: dict[str, Any] = {
         "dtype": dtype,
-        "cuda_graph_bs": build_power_of_two_cuda_graph_bs(16),
+        "cuda_graph_bs": build_default_cuda_graph_bs(16),
         "cuda_graph_max_bs": 16,
         "disable_cuda_graph": False,
         "disable_overlap_schedule": True,
@@ -628,7 +628,10 @@ def create_sglang_tts_engine_executor(
         # micro-steps and 13 seeded sampling passes per frame): eager it is
         # kernel-launch-bound at ~22 ms/frame independent of batch size.
         model.init_frame_decode_graphs(
-            list(overrides.get("cuda_graph_bs") or [1, 2, 4, 8, 16])
+            list(
+                overrides.get("cuda_graph_bs")
+                or build_default_cuda_graph_bs(int(overrides["cuda_graph_max_bs"]))
+            )
         )
 
     output_proc = SGLangOutputProcessor(

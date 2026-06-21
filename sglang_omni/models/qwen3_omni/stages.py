@@ -30,7 +30,7 @@ from sglang_omni.models.qwen3_omni.request_builders import (
 from sglang_omni.profiler.event_recorder import emit as _emit_event
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.generation_batch_policy import (
-    build_power_of_two_cuda_graph_bs,
+    build_default_cuda_graph_bs,
     sync_cuda_graph_bs_with_max_bs,
     validate_generation_batch_policy,
 )
@@ -1072,7 +1072,7 @@ def create_talker_ar_executor_from_config(
     # under cuda graph the captured RNG is boot-dependent and ~5% of prompts
     # trigger degenerate AR loops (see #408). Revert once upstream lands.
     overrides: dict[str, Any] = {
-        "cuda_graph_bs": build_power_of_two_cuda_graph_bs(16),
+        "cuda_graph_bs": build_default_cuda_graph_bs(16),
         "cuda_graph_max_bs": 16,
         "disable_cuda_graph": False,
         "max_running_requests": 16,

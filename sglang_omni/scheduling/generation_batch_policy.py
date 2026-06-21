@@ -20,17 +20,18 @@ class GenerationBatchPolicyReport:
     model_buffer_bs: int | None
 
 
-def build_power_of_two_cuda_graph_bs(max_bs: int) -> list[int]:
+def build_default_cuda_graph_bs(max_bs: int) -> list[int]:
     max_bs = int(max_bs)
     if max_bs < 1:
         raise ValueError("max_bs must be >= 1")
 
-    values: list[int] = []
-    bs = 1
-    while bs < max_bs:
-        values.append(bs)
-        bs *= 2
-    values.append(max_bs)
+    values = [1, 2, 4, 8, 12]
+    values.extend(range(16, 257, 8))
+    values.extend(range(272, 512, 16))
+    values.extend(range(512, max_bs + 1, 32))
+    values = [bs for bs in values if bs <= max_bs]
+    if not values or values[-1] != max_bs:
+        values.append(max_bs)
     return values
 
 
@@ -44,7 +45,7 @@ def sync_cuda_graph_bs_with_max_bs(
         "cuda_graph_max_bs" in server_args_overrides
         and "cuda_graph_bs" not in server_args_overrides
     ):
-        overrides["cuda_graph_bs"] = build_power_of_two_cuda_graph_bs(
+        overrides["cuda_graph_bs"] = build_default_cuda_graph_bs(
             int(overrides["cuda_graph_max_bs"])
         )
 

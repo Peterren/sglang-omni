@@ -59,7 +59,7 @@ from sglang_omni.preprocessing.cache_key import (
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.bootstrap import create_sglang_infrastructure
 from sglang_omni.scheduling.generation_batch_policy import (
-    build_power_of_two_cuda_graph_bs,
+    build_default_cuda_graph_bs,
     sync_cuda_graph_bs_with_max_bs,
     validate_generation_batch_policy,
 )
@@ -412,7 +412,7 @@ def create_sglang_tts_engine_executor(
 
     overrides: dict[str, Any] = {
         "disable_cuda_graph": False,
-        "cuda_graph_bs": build_power_of_two_cuda_graph_bs(cuda_graph_max_bs),
+        "cuda_graph_bs": build_default_cuda_graph_bs(cuda_graph_max_bs),
         "cuda_graph_max_bs": cuda_graph_max_bs,
         "mem_fraction_static": 0.85,
         "max_running_requests": max_running_requests,

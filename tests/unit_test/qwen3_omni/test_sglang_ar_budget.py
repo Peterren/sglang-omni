@@ -295,7 +295,7 @@ def test_qwen_talker_ar_threads_explicit_generation_batch_policy(monkeypatch) ->
 
     assert build_calls == [
         {
-            "cuda_graph_bs": [1, 2, 4, 8, 16],
+            "cuda_graph_bs": [1, 2, 4, 8, 12, 16],
             "cuda_graph_max_bs": 16,
             "disable_cuda_graph": False,
             "max_running_requests": 16,
@@ -310,7 +310,7 @@ def test_qwen_talker_ar_threads_explicit_generation_batch_policy(monkeypatch) ->
             "sampling_backend": "pytorch",
             "max_running_requests": 16,
             "cuda_graph_max_bs": 16,
-            "cuda_graph_bs": [1, 2, 4, 8, 16],
+            "cuda_graph_bs": [1, 2, 4, 8, 12, 16],
             "torch_compile_max_bs": 16,
             "weight_prefix": "talker.",
         }

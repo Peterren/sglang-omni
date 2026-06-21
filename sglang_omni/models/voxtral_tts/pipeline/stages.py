@@ -17,7 +17,7 @@ from sglang_omni.models.voxtral_tts.io import VoxtralTTSState
 from sglang_omni.models.voxtral_tts.pipeline.state_io import load_state, store_state
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.generation_batch_policy import (
-    build_power_of_two_cuda_graph_bs,
+    build_default_cuda_graph_bs,
     sync_cuda_graph_bs_with_max_bs,
     validate_generation_batch_policy,
 )
@@ -203,7 +203,7 @@ def create_generation_executor(
     gpu_id = int(device.split(":")[-1]) if ":" in device else 0
 
     overrides: dict[str, Any] = {
-        "cuda_graph_bs": build_power_of_two_cuda_graph_bs(16),
+        "cuda_graph_bs": build_default_cuda_graph_bs(16),
         "cuda_graph_max_bs": 16,
         "dtype": "bfloat16",
         "disable_cuda_graph": False,

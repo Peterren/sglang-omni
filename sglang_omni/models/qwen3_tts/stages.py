@@ -21,7 +21,7 @@ from sglang_omni.models.qwen3_tts.request_builders import (
 )
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.generation_batch_policy import (
-    build_power_of_two_cuda_graph_bs,
+    build_default_cuda_graph_bs,
     sync_cuda_graph_bs_with_max_bs,
     validate_generation_batch_policy,
 )
@@ -197,7 +197,7 @@ def create_sglang_tts_engine_executor(
     gpu_id = int(device.split(":")[-1]) if ":" in device else 0
 
     overrides: dict[str, Any] = {
-        "cuda_graph_bs": build_power_of_two_cuda_graph_bs(16),
+        "cuda_graph_bs": build_default_cuda_graph_bs(16),
         "cuda_graph_max_bs": 16,
         "dtype": dtype,
         "disable_cuda_graph": False,

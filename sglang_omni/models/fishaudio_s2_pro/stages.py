@@ -18,7 +18,7 @@ from sglang_omni.models.fishaudio_s2_pro.request_builders import (
 )
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.generation_batch_policy import (
-    build_power_of_two_cuda_graph_bs,
+    build_default_cuda_graph_bs,
     sync_cuda_graph_bs_with_max_bs,
     validate_generation_batch_policy,
 )
@@ -251,7 +251,7 @@ def create_sglang_tts_engine_executor(
     patch_fish_config_for_sglang()
 
     overrides: dict[str, Any] = {
-        "cuda_graph_bs": build_power_of_two_cuda_graph_bs(64),
+        "cuda_graph_bs": build_default_cuda_graph_bs(64),
         "cuda_graph_max_bs": 64,
         "disable_cuda_graph": False,
         "mem_fraction_static": 0.85,
