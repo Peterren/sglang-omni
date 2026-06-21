@@ -20,6 +20,7 @@ def _server_args(**overrides: object) -> SimpleNamespace:
         "disable_cuda_graph": False,
         "cuda_graph_max_bs": 16,
         "cuda_graph_bs": [1, 2, 4, 8, 16],
+        "enable_torch_compile": True,
         "torch_compile_max_bs": 16,
     }
     values.update(overrides)
@@ -43,6 +44,7 @@ def test_validate_generation_batch_policy_reports_explicit_full_policy() -> None
     assert report.cuda_graph_enabled is True
     assert report.cuda_graph_max_bs == 16
     assert report.cuda_graph_bs == (1, 2, 4, 8, 16)
+    assert report.torch_compile_enabled is True
     assert report.torch_compile_max_bs == 16
     assert report.model_buffer_bs == 16
 
@@ -63,8 +65,8 @@ def test_validate_generation_batch_policy_rejects_mismatched_cuda_graph_max() ->
         )
 
 
-def test_validate_generation_batch_policy_requires_compile_coverage_or_exception() -> None:
-    partial_compile = _server_args(
+def test_validate_generation_batch_policy_requires_enabled_compile_coverage() -> None:
+    undercovered_compile = _server_args(
         max_running_requests=64,
         cuda_graph_max_bs=64,
         cuda_graph_bs=[1, 2, 4, 8, 16, 32, 64],
@@ -73,14 +75,22 @@ def test_validate_generation_batch_policy_requires_compile_coverage_or_exception
     with pytest.raises(ValueError, match="torch_compile_max_bs must cover"):
         validate_generation_batch_policy(
             model_name="test-model",
-            server_args=partial_compile,
+            server_args=undercovered_compile,
         )
 
+
+def test_validate_generation_batch_policy_ignores_disabled_compile_cap() -> None:
     report = validate_generation_batch_policy(
         model_name="test-model",
-        server_args=partial_compile,
-        allow_partial_torch_compile_coverage=True,
+        server_args=_server_args(
+            max_running_requests=64,
+            cuda_graph_max_bs=64,
+            cuda_graph_bs=[1, 2, 4, 8, 16, 32, 64],
+            enable_torch_compile=False,
+            torch_compile_max_bs=16,
+        ),
     )
+    assert report.torch_compile_enabled is False
     assert report.torch_compile_max_bs == 16
 
 

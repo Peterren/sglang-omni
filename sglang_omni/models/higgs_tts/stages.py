@@ -59,6 +59,8 @@ from sglang_omni.preprocessing.cache_key import (
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.bootstrap import create_sglang_infrastructure
 from sglang_omni.scheduling.generation_batch_policy import (
+    build_power_of_two_cuda_graph_bs,
+    sync_cuda_graph_bs_with_max_bs,
     validate_generation_batch_policy,
 )
 from sglang_omni.scheduling.omni_scheduler import OmniScheduler
@@ -410,6 +412,7 @@ def create_sglang_tts_engine_executor(
 
     overrides: dict[str, Any] = {
         "disable_cuda_graph": False,
+        "cuda_graph_bs": build_power_of_two_cuda_graph_bs(cuda_graph_max_bs),
         "cuda_graph_max_bs": cuda_graph_max_bs,
         "mem_fraction_static": 0.85,
         "max_running_requests": max_running_requests,
@@ -421,6 +424,7 @@ def create_sglang_tts_engine_executor(
     }
     if server_args_overrides:
         overrides.update(server_args_overrides)
+        sync_cuda_graph_bs_with_max_bs(overrides, server_args_overrides)
 
     server_args = build_sglang_server_args(
         checkpoint_dir,
@@ -444,8 +448,7 @@ def create_sglang_tts_engine_executor(
     validate_generation_batch_policy(
         model_name="Higgs TTS",
         server_args=server_args,
-        model_buffer_bs=getattr(model, "_max_batch_size", None),
-        require_cuda_graph_bs=False,
+        model_buffer_bs=model.sampler_pool_max_running_requests,
     )
 
     output_proc = SGLangOutputProcessor(

@@ -55,6 +55,13 @@ def _compile_s2pro_codebook_decoder(model: Any, *, max_batch_size: int) -> None:
     )
 
 
+def _resolve_s2pro_model_buffer_bs(model: Any) -> int:
+    return min(
+        int(model.vq_decode_max_batch_size),
+        int(model._audio_decoder.kv_cache_max_batch_size),
+    )
+
+
 def _resolve_checkpoint(checkpoint: str) -> str:
     if os.path.isdir(checkpoint):
         return checkpoint
@@ -252,7 +259,7 @@ def create_sglang_tts_engine_executor(
         "chunked_prefill_size": 8192,
         "dtype": "bfloat16",
         "enable_torch_compile": True,
-        "torch_compile_max_bs": 16,
+        "torch_compile_max_bs": 64,
         "random_seed": int.from_bytes(os.urandom(4), "little") & 0x7FFFFFFF,
     }
     if server_args_overrides:
@@ -306,8 +313,7 @@ def create_sglang_tts_engine_executor(
     validate_generation_batch_policy(
         model_name="FishAudio S2-Pro",
         server_args=server_args,
-        model_buffer_bs=server_args.max_running_requests,
-        allow_partial_torch_compile_coverage=True,
+        model_buffer_bs=_resolve_s2pro_model_buffer_bs(model_worker.model_runner.model),
     )
 
     if bool(getattr(server_args, "enable_torch_compile", False)):

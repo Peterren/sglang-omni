@@ -15,6 +15,7 @@ class GenerationBatchPolicyReport:
     cuda_graph_enabled: bool
     cuda_graph_max_bs: int | None
     cuda_graph_bs: tuple[int, ...] | None
+    torch_compile_enabled: bool
     torch_compile_max_bs: int | None
     model_buffer_bs: int | None
 
@@ -53,11 +54,6 @@ def validate_generation_batch_policy(
     model_name: str,
     server_args: Any,
     model_buffer_bs: int | None = None,
-    allow_partial_cuda_graph_coverage: bool = False,
-    allow_partial_torch_compile_coverage: bool = False,
-    require_cuda_graph_bs: bool = True,
-    require_full_cuda_graph_coverage: bool = True,
-    require_full_torch_compile_coverage: bool = True,
 ) -> GenerationBatchPolicyReport:
     errors: list[str] = []
 
@@ -79,8 +75,7 @@ def validate_generation_batch_policy(
         )
         cuda_graph_bs_value = getattr(server_args, "cuda_graph_bs", None)
         if cuda_graph_bs_value is None:
-            if require_cuda_graph_bs:
-                errors.append("cuda_graph_bs must be explicit when CUDA graph is enabled")
+            errors.append("cuda_graph_bs must be explicit when CUDA graph is enabled")
         else:
             cuda_graph_bs = _normalize_cuda_graph_bs(cuda_graph_bs_value, errors)
 
@@ -92,9 +87,7 @@ def validate_generation_batch_policy(
                 )
 
         if (
-            require_full_cuda_graph_coverage
-            and not allow_partial_cuda_graph_coverage
-            and max_running_requests is not None
+            max_running_requests is not None
             and cuda_graph_max_bs is not None
             and cuda_graph_max_bs < max_running_requests
         ):
@@ -103,15 +96,15 @@ def validate_generation_batch_policy(
                 f"({cuda_graph_max_bs} < {max_running_requests})"
             )
 
+    torch_compile_enabled = bool(getattr(server_args, "enable_torch_compile", False))
     torch_compile_max_bs = _read_positive_int(
         server_args,
         "torch_compile_max_bs",
         errors,
-        required=False,
+        required=torch_compile_enabled,
     )
     if (
-        require_full_torch_compile_coverage
-        and not allow_partial_torch_compile_coverage
+        torch_compile_enabled
         and max_running_requests is not None
         and torch_compile_max_bs is not None
         and torch_compile_max_bs < max_running_requests
@@ -147,6 +140,7 @@ def validate_generation_batch_policy(
         cuda_graph_enabled=cuda_graph_enabled,
         cuda_graph_max_bs=cuda_graph_max_bs,
         cuda_graph_bs=cuda_graph_bs,
+        torch_compile_enabled=torch_compile_enabled,
         torch_compile_max_bs=torch_compile_max_bs,
         model_buffer_bs=normalized_model_buffer_bs,
     )
