@@ -32,6 +32,7 @@ from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.generation_batch_policy import (
     build_power_of_two_cuda_graph_bs,
     sync_cuda_graph_bs_with_max_bs,
+    validate_generation_batch_policy,
 )
 from sglang_omni.scheduling.sglang_backend import (
     apply_encoder_mem_reserve,
@@ -1091,6 +1092,10 @@ def create_talker_ar_executor_from_config(
         model_path,
         context_length=talker_max_seq_len,
         **overrides,
+    )
+    validate_generation_batch_policy(
+        model_name="Qwen3-Omni talker_ar",
+        server_args=server_args,
     )
     pre_load_avail_mem = avail_gpu_mem(gpu_id)
     pre_load_process_mem = get_process_gpu_memory_bytes(gpu_id)

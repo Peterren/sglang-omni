@@ -38,6 +38,8 @@ def test_higgs_tts_engine_enables_cuda_graph_by_default(monkeypatch) -> None:
         server_args = SimpleNamespace(
             disable_cuda_graph=overrides["disable_cuda_graph"],
             disable_overlap_schedule=False,
+            max_running_requests=overrides["max_running_requests"],
+            cuda_graph_max_bs=overrides["cuda_graph_max_bs"],
         )
         captured["checkpoint_dir"] = checkpoint_dir
         captured["context_length"] = context_length
@@ -47,7 +49,10 @@ def test_higgs_tts_engine_enables_cuda_graph_by_default(monkeypatch) -> None:
 
     def fake_create_sglang_infrastructure(server_args, gpu_id):
         captured["gpu_id"] = gpu_id
-        model = SimpleNamespace(reset_request=lambda _request_id: None)
+        model = SimpleNamespace(
+            _max_batch_size=64,
+            reset_request=lambda _request_id: None,
+        )
         return (
             SimpleNamespace(model_runner=SimpleNamespace(model=model)),
             object(),

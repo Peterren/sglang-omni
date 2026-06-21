@@ -23,6 +23,7 @@ from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.generation_batch_policy import (
     build_power_of_two_cuda_graph_bs,
     sync_cuda_graph_bs_with_max_bs,
+    validate_generation_batch_policy,
 )
 from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
 from sglang_omni.utils.audio_payload import audio_waveform_payload
@@ -239,6 +240,11 @@ def create_sglang_tts_engine_executor(
 
     if want_cuda_graph:
         server_args.disable_cuda_graph = False
+
+    validate_generation_batch_policy(
+        model_name="Qwen3-TTS",
+        server_args=server_args,
+    )
 
     model = model_worker.model_runner.model
     speech_tokenizer = _load_qwen3_tts_tokenizer(

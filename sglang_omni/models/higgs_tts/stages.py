@@ -58,6 +58,9 @@ from sglang_omni.preprocessing.cache_key import (
 )
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.bootstrap import create_sglang_infrastructure
+from sglang_omni.scheduling.generation_batch_policy import (
+    validate_generation_batch_policy,
+)
 from sglang_omni.scheduling.omni_scheduler import OmniScheduler
 from sglang_omni.scheduling.sglang_backend import (
     SGLangOutputProcessor,
@@ -436,15 +439,21 @@ def create_sglang_tts_engine_executor(
         model_config,
     ) = create_sglang_infrastructure(server_args, gpu_id)
 
-    truncate_rope_to_bf16(model_worker.model_runner.model)
+    model = model_worker.model_runner.model
+    truncate_rope_to_bf16(model)
+    validate_generation_batch_policy(
+        model_name="Higgs TTS",
+        server_args=server_args,
+        model_buffer_bs=getattr(model, "_max_batch_size", None),
+        require_cuda_graph_bs=False,
+    )
 
     output_proc = SGLangOutputProcessor(
         capture_hidden=False,
         capture_hidden_layers=None,
-        model=model_worker.model_runner.model,
+        model=model,
     )
     model_runner = HiggsTTSModelRunner(model_worker, output_proc)
-    model = model_worker.model_runner.model
     request_builder, result_adapter = make_higgs_scheduler_adapters(
         model,
         max_new_tokens_cap=max_new_tokens,

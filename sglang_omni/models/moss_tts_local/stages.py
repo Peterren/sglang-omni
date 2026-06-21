@@ -34,6 +34,10 @@ from sglang_omni.models.moss_tts_local.streaming_vocoder import (
 from sglang_omni.preprocessing.cache_key import (
     reference_path_cache_key as _reference_path_cache_key,
 )
+from sglang_omni.scheduling.generation_batch_policy import (
+    sync_cuda_graph_bs_with_max_bs,
+    validate_generation_batch_policy,
+)
 from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
 from sglang_omni.scheduling.stage_cache import StageOutputCache
 
@@ -553,6 +557,7 @@ def create_sglang_tts_engine_executor(
         overrides["mem_fraction_static"] = 0.6 if torch.cuda.device_count() > 1 else 0.5
     if server_args_overrides:
         overrides.update(server_args_overrides)
+        sync_cuda_graph_bs_with_max_bs(overrides, server_args_overrides)
     memory_budget = _apply_colocated_ar_memory_budget(
         overrides,
         total_gpu_memory_fraction=total_gpu_memory_fraction,
@@ -609,6 +614,11 @@ def create_sglang_tts_engine_executor(
 
     if want_cuda_graph:
         server_args.disable_cuda_graph = False
+
+    validate_generation_batch_policy(
+        model_name="MOSS-TTS Local",
+        server_args=server_args,
+    )
 
     model = model_worker.model_runner.model
     if want_cuda_graph:

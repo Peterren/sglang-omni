@@ -20,6 +20,7 @@ from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.generation_batch_policy import (
     build_power_of_two_cuda_graph_bs,
     sync_cuda_graph_bs_with_max_bs,
+    validate_generation_batch_policy,
 )
 
 logger = logging.getLogger(__name__)
@@ -301,6 +302,12 @@ def create_sglang_tts_engine_executor(
         num_codebooks=num_codebooks,
         codebook_size=codebook_size,
         ras_window=ras_window,
+    )
+    validate_generation_batch_policy(
+        model_name="FishAudio S2-Pro",
+        server_args=server_args,
+        model_buffer_bs=server_args.max_running_requests,
+        allow_partial_torch_compile_coverage=True,
     )
 
     if bool(getattr(server_args, "enable_torch_compile", False)):

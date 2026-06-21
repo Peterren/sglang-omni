@@ -23,6 +23,10 @@ from sglang_omni.models.moss_tts.request_builders import (
     set_moss_tts_preprocessing_context,
 )
 from sglang_omni.proto import StagePayload
+from sglang_omni.scheduling.generation_batch_policy import (
+    sync_cuda_graph_bs_with_max_bs,
+    validate_generation_batch_policy,
+)
 from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
 from sglang_omni.utils.audio_payload import audio_waveform_payload
 
@@ -239,6 +243,7 @@ def create_sglang_tts_engine_executor(
     }
     if server_args_overrides:
         overrides.update(server_args_overrides)
+        sync_cuda_graph_bs_with_max_bs(overrides, server_args_overrides)
 
     server_args = build_sglang_server_args(
         checkpoint_dir,
@@ -266,6 +271,11 @@ def create_sglang_tts_engine_executor(
 
     if want_cuda_graph:
         server_args.disable_cuda_graph = False
+
+    validate_generation_batch_policy(
+        model_name="MOSS-TTS",
+        server_args=server_args,
+    )
 
     model = model_worker.model_runner.model
     if want_cuda_graph:
