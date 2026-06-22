@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang Omni 每日 PR 学习日报 · 2026-06-22</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1d212b; --ink:#e6e9ef; --muted:#9aa4b2;
+    --accent:#6e63da; --accent2:#39b3a6; --warn:#e0a458; --line:#2a2f3a; --code:#11141a;
+    --green:#3fb950; --red:#f06b6b; --blue:#58a6ff;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans CJK SC","PingFang SC","Microsoft YaHei","Segoe UI",system-ui,-apple-system,sans-serif;
+    line-height:1.75; font-size:16px;
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:32px 22px 80px;}
+  header.top{
+    border:1px solid var(--line); border-radius:16px; padding:28px 30px;
+    background:linear-gradient(135deg,#1b1f2a 0%,#171a21 60%);
+  }
+  header.top h1{margin:0 0 6px; font-size:27px; letter-spacing:.3px}
+  header.top .sub{color:var(--muted); font-size:14px}
+  .badges{margin-top:16px; display:flex; flex-wrap:wrap; gap:8px}
+  .badge{
+    font-size:12.5px; padding:4px 11px; border-radius:999px;
+    background:#23283400; border:1px solid var(--line); color:var(--muted);
+  }
+  .badge.k{border-color:var(--accent); color:#cdc8ff}
+  .badge.t{border-color:var(--accent2); color:#bdeee8}
+  .badge.w{border-color:var(--warn); color:#f3d9ad}
+
+  .overview{
+    margin-top:22px; border:1px solid var(--line); border-radius:14px;
+    background:var(--card); padding:22px 24px;
+  }
+  .overview h2{margin:0 0 12px; font-size:18px}
+  .stat-row{display:flex; flex-wrap:wrap; gap:14px; margin:6px 0 14px}
+  .stat{
+    flex:1 1 150px; background:var(--card2); border:1px solid var(--line);
+    border-radius:12px; padding:12px 16px;
+  }
+  .stat .n{font-size:26px; font-weight:700}
+  .stat .l{font-size:12.5px; color:var(--muted)}
+  .toc{margin-top:8px}
+  .toc a{color:var(--blue); text-decoration:none; display:block; padding:3px 0; font-size:14.5px}
+  .toc a:hover{text-decoration:underline}
+  .toc .meta{color:var(--muted); font-size:12.5px}
+
+  details.card{
+    margin-top:26px; border:1px solid var(--line); border-radius:14px;
+    background:var(--card); overflow:hidden;
+  }
+  details.card[open]{box-shadow:0 0 0 1px #2a2f3a}
+  summary{
+    cursor:pointer; list-style:none; padding:18px 22px;
+    display:flex; align-items:flex-start; gap:14px; background:var(--card2);
+  }
+  summary::-webkit-details-marker{display:none}
+  .pr-num{
+    flex:none; font-weight:700; font-size:13px; color:#fff; background:var(--accent);
+    border-radius:8px; padding:5px 10px; margin-top:2px; white-space:nowrap;
+  }
+  .pr-num.green{background:#2f6b3a}
+  .sum-body h3{margin:0 0 4px; font-size:17.5px; line-height:1.45}
+  .sum-body .line{color:var(--muted); font-size:13px}
+  .card-inner{padding:6px 26px 26px}
+
+  .card-inner h4{
+    margin:26px 0 8px; font-size:16px; color:#fff;
+    border-left:4px solid var(--accent); padding-left:11px;
+  }
+  .card-inner h5{margin:18px 0 6px; font-size:14.5px; color:var(--accent2)}
+  p{margin:9px 0}
+  .muted{color:var(--muted)}
+  a.ext{color:var(--blue); text-decoration:none}
+  a.ext:hover{text-decoration:underline}
+  ul,ol{margin:9px 0; padding-left:22px}
+  li{margin:5px 0}
+  code.inl{
+    background:#222733; border:1px solid var(--line); border-radius:5px;
+    padding:1px 6px; font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
+    font-size:13.5px; color:#e8c9a0;
+  }
+  pre{
+    background:var(--code); border:1px solid var(--line); border-radius:10px;
+    padding:14px 16px; overflow-x:auto; margin:12px 0;
+    font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
+    font-size:13px; line-height:1.6; color:#d7dce5;
+  }
+  pre .c{color:#6a7384; font-style:italic}      /* comment */
+  pre .k{color:#c98bda}                          /* keyword */
+  pre .s{color:#9ece6a}                          /* string */
+  pre .f{color:#7aa2f7}                          /* func/name */
+  pre .n{color:#e0af68}                          /* number */
+  pre .add{color:#7ee787}
+  pre .del{color:#f06b6b}
+
+  .box{
+    border:1px solid var(--line); border-left:4px solid var(--accent2);
+    background:#14181f; border-radius:10px; padding:12px 16px; margin:14px 0;
+  }
+  .box.know{border-left-color:var(--warn)}
+  .box.tip{border-left-color:var(--accent)}
+  .box h6{margin:0 0 6px; font-size:14px; color:#fff}
+  .box .triad{margin:8px 0 0}
+  .box .triad b{color:var(--warn)}
+
+  table{border-collapse:collapse; width:100%; margin:12px 0; font-size:13px}
+  th,td{border:1px solid var(--line); padding:7px 10px; text-align:left}
+  th{background:var(--card2); color:#fff}
+  td.pos{color:var(--green)} td.neg{color:var(--red)}
+
+  .analogy{background:#1a1726; border-left:4px solid #9a7bd6; border-radius:8px;
+    padding:10px 15px; margin:12px 0; font-size:14.5px}
+  .analogy b{color:#c9b6f5}
+
+  footer{margin-top:46px; color:var(--muted); font-size:13px; text-align:center;
+    border-top:1px solid var(--line); padding-top:20px}
+
+  @media print{
+    body{background:#fff; color:#1a1d23; font-size:11.5pt}
+    .wrap{max-width:none; padding:0}
+    header.top{background:#f3f2fb; border-color:#d8d8e8}
+    header.top h1,.sum-body h3,.card-inner h4,.box h6{color:#15131f}
+    .overview,.stat,details.card,summary,pre,.box,.analogy,.toc a{break-inside:avoid}
+    details.card,.overview{background:#fafafd; border-color:#dcdce6}
+    summary{background:#f0f0f6}
+    pre{background:#1b1e26; color:#d7dce5}            /* keep code dark for contrast */
+    code.inl{background:#eee; color:#8a4b1f; border-color:#ddd}
+    .muted,.sum-body .line,.stat .l,.toc .meta{color:#5a6170}
+    a.ext,.toc a{color:#2f57c2}
+    .badge{color:#5a6170;border-color:#ccd}
+    .box{background:#f4f6f8}
+    .analogy{background:#f3effa}
+    details.card{box-shadow:none}
+    h4{break-after:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>SGLang&nbsp;Omni · 每日 PR 学习日报</h1>
+  <div class="sub">数据日期：2026-06-22 ｜ 仓库：<a class="ext" href="https://github.com/sgl-project/sglang-omni">sgl-project/sglang-omni</a> ｜ 统计窗口：过去 24 小时内合并（merged）的 PR</div>
+  <div class="badges">
+    <span class="badge k">主题 · 张量并行正确性</span>
+    <span class="badge t">主题 · 生成批处理 / CUDA Graph</span>
+    <span class="badge w">主题 · 架构文档 / RFC</span>
+    <span class="badge">面向小白 · 三段式讲解</span>
+  </div>
+</header>
+
+<section class="overview">
+  <h2>📊 当日概览</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="n">3</div><div class="l">过去 24h 合并 PR 总数</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">核心贡献者（luojiaxuan / JiaxinD）</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">主题分类：并行正确性 / 批处理策略 / 架构文档</div></div>
+  </div>
+  <p class="muted" style="margin-top:0">本日 3 个 PR 全部与 <b>Omni / 多模态 / 多阶段（multi-stage）架构</b>直接相关：一个修复多模态 <i>thinker</i> 阶段在张量并行下的正确性，一个为所有 TTS / 音频生成阶段建立统一的批处理与 CUDA Graph 校验机制，一个梳理整个多阶段架构的设计决策历史。下面按"深度优先"逐个讲透。</p>
+  <div class="toc">
+    <a href="#pr771">#771 · [Qwen3-Omni] TP correctness — 修复多模态 thinker 在 TP&gt;1 时的自定义 all-reduce 正确性 <span class="meta">（并行 · 已合并）</span></a>
+    <a href="#pr843">#843 · [TTS] Validate generation batch policies — 统一的生成批处理 / CUDA Graph 策略校验器 <span class="meta">（批处理/性能 · 已合并）</span></a>
+    <a href="#pr537">#537 · [Docs] Internalize RFC + consolidate historical RFCs — 内化 RFC 评审、合并历史设计决策 <span class="meta">（文档/架构 · 已合并）</span></a>
+  </div>
+</section>
+
+<!-- ================= 前置导读 ================= -->
+<details class="card" open>
+  <summary>
+    <span class="pr-num" style="background:#39506b">导读</span>
+    <div class="sum-body">
+      <h3>先建立地图：SGLang 与 SGLang-Omni 到底是什么？</h3>
+      <div class="line">看不懂下面的 PR？先花 3 分钟读这一节，把术语地基打好。</div>
+    </div>
+  </summary>
+  <div class="card-inner">
+    <p><b>SGLang</b> 是一个开源的大模型<strong>推理（inference）引擎</strong>——也就是"把训练好的模型跑起来、对外提供服务"的那层基础设施。它的卖点是高吞吐：靠 <i>RadixAttention</i>（前缀缓存复用）、<i>continuous batching</i>（连续批处理）、<i>CUDA Graph</i>（算子图捕获）等手段把 GPU 榨干。</p>
+    <p><b>SGLang-Omni</b> 是在 SGLang 之上做的<strong>多模态 / 全模态（Omni）扩展</strong>。"Omni"意味着它要同时处理文本、图像、音频，甚至直接<strong>输出语音（TTS）</strong>。这类模型不是"一个网络一口气算完"，而是被拆成<strong>多个阶段（stage）</strong>串成一条流水线（pipeline）。</p>
+
+    <div class="box">
+      <h6>🧩 关键心智模型：多阶段流水线（multi-stage pipeline）</h6>
+      <p>以 Qwen3-Omni 语音管线为例，一句"看图说话再朗读"的请求会依次流过这些阶段：</p>
+      <pre><span class="c"># 8-stage speech pipeline（简化示意）</span>
+preprocessing  <span class="c"># 预处理：把图片/音频切成模型能吃的张量</span>
+  → image_encoder / audio_encoder   <span class="c"># 多模态编码器：把像素/声波编码成 embedding</span>
+  → <span class="k">thinker</span>            <span class="c"># "思考者"：核心大语言模型，理解输入并产生文本/语义</span>
+  → talker_ar          <span class="c"># "说话者"：自回归地把语义转成离散语音 token</span>
+  → code2wav           <span class="c"># 声码器：把语音 token 还原成波形 wav</span></pre>
+      <p>每个阶段都是<strong>独立的进程 / GPU 角色</strong>，阶段之间用消息（payload）传递数据。今天的两个核心 PR 分别动了其中两个关键位置：<code class="inl">thinker</code>（#771）和各类<strong>生成阶段</strong>（#843）。</p>
+    </div>
+
+    <div class="box know">
+      <h6>📖 名词速查（后文反复出现）</h6>
+      <ul>
+        <li><b>thinker / talker</b>：Omni 架构里的两个角色。thinker = 负责"理解与思考"的主干 LLM；talker = 负责"把思考结果说出来"的语音生成模型。源自 Qwen-Omni 系列的设计命名。</li>
+        <li><b>stage（阶段）</b>：流水线里的一个独立计算单元，有自己的进程、GPU、配置（<code class="inl">StageConfig</code>）。</li>
+        <li><b>TP / tensor parallelism（张量并行）</b>：把一个大模型的权重<strong>横切</strong>到多张 GPU 上同时算，再把结果拼回来。详见 #771。</li>
+        <li><b>CUDA Graph</b>：把一连串 GPU 操作"录制"成一张可重放的图，省去每次重新下发指令的开销。详见 #843。</li>
+        <li><b>ServerArgs</b>：SGLang 启动一个推理引擎时的"参数表"对象，几乎所有调优旋钮都挂在它上面。</li>
+      </ul>
+    </div>
+  </div>
+</details>
+
+<!-- ================= PR 771 ================= -->
+<details class="card" open id="pr771">
+  <summary>
+    <span class="pr-num green">#771</span>
+    <div class="sum-body">
+      <h3>[Qwen3-Omni] TP correctness — 让多进程 TP 启动的 thinker 自动关闭"自定义 all-reduce"</h3>
+      <div class="line">作者 <b>luojiaxuan</b> ｜ 状态 <b>merged</b>（2026-06-21）｜ <a class="ext" href="https://github.com/sgl-project/sglang-omni/pull/771">查看 PR #771 ↗</a></div>
+    </div>
+  </summary>
+  <div class="card-inner">
+
+    <h4>1 · PR 概览</h4>
+    <p><b>一句话：</b>把"当 thinker 阶段用 &gt;1 张 GPU 做张量并行时，要关掉 SGLang 的自定义 all-reduce 内核"这条规则，从每个模型各写一遍、且只在示例脚本里生效，<strong>下沉成所有多模态配置共享的一个声明式开关</strong>，从而让正式的 <code class="inl">sglang_omni serve</code> 启动路径也能自动正确生效。这是一个<strong>正确性（correctness）修复</strong>，回归守卫的是 issue&nbsp;#760。</p>
+
+    <h4>2 · 它解决了什么问题</h4>
+    <p>背景要从"张量并行"和"all-reduce"说起（下面"知识点"会展开）。简单讲：当 thinker 被切到多张 GPU 上时，每算完一层都需要把各卡的部分结果<strong>加总同步</strong>一次，这个操作叫 <b>all-reduce</b>。SGLang 为了快，默认用一个<strong>自己手写的 CUDA all-reduce 内核（custom all-reduce）</strong>替代通用的 NCCL。</p>
+    <p>问题是：这个自定义内核对硬件互联拓扑（NVLink / PCIe P2P）有要求，在某些多进程 TP 启动方式下会<strong>算出错误结果或直接挂掉</strong>。团队早就知道要对 thinker 加一句 <code class="inl">disable_custom_all_reduce=True</code> 来回退到稳妥实现——但这段逻辑<strong>散落在各个模型里、而且实测只在"示例脚本"路径生效，真正的 <code class="inl">serve</code> 命令行启动路径漏掉了 Qwen3-Omni</strong>（issue #760 的现象）。结果就是：用户用官方 demo 跑没问题，一旦用正式服务命令开 TP&gt;1，thinker 就可能出错。</p>
+    <div class="analogy"><b>类比：</b>就像一栋楼里每层楼都各自贴了一张"地震时走安全通道"的告示（重复、容易贴漏），而且<strong>正门的告示忘了贴</strong>。这个 PR 做的是：把告示改成<strong>楼栋统一的电子广播</strong>——一处声明，全楼（含正门）自动生效。</p>
+
+    <h4>3 · 具体做了什么改动</h4>
+    <h5>3.1 核心文件</h5>
+    <ul>
+      <li><code class="inl">sglang_omni/config/schema.py</code> — 流水线配置基类 <code class="inl">PipelineConfig</code>，新增共享开关。</li>
+      <li><code class="inl">sglang_omni/models/qwen3_omni/config.py</code> — Qwen3-Omni 各管线配置。</li>
+      <li><code class="inl">sglang_omni/models/ming_omni/config.py</code> — Ming-Omni 各管线配置（把已有逻辑改成复用新机制）。</li>
+      <li><code class="inl">tests/unit_test/qwen3_omni/test_pipeline.py</code> — 新增 3 个回归测试。</li>
+    </ul>
+
+    <h5>3.2 改动前后逻辑对比</h5>
+    <p><b>改动前</b>：每个模型配置类各自<strong>重写（override）</strong>一个方法 <code class="inl">tensor_parallel_server_args_overrides</code>，里面硬编码同一段 if 判断：</p>
+    <pre><span class="c"># 改动前：Ming / Qwen3-Omni 的每个管线类里都重复这一段</span>
+<span class="k">class</span> <span class="f">MingOmniPipelineConfig</span>(PipelineConfig):
+    <span class="k">@classmethod</span>
+    <span class="k">def</span> <span class="f">tensor_parallel_server_args_overrides</span>(cls, *, stage_name, tp_size):
+        <span class="k">if</span> stage_name == THINKER_STAGE <span class="k">and</span> tp_size &gt; <span class="n">1</span>:
+            <span class="k">return</span> {<span class="s">"disable_custom_all_reduce"</span>: <span class="k">True</span>}
+        <span class="k">return</span> {}</pre>
+
+    <p><b>改动后</b>：在基类 <code class="inl">PipelineConfig</code> 上加一个<strong>声明式的类变量</strong>，并把判断逻辑<strong>只写一次</strong>放进基类方法：</p>
+    <pre><span class="c"># schema.py —— 基类新增一个"哪些阶段要关自定义 all-reduce"的声明位</span>
+<span class="k">class</span> <span class="f">PipelineConfig</span>(BaseModel):
+    tensor_parallel_disable_custom_all_reduce_stages: ClassVar[tuple[str, ...]] = ()
+                                                       <span class="c"># ↑ 默认空：什么都不关</span>
+
+    <span class="k">@classmethod</span>
+    <span class="k">def</span> <span class="f">tensor_parallel_server_args_overrides</span>(cls, *, stage_name, tp_size):
+        <span class="k">if</span> tp_size &gt; <span class="n">1</span> <span class="k">and</span> stage_name <span class="k">in</span> cls.tensor_parallel_disable_custom_all_reduce_stages:
+            <span class="k">return</span> {<span class="s">"disable_custom_all_reduce"</span>: <span class="k">True</span>}   <span class="c"># ← 命中：注入这条 ServerArgs 覆盖</span>
+        <span class="k">return</span> {}</pre>
+
+    <p>然后各模型只需<strong>一行声明</strong>就接入了这套机制（再也不用重写方法）：</p>
+    <pre><span class="c"># qwen3_omni/config.py —— 新增一个共享基类，所有 Qwen3-Omni 管线都继承它</span>
+<span class="k">class</span> <span class="f">_Qwen3OmniBasePipelineConfig</span>(PipelineConfig):
+    architecture: ClassVar[str] = <span class="s">"Qwen3OmniMoeForConditionalGeneration"</span>
+    tensor_parallel_disable_custom_all_reduce_stages: ClassVar[tuple[str, ...]] = (
+        THINKER_STAGE,     <span class="c"># ← 唯一需要写的"业务知识"：thinker 阶段要关</span>
+    )
+
+<span class="k">class</span> <span class="f">Qwen3OmniPipelineConfig</span>(_Qwen3OmniBasePipelineConfig): ...        <span class="c"># 6 阶段纯文本</span>
+<span class="k">class</span> <span class="f">Qwen3OmniSpeechPipelineConfig</span>(_Qwen3OmniBasePipelineConfig): ...  <span class="c"># 8 阶段语音</span></pre>
+    <p>Ming-Omni 这边同理：抽出 <code class="inl">_MingOmniBasePipelineConfig</code>，把原本在 3 个管线类（文本 / 语音 / 流式语音）里重复 3 遍的 override 删掉，统一继承基类。<strong>净效果是删代码 + 修 bug</strong>：Qwen3-Omni 之前根本没有这段保护（所以 #760 才会发生），现在它和 Ming 走同一条受测试守卫的路径。</p>
+
+    <h5>3.3 测试怎么验证它真的修好了</h5>
+    <p>关键的回归测试断言了两件事：(a) 6 个管线类<strong>都不再自己重写</strong>那个方法（确保走的是共享 hook），(b) thinker 在 tp=2 时确实拿到 <code class="inl">disable_custom_all_reduce=True</code>，而 tp=1 或别的阶段（encoder/talker/code2wav）拿到空字典：</p>
+    <pre><span class="k">for</span> cls <span class="k">in</span> classes:
+    <span class="k">assert</span> <span class="s">"tensor_parallel_server_args_overrides"</span> <span class="k">not in</span> cls.__dict__   <span class="c"># 没有自己 override</span>
+    <span class="k">assert</span> cls.tensor_parallel_server_args_overrides(
+        stage_name=<span class="s">"thinker"</span>, tp_size=<span class="n">2</span>) == {<span class="s">"disable_custom_all_reduce"</span>: <span class="k">True</span>}</pre>
+    <p>还有一个<strong>端到端测试</strong>，模拟真实的 CLI <code class="inl">serve</code> 路径（<code class="inl">apply_parallelism_cli_overrides</code> → <code class="inl">_apply_tensor_parallel_server_args_overrides</code>），断言写进 thinker 阶段的 server args 里真的带上了这个开关——这正是 #760 漏掉的那条路径。</p>
+
+    <h4>4 · 涉及的知识点（重点展开）</h4>
+
+    <div class="box know">
+      <h6>知识点 A · 张量并行 Tensor Parallelism (TP)</h6>
+      <p class="triad"><b>它是什么 →</b> 一种把<strong>单个模型</strong>拆到多张 GPU 的并行方式。具体是把权重矩阵按行或列切开，每张卡只存一部分、只算一部分。比如一个 <code class="inl">[4096×4096]</code> 的线性层，TP=2 时每张卡各拿 <code class="inl">[4096×2048]</code>。</p>
+      <p class="triad"><b>为什么需要它 →</b> 大模型一张卡放不下，或放得下但算得慢。TP 让多卡像"一张大卡"一样协同，显著降低单请求延迟。它和"数据并行（多卡各跑不同请求）"是正交的两个维度。</p>
+      <p class="triad"><b>在这个 PR 里 →</b> 只有当 thinker 的 <code class="inl">tp_size &gt; 1</code>（真的切到多卡了）才需要这层修复；<code class="inl">tp_size == 1</code> 时根本没有跨卡同步，自然不触发。</p>
+      <div class="analogy"><b>类比：</b>TP 像把一道大菜分给 2 个厨师，一人切菜一人炒——但每过一步两人要把半成品<strong>对齐合并</strong>一次，这个"合并"就是下面的 all-reduce。</div>
+    </div>
+
+    <div class="box know">
+      <h6>知识点 B · All-Reduce 与"自定义 all-reduce 内核"</h6>
+      <p class="triad"><b>它是什么 →</b> All-reduce 是分布式计算里的集合通信原语：把 N 张卡上的张量<strong>逐元素求和（或求平均）</strong>，再把同一个结果广播回每张卡。TP 里每个被切开的层算完都要 all-reduce 一次来"拼回完整结果"。</p>
+      <p class="triad"><b>为什么需要它 →</b> 因为每张卡只算了部分和（partial sum），必须加总才能得到正确的整层输出。标准实现是 NVIDIA 的 <b>NCCL</b> 库；SGLang 额外提供一个<strong>手写的 custom all-reduce CUDA 内核</strong>，在小数据量、有 NVLink/P2P 直连时延迟更低。</p>
+      <p class="triad"><b>在这个 PR 里 →</b> 这个自定义内核依赖特定的 GPU 间互联拓扑（P2P / NVLink），在多进程 TP 启动时不一定满足，会导致结果错误或崩溃。所以对 thinker 注入 <code class="inl">disable_custom_all_reduce=True</code>，<strong>回退到稳妥但稍慢的通用 all-reduce</strong>——用一点点性能换正确性。PR 描述里特意保留了"拓扑门控（topology gate）"的铺垫：未来若能确认是 NVLink mesh，再选择性放开。</p>
+    </div>
+
+    <div class="box tip">
+      <h6>知识点 C · 设计模式：声明式配置 + 模板方法 (Template Method)</h6>
+      <p class="triad"><b>它是什么 →</b> 把"<strong>会变化的业务知识</strong>"（哪些阶段要关）抽成一个数据声明（类变量 <code class="inl">ClassVar</code> 元组），把"<strong>不变的处理流程</strong>"（怎么判断、返回什么）放在基类方法里。子类只填数据、不重写逻辑。</p>
+      <p class="triad"><b>为什么需要它 →</b> 改动前 6 处复制粘贴同一段 if，任何一处漏改/写错就是一个潜在 bug（#760 正是漏了一处）。"逻辑只写一次、数据各自声明"消除了这种重复，也让测试可以统一守卫。</p>
+      <p class="triad"><b>在这个 PR 里 →</b> <code class="inl">ClassVar[tuple[str, ...]]</code> 是声明位，基类的 <code class="inl">tensor_parallel_server_args_overrides</code> 是模板方法。这是<strong>"用数据驱动行为、把策略上提到基类"</strong>的典型重构。</p>
+    </div>
+
+    <p class="muted"><b>补充名词：</b><code class="inl">ServerArgs overrides</code> 指的是"启动 SGLang 引擎前，往参数表里塞的覆盖项"——TP 设置会<strong>隐含</strong>一些必须的引擎参数，这个方法就是把这种隐含规则显式化。</p>
+
+    <h4>5 · 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>正确性 bug 往往藏在"重复代码 + 多条入口路径"的缝里</b>：示例脚本对，serve 路径错——这类"看起来都实现了却漏一条路径"的 bug，根因常常是逻辑被复制了多份。<strong>消重 + 端到端测试覆盖每条入口</strong>是治本之道。</li>
+      <li><b>性能优化要可降级</b>：custom all-reduce 是优化项，但工程上必须能一键回退到稳妥实现。"快"永远不能以"偶尔算错"为代价。</li>
+      <li><b>最小化 PR 的纪律</b>：作者明确把这个 PR "瘦身"成只含正确性修复，把 prefill/coalescing/idle-broadcast 等调优机器全部剥离到后续 PR。<strong>一个 PR 只做一件事</strong>，便于审查与回滚。</li>
+      <li><b>延伸前置知识：</b>集合通信（all-reduce/all-gather/reduce-scatter）、NCCL 与 NVLink 拓扑、Megatron 式 TP 的行/列切分、以及"流水线并行 PP vs 张量并行 TP vs 数据并行 DP"三者的区别。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ================= PR 843 ================= -->
+<details class="card" open id="pr843">
+  <summary>
+    <span class="pr-num green">#843</span>
+    <div class="sum-body">
+      <h3>[TTS] Validate generation batch policies — 给所有音频生成阶段建立统一的"批处理策略校验器"</h3>
+      <div class="line">作者 <b>luojiaxuan</b> ｜ 状态 <b>merged</b>（2026-06-22）｜ <a class="ext" href="https://github.com/sgl-project/sglang-omni/pull/843">查看 PR #843 ↗</a> ｜ 关联 issue #836（Workstream 1）</div>
+    </div>
+  </summary>
+  <div class="card-inner">
+
+    <h4>1 · PR 概览</h4>
+    <p><b>一句话：</b>新增一个可复用的 <code class="inl">generation_batch_policy</code> 模块，统一<strong>构造</strong>和<strong>校验</strong>所有 SGLang 后端生成阶段（7 个 TTS / 音频模型）的批处理参数——CUDA Graph 的捕获桶、<code class="inl">max_running_requests</code>、torch.compile 上限、以及模型侧实际分配的缓冲区容量，必须互相覆盖、对得上，否则启动时直接报错。</p>
+
+    <h4>2 · 它解决了什么问题</h4>
+    <p>这些音频生成阶段启动时要设一堆相互关联的批处理旋钮，之前的痛点有三：</p>
+    <ul>
+      <li><b>魔法数字散落、容易不一致：</b>每个模型各自硬编码一份 <code class="inl">cuda_graph_bs = [1, 2, 4, 8, 16]</code> 这样的桶列表，和 <code class="inl">cuda_graph_max_bs</code>、<code class="inl">max_running_requests</code> 之间<strong>没人保证对得上</strong>。</li>
+      <li><b>"静默错配"很危险：</b>如果允许的并发请求数（<code class="inl">max_running_requests=64</code>）超过了 CUDA Graph 捕获的最大批量（<code class="inl">cuda_graph_max_bs=16</code>），或者超过了模型实际<strong>分配的 KV/采样缓冲区行数</strong>，运行时要么走慢速回退、要么越界——而且不会在启动时报错，等到线上高并发才暴雷。</li>
+      <li><b>旧的"部分校验"旋钮形同虚设：</b>原来有一些 partial/require 校验开关，但默认不强制，等于没护栏。</li>
+    </ul>
+    <p>这个 PR 把"批处理参数必须自洽"变成<strong>启动期的硬约束（fail-fast）</strong>，同时把 S2-Pro 的 <code class="inl">torch_compile_max_bs</code> 从 16 提到 64，使三个上限（<code class="inl">max_running_requests / cuda_graph_max_bs / torch_compile_max_bs</code>）齐平到 64，扩大了高并发下的图覆盖。</p>
+    <div class="analogy"><b>类比：</b>之前像一栋楼的"电梯限载 16 人"但"门禁却放 64 人进来排队"——平时没事，人一多就卡死或出危险。这个 PR 是在开业前装了一个<strong>验收员</strong>：限载、门禁、楼道宽度三者对不上，就不准开业。</p>
+
+    <h4>3 · 具体做了什么改动</h4>
+    <h5>3.1 核心新增：<code class="inl">scheduling/generation_batch_policy.py</code>（+196 行）</h5>
+    <p>这个新模块提供三个工具函数 + 一份报告数据类：</p>
+
+    <p><b>(a) <code class="inl">build_default_cuda_graph_bs(max_bs)</code> — 生成"标准捕获桶列表"</b></p>
+    <pre><span class="k">def</span> <span class="f">build_default_cuda_graph_bs</span>(max_bs: int) -&gt; list[int]:
+    values = [<span class="n">1</span>, <span class="n">2</span>, <span class="n">4</span>, <span class="n">8</span>, <span class="n">12</span>]
+    values.extend(range(<span class="n">16</span>, <span class="n">257</span>, <span class="n">8</span>))    <span class="c"># 16,24,32,...,256：低区间密一点</span>
+    values.extend(range(<span class="n">272</span>, <span class="n">512</span>, <span class="n">16</span>))   <span class="c"># 272,288,...：中区间疏一点</span>
+    values.extend(range(<span class="n">512</span>, max_bs + <span class="n">1</span>, <span class="n">32</span>))  <span class="c"># 512 以上更疏</span>
+    values = [bs <span class="k">for</span> bs <span class="k">in</span> values <span class="k">if</span> bs &lt;= max_bs]
+    <span class="k">if</span> <span class="k">not</span> values <span class="k">or</span> values[-<span class="n">1</span>] != max_bs:
+        values.append(max_bs)                  <span class="c"># 保证最大值一定被捕获</span>
+    <span class="k">return</span> values</pre>
+    <p>它生成的桶刻意<strong>对齐 SGLang 默认的捕获桶</strong>（小批量密集、大批量稀疏），这样校验不会人为缩小图覆盖。例如 <code class="inl">max_bs=64 → [1,2,4,8,12,16,24,32,40,48,56,64]</code>。</p>
+
+    <p><b>(b) <code class="inl">sync_cuda_graph_bs_with_max_bs(...)</code> — 用户改了 max 就自动重算桶</b></p>
+    <pre><span class="k">def</span> <span class="f">sync_cuda_graph_bs_with_max_bs</span>(overrides, server_args_overrides):
+    <span class="k">if</span> <span class="s">"cuda_graph_max_bs"</span> <span class="k">in</span> server_args_overrides \
+       <span class="k">and</span> <span class="s">"cuda_graph_bs"</span> <span class="k">not in</span> server_args_overrides:
+        <span class="c"># 用户只改了上限、没给具体桶 → 按新上限重建一份桶</span>
+        overrides[<span class="s">"cuda_graph_bs"</span>] = build_default_cuda_graph_bs(
+            int(overrides[<span class="s">"cuda_graph_max_bs"</span>]))</pre>
+    <p>解决一个很隐蔽的坑：用户/上层只覆盖了 <code class="inl">cuda_graph_max_bs</code>，却忘了同步 <code class="inl">cuda_graph_bs</code> 列表，导致"上限说 64、桶里最大才 16"的不一致。</p>
+
+    <p><b>(c) <code class="inl">validate_generation_batch_policy(...)</code> — 启动期总校验</b></p>
+    <p>它把所有不变量集中检查，任一不满足就抛 <code class="inl">ValueError</code>。核心约束（逐条翻译）：</p>
+    <pre><span class="c"># CUDA Graph 开着时：</span>
+- cuda_graph_max_bs / cuda_graph_bs 必须显式给出（不能靠隐式默认）
+- max(cuda_graph_bs) 必须 == cuda_graph_max_bs        <span class="c"># 桶顶要等于声明的上限</span>
+- cuda_graph_max_bs &gt;= max_running_requests           <span class="c"># 图要能覆盖最大并发</span>
+<span class="c"># 只有 enable_torch_compile=True 时才强制：</span>
+- torch_compile_max_bs &gt;= max_running_requests        <span class="c"># 编译上限也要覆盖并发</span>
+<span class="c"># 若传入模型实际缓冲容量：</span>
+- model_buffer_bs &gt;= max_running_requests             <span class="c"># 物理 buffer 要装得下并发</span></pre>
+    <p>还有一个 <code class="inl">_normalize_cuda_graph_bs</code> 辅助函数，校验桶列表是<strong>严格递增、全为正整数、非空</strong>——把"手滑写错列表"也挡在门外。</p>
+
+    <h5>3.2 在 7 个生成阶段统一接入</h5>
+    <p>改动模式高度一致，每个 <code class="inl">stages.py</code> 都是"<strong>构造时用默认桶 + 启动后调校验器</strong>"。以 MOSS-TTS 为例，原本的魔法列表被替换：</p>
+    <pre><span class="del">- "cuda_graph_bs": [1, 2, 4, 8, 16],</span>
+<span class="add">+ "cuda_graph_bs": build_default_cuda_graph_bs(16),</span>
+  ...
+  <span class="k">if</span> server_args_overrides:
+      overrides.update(server_args_overrides)
+<span class="add">+     sync_cuda_graph_bs_with_max_bs(overrides, server_args_overrides)</span>
+  ...
+<span class="add">+ validate_generation_batch_policy(model_name="MOSS-TTS", server_args=server_args)</span></pre>
+    <p>覆盖的阶段：<b>Higgs TTS、MOSS-TTS、MOSS-TTS Local、Qwen3-TTS、Voxtral TTS、FishAudio S2-Pro、Qwen3-Omni talker_ar</b>。其中两个还把"模型物理缓冲容量"也喂给校验器做更强的检查：</p>
+    <ul>
+      <li><b>Higgs TTS</b> 暴露 <code class="inl">sampler_pool_max_running_requests</code>（采样器池的行数）作为 <code class="inl">model_buffer_bs</code>。</li>
+      <li><b>FishAudio S2-Pro</b> 取 <code class="inl">min(VQ 解码 buffer 行数, 音频解码器 KV cache 的 batch 维)</code> —— 即同时受两个张量第 0 维容量约束，取较小者：</li>
+    </ul>
+    <pre><span class="k">def</span> <span class="f">_resolve_s2pro_model_buffer_bs</span>(model) -&gt; int:
+    <span class="k">return</span> min(
+        int(model.vq_decode_max_batch_size),               <span class="c"># VQ 码本解码缓冲</span>
+        int(model._audio_decoder.kv_cache_max_batch_size), <span class="c"># = kv_cache.k_cache.shape[0]</span>
+    )</pre>
+    <p>S2-Pro 同时把 <code class="inl">cuda_graph_bs/max_bs</code> 设到 64、<code class="inl">torch_compile_max_bs</code> 16→64，让 Fast-AR 编译批量和图覆盖都齐到 64（PR 实测启动日志确认捕获桶为 <code class="inl">[1,2,4,8,12,16,24,32,40,48,56,64]</code>）。</p>
+
+    <h5>3.3 性能：校验不是免费午餐，但几乎零开销</h5>
+    <p>PR 在同一台 H100 上做了 generation-only 基准对比（基线 main@8a41fc4，PR@f2a886c），结论是<strong>性能基本持平</strong>，波动都在噪声范围内（作者特意重复跑 3 次剔除离群值，态度很严谨）：</p>
+    <table>
+      <tr><th>模型</th><th>并发</th><th>PR req/s</th><th>基线 req/s</th><th>Δ</th></tr>
+      <tr><td>Higgs TTS</td><td>16</td><td>15.473</td><td>15.410</td><td class="pos">+0.4%</td></tr>
+      <tr><td>FishAudio S2-Pro</td><td>64</td><td>1.268</td><td>1.320</td><td class="neg">−3.9%</td></tr>
+      <tr><td>MOSS-TTS</td><td>16</td><td>3.933</td><td>3.864</td><td class="pos">+1.8%</td></tr>
+      <tr><td>Voxtral TTS</td><td>16</td><td>7.453</td><td>7.321</td><td class="pos">+1.8%</td></tr>
+      <tr><td>Qwen3-TTS 0.6B</td><td>16</td><td>2.537</td><td>2.606</td><td class="neg">−2.6%</td></tr>
+    </table>
+    <p class="muted">作者明确指出 S2-Pro / Qwen3-TTS 的小幅负值在重复测试后属于噪声，没有夸大为"提速"，也没把 Voxtral 的单次离群提速算作真实收益——这种<strong>不 cherry-pick 数据</strong>的报告习惯值得学。</p>
+
+    <h4>4 · 涉及的知识点（重点展开）</h4>
+
+    <div class="box know">
+      <h6>知识点 A · CUDA Graph 与"捕获桶 (capture buckets)"</h6>
+      <p class="triad"><b>它是什么 →</b> 正常跑 GPU 时，CPU 要一条一条地把 kernel"下发（launch）"给 GPU，每条下发都有微秒级开销。CUDA Graph 把"一次前向里的整串 kernel 调用"<strong>录制成一张静态图</strong>，之后直接"重放（replay）"整张图，省掉逐条下发的 CPU 开销。</p>
+      <p class="triad"><b>为什么需要它 →</b> 自回归解码每步只算 1 个 token、计算量很小，<strong>瓶颈往往不是算力而是 kernel launch 开销</strong>（launch-bound）。CUDA Graph 能让小批量解码提速可观（MOSS-TTS Local 注释里就提到 eager 模式 ~22ms/帧、纯属 launch-bound）。</p>
+      <p class="triad"><b>"桶"是怎么回事 →</b> CUDA Graph 是<strong>形状静态</strong>的：录制时 batch size 多大，重放时就得多大。但线上并发是变化的（这一刻 3 个请求、下一刻 30 个）。所以要<strong>预先为若干个固定批量各录一张图</strong>——这些预设批量就是"桶"。运行时把当前并发<strong>向上取整到最近的桶</strong>用对应的图。桶太稀 → 浪费算力（小批量也用大图）；桶太密 → 录制慢、占显存。本 PR 的 <code class="inl">[1,2,4,8,12,16,24,...]</code> 就是在"覆盖度"和"成本"间取的平衡。</p>
+      <div class="analogy"><b>类比：</b>CUDA Graph 像把一套固定动作<strong>预先排练并录像</strong>，演出时直接放录像而不是临场喊口令。但录像是"几人版"固定的，所以要为 1 人 / 2 人 / 4 人……各录一版（桶），来几个人就放最接近的那一版。</div>
+    </div>
+
+    <div class="box know">
+      <h6>知识点 B · <code class="inl">max_running_requests</code> 与 Continuous Batching（连续批处理）</h6>
+      <p class="triad"><b>它是什么 →</b> <code class="inl">max_running_requests</code> 是引擎<strong>同时在跑的请求数上限</strong>。连续批处理（又叫 in-flight batching）指：不像传统"凑满一批再一起算"，而是<strong>每个解码步都动态地把新到的请求塞进当前批、把已完成的请求踢出去</strong>，让 GPU 时刻保持高占用。</p>
+      <p class="triad"><b>为什么需要它 →</b> 不同请求生成长度差异巨大，静态批会被最慢的拖死。连续批处理把吞吐拉满，是现代推理引擎（vLLM/SGLang）的核心吞吐来源。</p>
+      <p class="triad"><b>在这个 PR 里 →</b> 校验器要求 <code class="inl">cuda_graph_max_bs &gt;= max_running_requests</code>：既然最多可能 64 个请求并发，CUDA Graph 就必须能覆盖到 64，否则高并发那一刻没有对应的图可用，只能退化到慢速 eager。这就是"限载必须 ≥ 门禁放行量"的工程化表达。</p>
+    </div>
+
+    <div class="box know">
+      <h6>知识点 C · KV Cache 与"模型缓冲区容量 (model_buffer_bs)"</h6>
+      <p class="triad"><b>它是什么 →</b> Transformer 自回归解码时，前面 token 算出的 Key/Value 向量会被<strong>缓存复用</strong>（不必每步重算整段历史），这就是 KV Cache。它在显存里是预先分配好的固定大张量，第 0 维通常就是"能同时容纳多少个请求/序列"。</p>
+      <p class="triad"><b>为什么需要它 →</b> KV Cache 把解码从 O(n²) 降到每步 O(n)，是 LLM 推理能跑快的根基。但它<strong>占显存且容量固定</strong>，分配多大就只能装多少并发。</p>
+      <p class="triad"><b>在这个 PR 里 →</b> 校验器新增 <code class="inl">model_buffer_bs &gt;= max_running_requests</code> 这条：即便参数表里写 <code class="inl">max_running_requests=64</code>，如果模型<strong>实际分配的</strong> KV cache / 采样池 / VQ 解码缓冲只有 32 行，那也是骗人的——第 33 个请求会越界。S2-Pro 取两个缓冲张量 <code class="inl">shape[0]</code> 的较小值正是在问"物理上到底装得下几个"。这是把"配置声明"和"物理现实"对账的一步。</p>
+    </div>
+
+    <div class="box know">
+      <h6>知识点 D · <code class="inl">torch.compile</code> 与 <code class="inl">torch_compile_max_bs</code></h6>
+      <p class="triad"><b>它是什么 →</b> <code class="inl">torch.compile</code> 是 PyTorch 2.x 的即时编译器，把 Python 算子图编译成融合后的高效 kernel。和 CUDA Graph 一样，它对<strong>输入形状敏感</strong>，需要为不同批量上限编译。</p>
+      <p class="triad"><b>为什么只在开启时才校验 →</b> PR 特意做到"<code class="inl">torch_compile_max_bs</code> 的覆盖只在 <code class="inl">enable_torch_compile=True</code> 时强制"。因为编译没开时这个参数无意义，强制它会误伤。这体现了<strong>"约束要跟随实际生效的特性"</strong>的细致。</p>
+      <p class="triad"><b>在这个 PR 里 →</b> S2-Pro 把它从 16 提到 64，使编译覆盖追上 64 的并发上限。</p>
+    </div>
+
+    <div class="box tip">
+      <h6>知识点 E · 工程思想：Fail-Fast 校验 + 单一事实来源 (SSOT)</h6>
+      <p class="triad"><b>它是什么 →</b> Fail-Fast 指"错误配置在<strong>启动时立刻、清晰地报错</strong>，而不是潜伏到运行期才以诡异症状爆发"。SSOT 指"桶列表怎么生成只有 <code class="inl">build_default_cuda_graph_bs</code> 这一个出处"。</p>
+      <p class="triad"><b>为什么需要它 →</b> 推理基础设施的参数耦合极强（图/并发/缓冲/编译四者互相牵制），靠人工记忆对齐必然出错。把约束写成代码、启动即校验，把"线上半夜暴雷"提前成"启动 5 秒报错"。</p>
+      <p class="triad"><b>在这个 PR 里 →</b> 一个 196 行的小模块 + 7 处统一调用，就把过去散落的隐性契约固化成显式护栏，且自带 134 行单元测试覆盖每条约束分支。</p>
+    </div>
+
+    <h4>5 · 我能学到什么 / 延伸思考</h4>
+    <ul>
+      <li><b>"配置正确性"也是产品质量</b>：很多线上事故不是算法错，而是参数互不自洽。把"参数不变量"写成可测试的校验器，是高可靠系统的标配。</li>
+      <li><b>声明 vs 现实要对账</b>：<code class="inl">max_running_requests</code> 是"我想要"，KV cache/buffer 的 <code class="inl">shape[0]</code> 是"我实际有"。优秀工程会主动把两者对齐校验，而不是假设它们一致。</li>
+      <li><b>性能改动要有可复现的基准</b>：同机同容器、固定 commit、重复多次取中位数、剔除离群、不夸大收益——这套 benchmark 纪律本身就是可复用的方法论。</li>
+      <li><b>延伸前置知识：</b>CUDA Graph 的 capture/replay API、torch.compile 的 dynamic shapes、PagedAttention / RadixAttention 的 KV 管理、以及 SGLang 的 <code class="inl">ServerArgs</code> 全套调优旋钮含义。</li>
+    </ul>
+  </div>
+</details>
+
+<!-- ================= PR 537 ================= -->
+<details class="card" open id="pr537">
+  <summary>
+    <span class="pr-num green">#537</span>
+    <div class="sum-body">
+      <h3>[Docs] Internalize RFC comments + consolidate historical RFCs — 内化设计评审、合并历史 RFC 成一份设计决策史</h3>
+      <div class="line">作者 <b>JiaxinD</b> ｜ 状态 <b>merged</b>（2026-06-21）｜ <a class="ext" href="https://github.com/sgl-project/sglang-omni/pull/537">查看 PR #537 ↗</a> ｜ 关联 #488 part 4.1+4.2</div>
+    </div>
+  </summary>
+  <div class="card-inner">
+    <p class="muted">（本 PR 是纯文档工作，按"深度优先于覆盖"原则做精炼讲解；它的价值在于帮你看懂前两个 PR 背后的<strong>架构脉络</strong>。）</p>
+
+    <h4>1 · PR 概览 & 2 · 解决什么问题</h4>
+    <p><b>一句话：</b>把原本散落在外部工具（Lark 导出）里的 RFC 评审意见<strong>内化进仓库的 <code class="inl">docs/design/refactor_rfc.md</code></strong>，并把 36 个"塑造了架构"的历史 PR<strong>合并成两条按时间排序的"设计决策史"</strong>。</p>
+    <p>痛点：一个长期演进的多阶段推理框架，其"为什么是现在这个架构"的决策依据，过去散落在外部文档、PR 评论、历史 RFC 里，<strong>新人无从溯源、文档还和主干代码冲突</strong>。这个 PR 把这些一次性收敛进仓库、与最新 <code class="inl">main</code> 对齐，让设计文档成为"活的、自洽的单一事实来源"。</p>
+
+    <h4>3 · 具体做了什么</h4>
+    <ul>
+      <li><b>基于最新 main 三方合并</b>：保留 main 上更新的 <code class="inl">LOCAL_OBJECT</code> / <code class="inl">LocalStageDispatcher</code> 数据面文档，把过时的"Pending"段落改写成"已落地"的结论性叙述。</li>
+      <li><b>补回系统总览图</b>：用 mermaid 画了 System Overview（恢复 HTTP-API↔Client 边、WebSocket 入口）和类图，澄清"应用层没有 TLS，TLS 在反向代理 / 负载均衡处终结"。</li>
+      <li><b>两条设计决策史</b>：
+        <ul>
+          <li><i>框架 / V1 重构线</i>：原始 RFC 系列 + #496（拓扑感知 <code class="inl">LOCAL_OBJECT</code> / CUDA-IPC 传输）+ #558（hook/payload/stage-worker 重构）+ #589（阶段融合 stage fusion）+ #824（统一采样种子）。</li>
+          <li><i>模型接入 + TTS 优化线</i>：#437 Ming-Omni V1、#446 LLaDA2.0-Uni、#451 Qwen3-TTS/Voxtral，以及 Higgs Audio v3 系列与 MOSS-TTS 系列共十几个 PR。</li>
+        </ul>
+      </li>
+      <li><b>资产瘦身</b>：用自包含的 S2-Pro 示例 SVG 替换 1.4MB 的 PNG。</li>
+    </ul>
+
+    <h4>4 · 涉及的知识点</h4>
+    <div class="box know">
+      <h6>知识点 A · RFC（Request for Comments）</h6>
+      <p class="triad"><b>它是什么 →</b> 一种"动手写代码前先写设计文档、公开征求意见"的工程协作方式。<b>为什么需要 →</b> 大改动若直接写代码，方向错了代价巨大；RFC 让团队先就架构达成共识、留下决策档案。<b>在这里 →</b> 本 PR 做的是 RFC 的"<strong>归档与内化</strong>"——把决策从临时讨论沉淀成仓库内可追溯的历史。</p>
+    </div>
+    <div class="box know">
+      <h6>知识点 B · <code class="inl">LOCAL_OBJECT</code> / CUDA-IPC 传输 与 阶段融合 (stage fusion)</h6>
+      <p class="triad"><b>它是什么 →</b> 多阶段流水线里，阶段间要传大张量（如 encoder 输出的 embedding）。若两个阶段在<strong>同机同卡</strong>，与其序列化走网络，不如用 <b>CUDA-IPC</b>（GPU 显存的进程间共享）直接传指针——这就是 <code class="inl">LOCAL_OBJECT</code> 的拓扑感知传输。<b>Stage fusion</b> 则更进一步：把相邻阶段<strong>合并到同一进程</strong>省掉跨进程开销。<b>为什么需要 →</b> 阶段切分带来灵活性，但也带来通信开销；这些优化在"灵活"与"快"之间动态权衡。<b>在这里 →</b> 文档把这些传输/融合决策的来龙去脉串成可读的历史线——正好解释了 #771、#843 所在的"多阶段"世界为何如此设计。</p>
+    </div>
+
+    <h4>5 · 我能学到什么</h4>
+    <ul>
+      <li><b>文档是基础设施的一部分</b>：决策史让"为什么这么设计"可追溯，等价于给架构加了"版本控制 + 注释"。</li>
+      <li><b>把外部知识内化进仓库</b>：依赖外部工具（Lark/飞书文档）的知识容易腐烂；沉淀进 repo 才能随代码一起演进、被 review。</li>
+      <li><b>延伸：</b>想读懂这个项目，<code class="inl">docs/design/refactor_rfc.md</code> 是最佳入口；可重点看 LOCAL_OBJECT 传输、stage fusion、hook/payload 重构（#558）这几条主线。</li>
+    </ul>
+  </div>
+</details>
+
+<footer>
+  本日报由自动化例程于 2026-06-22 生成 · 数据来源 GitHub <code class="inl">sgl-project/sglang-omni</code> · 仅供学习存档<br>
+  讲解遵循"它是什么 → 为什么需要 → 在本 PR 里怎么用"三段式 · 深度优先于覆盖广度
+</footer>
+
+</div>
+</body>
+</html>
