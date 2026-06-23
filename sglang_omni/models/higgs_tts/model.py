@@ -341,7 +341,7 @@ class HiggsTTSModel(nn.Module):
         # Note(yichi): One D2H per step to skip STOP-sentinel rows in the Python append loop.
         was_done_cpu = was_done.cpu().tolist()
         codes_BN = codes_BN.detach().to(torch.long)
-        logprobs_BN = logprobs_BN.detach().to(torch.float32)
+        logprobs_BN = logprobs_BN.detach()
         for b in range(batch_size):
             if was_done_cpu[b]:
                 continue
