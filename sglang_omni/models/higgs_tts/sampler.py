@@ -298,17 +298,15 @@ def selected_token_logprobs(
     B = logits_BNV.shape[0]
     logits = logits_BNV.float()
 
-    safe_temp = temperature.clamp(min=_GREEDY_TEMP_THRESHOLD).view(B, 1, 1)
-    logprobs_sampled = torch.log_softmax(logits / safe_temp, dim=-1)
-    logprobs_greedy = torch.log_softmax(logits, dim=-1)
-
     greedy_B1 = (temperature <= _GREEDY_TEMP_THRESHOLD).view(B, 1)
     if top_k_buf is not None:
         greedy_B1 = greedy_B1 | (top_k_buf == 1).view(B, 1)
 
-    logprobs_full = torch.where(
-        greedy_B1.unsqueeze(-1), logprobs_greedy, logprobs_sampled
+    safe_temp = temperature.clamp(min=_GREEDY_TEMP_THRESHOLD).view(B, 1, 1)
+    eff_temp = torch.where(
+        greedy_B1.unsqueeze(-1), torch.ones_like(safe_temp), safe_temp
     )
+    logprobs_full = torch.log_softmax(logits / eff_temp, dim=-1)
     return logprobs_full.gather(-1, codes_BN.long().unsqueeze(-1)).squeeze(-1)
 
 
