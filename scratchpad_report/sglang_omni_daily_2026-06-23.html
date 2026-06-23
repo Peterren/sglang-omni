@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang Omni 每日 PR 学习日报 · 2026-06-23</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1117; --card:#1a1d27; --card2:#21263380; --ink:#e6e9ef; --muted:#9aa3b2;
+    --accent:#7c8cff; --accent2:#43d692; --warn:#ffad47; --line:#2a2f3d; --code:#11141b;
+    --pill:#2b3145; --pillink:#cdd5ff;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:linear-gradient(180deg,#0c0e14,#0f1117 200px);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.75;font-size:16px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 22px 90px}
+  header.hero{border:1px solid var(--line);border-radius:18px;padding:32px 30px;
+    background:radial-gradient(1200px 300px at 0% 0%, #2a2f55 0%, transparent 60%), var(--card);}
+  .kicker{color:var(--accent);font-weight:700;letter-spacing:.16em;font-size:12px;text-transform:uppercase;margin:0 0 8px}
+  h1{margin:0 0 6px;font-size:30px;line-height:1.25}
+  .sub{color:var(--muted);margin:0}
+  .stats{display:flex;flex-wrap:wrap;gap:14px;margin-top:24px}
+  .stat{flex:1;min-width:150px;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .stat .n{font-size:28px;font-weight:800;color:#fff}
+  .stat .l{color:var(--muted);font-size:13px}
+  .themebar{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .pill{background:var(--pill);color:var(--pillink);border:1px solid #353c55;border-radius:999px;
+    padding:5px 13px;font-size:13px;font-weight:600}
+  .pill.green{background:#16361f;color:#7df0a6;border-color:#1f5130}
+  .pill.amber{background:#3a2c12;color:#ffce8a;border-color:#5a431c}
+  h2.section{margin:54px 0 10px;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2)}
+  .toc{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
+  .toc a{display:flex;gap:12px;align-items:baseline;text-decoration:none;color:var(--ink);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--card)}
+  .toc a:hover{border-color:var(--accent)}
+  .toc .num{color:var(--accent);font-weight:800;font-variant-numeric:tabular-nums}
+  .toc .t{font-weight:600}
+  .toc .tag{margin-left:auto;font-size:12px;color:var(--muted)}
+  details.card{border:1px solid var(--line);border-radius:16px;margin:18px 0;background:var(--card);overflow:hidden}
+  details.card[open]{border-color:#3a4263}
+  details.card>summary{list-style:none;cursor:pointer;padding:20px 24px;display:flex;gap:14px;align-items:flex-start}
+  details.card>summary::-webkit-details-marker{display:none}
+  .chev{margin-left:auto;color:var(--muted);transition:transform .2s;flex:none;font-size:14px}
+  details.card[open] .chev{transform:rotate(90deg)}
+  .prnum{font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;flex:none}
+  .prtitle{font-weight:700;font-size:18px}
+  .prmeta{color:var(--muted);font-size:13px;margin-top:3px}
+  .prmeta a{color:var(--accent)}
+  .body{padding:4px 26px 26px}
+  .tag2{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:6px;margin-right:6px}
+  .t-merged{background:#16361f;color:#7df0a6}
+  .t-omni{background:#241b3a;color:#c4a8ff}
+  .t-ci{background:#3a2c12;color:#ffce8a}
+  h3.step{font-size:16px;margin:26px 0 8px;padding-left:12px;border-left:3px solid var(--accent)}
+  h4{font-size:14.5px;color:#cfd6e6;margin:18px 0 6px}
+  p{margin:9px 0}
+  .lead{color:#d7dcea}
+  ul,ol{margin:8px 0 8px;padding-left:22px}
+  li{margin:5px 0}
+  code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;
+    background:#222736;padding:1.5px 6px;border-radius:5px;color:#ffd9a8}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;margin:12px 0}
+  pre code{background:none;padding:0;color:#e6e9ef;font-size:12.5px;line-height:1.6}
+  .concept{border:1px solid #2c3350;border-radius:13px;background:linear-gradient(180deg,#191d2c,#161a26);
+    padding:14px 18px;margin:14px 0}
+  .concept .ctitle{font-weight:800;color:#9fb0ff;margin-bottom:2px;font-size:14.5px}
+  .concept .three{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .concept .three b{color:var(--accent2)}
+  .callout{border-left:3px solid var(--warn);background:#23211a;border-radius:0 10px 10px 0;padding:10px 16px;margin:14px 0;color:#f0e2c8}
+  .analogy{border-left:3px solid var(--accent2);background:#15231c;border-radius:0 10px 10px 0;padding:10px 16px;margin:14px 0;color:#cdedd7}
+  .analogy b,.callout b{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left}
+  th{background:#1d2231;color:#cdd5ff}
+  td.num{font-variant-numeric:tabular-nums;text-align:right}
+  .good{color:#7df0a6;font-weight:700}
+  .bad{color:#ff8e8e;font-weight:700}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;text-align:center;border-top:1px solid var(--line);padding-top:24px}
+  .takeaway{background:#15231c;border:1px solid #1f4a31;border-radius:12px;padding:14px 18px;margin-top:16px}
+  .takeaway .ctitle{color:#7df0a6;font-weight:800;margin-bottom:4px}
+  hr.soft{border:none;border-top:1px dashed var(--line);margin:24px 0}
+  @media print{
+    body{background:#fff;color:#16181d}
+    .wrap{max-width:100%}
+    header.hero,.stat,details.card,.concept,.toc a,pre,.takeaway{break-inside:avoid}
+    details.card{border-color:#ccc}
+    details.card>summary{pointer-events:none}
+    .chev{display:none}
+    pre{background:#f5f6f8;border-color:#ddd}
+    pre code{color:#16181d}
+    code{background:#eef0f4;color:#9a4a00}
+    h2.section{color:#1f7a4d}
+    .concept{background:#f5f7ff;color:#16181d}
+    .concept .ctitle{color:#2a3bb0}
+    .analogy{background:#eefaf1;color:#143}
+    .callout{background:#fdf6e8;color:#5a4410}
+    a{color:#2a3bb0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <p class="kicker">SGLang Omni · 每日 PR 学习日报</p>
+  <h1>过去 24 小时合并的 PR 深度解读</h1>
+  <p class="sub">报告日期：2026-06-23 ｜ 仓库：<a href="https://github.com/sgl-project/sglang-omni" style="color:#9fb0ff">sgl-project/sglang-omni</a> ｜ 抓取窗口：merged ≥ 2026-06-22</p>
+
+  <div class="stats">
+    <div class="stat"><div class="n">5</div><div class="l">合并 PR 总数</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">深度解读（Omni / 多模态 / 多阶段）</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">CI / 基础设施（简述）</div></div>
+    <div class="stat"><div class="n">+48%</div><div class="l">本日最大单项吞吐提升（#822）</div></div>
+  </div>
+
+  <div class="themebar">
+    <span class="pill green">多模态 TTS 声码器（Vocoder）</span>
+    <span class="pill green">SGLang 变长 FlashAttention</span>
+    <span class="pill">多阶段 Pipeline 架构</span>
+    <span class="pill">CUDA Graph / torch.compile 批策略</span>
+    <span class="pill">KV Cache 显存预算</span>
+    <span class="pill amber">CI 阈值校准</span>
+    <span class="pill amber">CI 工作流编排</span>
+  </div>
+</header>
+
+<h2 class="section">今日总览 · 主题分类</h2>
+<p class="lead">今天的 5 个 PR 可以分成两组。<b>第一组（#822 / #843 / #864）是真正"碰到模型与推理引擎内核"的改动</b>——它们围绕 SGLang-Omni 的多模态语音合成（TTS）流水线展开：怎么把声码器算得更快、怎么保证一堆 TTS 模型的批处理配置都"自洽"、怎么给显存预算留够余量。这三个是本报告的重点，会逐行讲代码、把每个陌生概念用"它是什么 → 为什么需要 → 本 PR 怎么用"三段式讲透。<b>第二组（#863 / #857）是工程基础设施</b>——CI 性能阈值的日常校准，以及 CI 工作流编排的 Bug 修复，和模型架构关系不大，因此放在后面简述，但同样点出它们背后的工程思想。</p>
+
+<div class="toc">
+  <a href="#pr822"><span class="num">#822</span><span class="t">为 MOSS 声码器接上 SGLang 变长 FlashAttention 解码路径</span><span class="tag">深度 · 多模态/多阶段</span></a>
+  <a href="#pr843"><span class="num">#843</span><span class="t">校验所有 TTS 生成阶段的批处理策略（CUDA Graph / torch.compile）</span><span class="tag">深度 · 多阶段</span></a>
+  <a href="#pr864"><span class="num">#864</span><span class="t">抬高 colocated 声码器显存预留，给 CI 留出 VRAM 余量</span><span class="tag">深度 · 显存/KV</span></a>
+  <a href="#pr863"><span class="num">#863</span><span class="t">2026/06/22 CI 阈值校准</span><span class="tag">简述 · CI</span></a>
+  <a href="#pr857"><span class="num">#857</span><span class="t">修复定向重跑最新 Omni CI 运行的逻辑</span><span class="tag">简述 · CI</span></a>
+</div>
+
+<!-- ================= PR 822 ================= -->
+<h2 class="section">深度解读</h2>
+
+<details class="card" id="pr822" open>
+  <summary>
+    <span class="prnum">#822</span>
+    <span>
+      <div class="prtitle">[MOSS] Add SGLang-backed MOSS vocoder decoder</div>
+      <div class="prmeta"><span class="tag2 t-merged">MERGED</span><span class="tag2 t-omni">多模态/多阶段</span> 作者 <b>Ratish1</b> · 合并于 2026-06-22 19:47 UTC · <a href="https://github.com/sgl-project/sglang-omni/pull/822">查看 PR ↗</a></div>
+    </span>
+    <span class="chev">▶</span>
+  </summary>
+  <div class="body">
+
+  <h3 class="step">1 · PR 概览</h3>
+  <p class="lead"><b>一句话：</b>给 MOSS-TTS Local 的"声码器"在<b>非流式</b>解码时换上一条更快的注意力计算路径——把原本由上游库执行的 transformer 注意力，改走 SGLang 打包后的<b>变长 FlashAttention</b>（packed varlen FlashAttention），在 H100 上把这一段的吞吐拉高约 <span class="good">+48.6%</span>、平均时延降低约 <span class="good">-33%</span>，而音质指标（WER / UTMOS / 说话人相似度）基本持平。</p>
+
+  <h3 class="step">2 · 它解决了什么问题</h3>
+  <p>要听懂这个 PR，先要知道 TTS（文本转语音）系统通常分两大步，这正是"多阶段架构"的含义：</p>
+  <ol>
+    <li><b>AR 阶段（自回归语言模型）</b>：像 LLM 一样，一个 token 一个 token 地生成"音频 token"（codec codes，可以理解成压缩后的声音编码）。</li>
+    <li><b>声码器阶段（Vocoder）</b>：把这些离散的音频 token 还原成真正能播放的连续波形（waveform）。</li>
+  </ol>
+  <p>痛点在于：<b>声码器本身也包含一个不小的 transformer</b>，而它在端到端时延里占了很大一块。原来的非流式路径直接调用上游 <code>processor.decode_audio_codes</code>，里面的注意力用的是通用实现（SDPA），并且为了对齐 padding 还要在一个 <code>[batch, max_seqlen, dim]</code> 的稠密张量上算注意力——其中有大量 padding 的"空位"也被白白算了一遍。批次里句子长短不一时，这种浪费尤其明显。</p>
+  <p class="lead">于是作者想：能不能把声码器 transformer 这段，也接到 SGLang 已经高度优化的 <b>变长 FlashAttention</b> 内核上？把一个 batch 里所有句子的有效帧"压扁"成一根长序列，只算真实 token、不算 padding，从而又快又省显存。</p>
+
+  <h3 class="step">3 · 具体做了什么改动</h3>
+  <h4>核心文件</h4>
+  <ul>
+    <li><code>sglang_omni/models/moss_tts_local/vocoder_decoder.py</code> <b>（新增，约 480 行）</b>——本 PR 的主体，定义了一整套"包装器"类，把上游声码器的注意力换成打包 FlashAttention。</li>
+    <li><code>sglang_omni/models/moss_tts_local/streaming_vocoder.py</code>（修改）——在调度器里安装/卸载这个新解码器。</li>
+  </ul>
+
+  <h4>改动前 vs 改动后（执行路径对比）</h4>
+  <p>PR 描述里给出的这张"流程图"非常关键，它说明新路径只替换了中间一段，<b>前后的 codec 嵌入、波形投影都保持原样</b>（这叫"作用域内替换 / scoped replacement"）：</p>
+<pre><code class="language-text">非流式 MOSS codes
+  → tokenizer 整段解码（chunk_duration=None）
+  → 【作用域内】安装 MOSS 声码器解码器替身
+  → 上游 codec 嵌入 / pretransform / 波形投影   ← 保持不变
+  → projected transformer 各阶段：
+       input projection（输入投影）
+       pack valid frames（把有效帧打包压扁）   ← 新增
+       MOSS 位置编码 / RoPE
+       SGLang flash_attn_varlen_func           ← 核心替换点
+       output projection（输出投影）
+       unpack valid frames（解包还原成 batch）  ← 新增
+  → waveform（波形）</code></pre>
+  <p>而<b>流式（streaming）请求继续走老的有状态路径</b>，新解码器只在非流式解码时用 <code>try/finally</code> 临时装上、用完即恢复——这是一个很克制、低风险的设计。</p>
+
+  <h4>关键代码逐块讲解</h4>
+  <p>下面这段是"打包"的核心——把 <code>[batch, max_seqlen, dim]</code> 的稠密张量，按每句真实长度压成一根 <code>[total_valid_tokens, dim]</code> 的长序列：</p>
+<pre><code class="language-python">def _pack_padded_sequence(x, input_lengths):
+    batch_size, max_seqlen, _ = x.shape
+    positions = torch.arange(max_seqlen, device=x.device)
+    # valid_mask: 每个位置是否在该句的真实长度内（True=真实 token，False=padding）
+    valid_mask = positions.view(1, max_seqlen) < input_lengths.view(batch_size, 1)
+    packed_x = x[valid_mask]                      # 只保留真实 token，压成一根长序列
+    # cu_seqlens: 累积长度数组，[0, len0, len0+len1, ...]，标记每句在长序列里的边界
+    cu_seqlens = torch.zeros(batch_size + 1, dtype=torch.int32, device=x.device)
+    cu_seqlens[1:] = torch.cumsum(input_lengths.to(torch.int32), dim=0)
+    position_ids = positions.view(1, max_seqlen).expand(batch_size, -1)[valid_mask]
+    return packed_x, valid_mask, cu_seqlens, position_ids</code></pre>
+  <ul>
+    <li><code>valid_mask</code>：一个布尔矩阵，标出哪些格子是真 token、哪些是 padding。逻辑是"位置下标 &lt; 这句的真实长度"。</li>
+    <li><code>packed_x = x[valid_mask]</code>：用掩码做花式索引，<b>一步就把所有真实 token 抽出来拼成一根长条</b>，padding 全部丢掉。</li>
+    <li><code>cu_seqlens</code>（cumulative sequence lengths，累积序列长度）：这是变长 FlashAttention 的"灵魂参数"。它告诉内核"长条里第 0~len0 个 token 属于第一句、len0~len0+len1 属于第二句……"，这样 FlashAttention 才知道<b>注意力不能跨句子串味</b>。</li>
+    <li><code>position_ids</code>：每个 token 在它<i>自己句子</i>里的位置下标，供 RoPE 位置编码使用。</li>
+  </ul>
+
+  <p>然后是真正调用 SGLang 内核的地方（在 <code>MossTTSLocalAttention._forward_packed_flash</code> 里）：</p>
+<pre><code class="language-python">q, k, v = self._project_qkv(x)              # 线性投影出 Query/Key/Value
+q, k = self._apply_packed_rope(q, k, position_ids, max_positions=max_seqlen)  # 给 q,k 加 RoPE
+out = self._flash_attn_varlen(
+    q.contiguous(), k.contiguous(), v.contiguous(),
+    cu_seqlens, cu_seqlens,        # q 和 k 用同一套边界（自注意力）
+    max_seqlen, max_seqlen,
+    causal=self.causal,            # 因果掩码：每个 token 只能看自己和前面的
+    window_size=self._flash_window_size(),  # 局部窗口：只看最近 context 个 token
+)
+return self.out_proj(out.reshape(x.shape[0], self.embed_dim))</code></pre>
+  <p>这里有个很精细的细节，体现作者对"语义对齐"的较真——局部窗口大小的换算：</p>
+<pre><code class="language-python">def _flash_window_size(self):
+    if self.context is None or not self.causal:
+        return (-1, -1)               # (-1,-1) 表示不限制窗口
+    # MOSS 的 SDPA 局部掩码：context 个 token 是"含当前 token"在内的总数
+    # 而 FlashAttention 的左窗口参数：数的是"当前 token 之前的 key 数量"
+    return (max(int(self.context) - 1, 0), 0)</code></pre>
+  <div class="callout"><b>为什么减 1？</b> 两套实现对"窗口"的定义差一个：上游 SDPA 把"能看见的总 token 数（含自己）"叫 context，而 FlashAttention 的左窗口只数"自己<i>前面</i>的 key 个数"。如果不减 1，新路径会比原实现多看一个 token，结果就对不上了。这种"差一"（off-by-one）正是替换内核时最容易踩、又最难查的坑。作者特意写注释标明，是非常专业的做法。</div>
+
+  <p>最后把长条还原回原来的 batch 形状（解包），保证后续波形投影看到的张量形状和原来一模一样：</p>
+<pre><code class="language-python">def _unpack_packed_sequence(packed_x, valid_mask, batch_size, max_seqlen):
+    x = packed_x.new_zeros(batch_size, max_seqlen, packed_x.shape[-1])  # 先铺一张全 0 的画布
+    x[valid_mask] = packed_x        # 把算好的真实 token 按掩码放回原位，padding 处保持 0
+    return x</code></pre>
+  <p>另外作者还做了一个<b>快路径优化</b>：当 batch 里只有一句、且它没有 padding（<code>batch_size==1 and 真实长度==max_seqlen</code>）时，根本不需要构造掩码，直接 <code>reshape</code> 就行，省掉掩码开销——见 <code>_pack_unpadded_sequence</code>。</p>
+
+  <h4>诚实的工程态度：它没有"装作 bit-identical"</h4>
+  <div class="callout">PR 反复强调：新路径的波形输出<b>不是和上游逐比特相同（not bit-identical）</b>。更难得的是，作者做了"消融实验"去定位漂移来源：他发现即便换成自己写的 SDPA 解码器（不用 FlashAttention），漂移也差不多大——这说明<b>漂移主要来自"非流式执行模型的整体改变"，而不是 FlashAttention 打包/窗口有 Bug</b>。这种"不甩锅、把可疑路径一条条排除"的验证方式，是性能优化 PR 的黄金标准。</div>
+
+  <h3 class="step">4 · 涉及的知识点（重点）</h3>
+
+  <div class="concept">
+    <div class="ctitle">声码器 Vocoder</div>
+    <div class="three">
+      <span><b>它是什么：</b>把"声音的压缩编码（codec tokens / 离散单元）"还原成真正能播放的连续音频波形的模块。可以理解成音频领域的"解压缩器 + 渲染器"。</span>
+      <span><b>为什么需要它：</b>语言模型擅长生成离散 token，但人耳要听的是连续波形。声码器就是这两个世界之间的桥。在 MOSS 里它本身还内嵌一个 transformer，所以并不便宜。</span>
+      <span><b>本 PR 怎么用：</b>把声码器 transformer 那一段的注意力换成 SGLang 内核，但保留它的嵌入和波形投影，只优化"最贵的中间段"。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">FlashAttention 与「变长（varlen / packed）」</div>
+    <div class="three">
+      <span><b>它是什么：</b>FlashAttention 是一种把注意力计算"分块、不落地中间大矩阵"从而又快又省显存的内核。<b>变长版本</b>允许你把一批长短不一的句子拼成一根长序列来算，靠 <code>cu_seqlens</code> 这个边界数组区分句子。</span>
+      <span><b>为什么需要它：</b>传统做法要把短句 padding 到最长句的长度，padding 部分白算、白占显存。变长版本"只算真 token"，batch 里长短差异越大，省得越多。</span>
+      <span><b>本 PR 怎么用：</b><code>_pack_padded_sequence</code> 负责压扁 + 生成 <code>cu_seqlens</code>，再交给 <code>flash_attn_varlen_func</code>，最后解包还原。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">RoPE（旋转位置编码 Rotary Position Embedding）</div>
+    <div class="three">
+      <span><b>它是什么：</b>一种把"token 在序列里的位置"信息，通过对 Query/Key 向量做"旋转"来注入的技术。位置越靠后，旋转角度越大。</span>
+      <span><b>为什么需要它：</b>注意力本身对顺序"无感"，必须额外告诉它谁前谁后。RoPE 的好处是相对位置关系天然体现在向量内积里。</span>
+      <span><b>本 PR 怎么用：</b>打包成长序列后，每个 token 必须用"它在自己句子里的位置"来旋转（而不是在长条里的全局位置），所以 <code>position_ids</code> 要随打包一起算好；<code>_MossPackedRopeCache</code> 还把 cos/sin 表缓存起来避免重复计算。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">SDPA（Scaled Dot-Product Attention）</div>
+    <div class="three">
+      <span><b>它是什么：</b>PyTorch 内置的"标准"缩放点积注意力实现（<code>torch.nn.functional.scaled_dot_product_attention</code>），通用、正确，但不一定最快。</span>
+      <span><b>为什么需要它：</b>作为对照基线和兜底路径——本 PR 里当不满足条件（非 CUDA、非 bf16 等）时仍回退到上游 SDPA 路径。</span>
+      <span><b>本 PR 怎么用：</b><code>resolve_attention_implementation</code> 会判断能否走打包 FlashAttention，不能就回退 SDPA；作者还用 SDPA 做消融实验来证明漂移不是 FlashAttention 的锅。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">作用域内替换（Scoped / Monkey-patch Replacement）+ try/finally</div>
+    <div class="three">
+      <span><b>它是什么：</b>临时把对象的某个组件换成自定义版本，用完立刻还原，保证不污染其他代码路径。</span>
+      <span><b>为什么需要它：</b>流式和非流式共用同一个 codec 实例；如果永久替换会影响流式。临时替换 + <code>try/finally</code> 恢复，把风险锁在一个很小的窗口内。</span>
+      <span><b>本 PR 怎么用：</b>只在非流式整段解码期间安装 <code>MossTTSLocalVocoderDecoder</code>，结束即恢复，流式会话完全不受影响。</span>
+    </div>
+  </div>
+
+  <div class="analogy"><b>一个类比帮助理解打包：</b>想象食堂打饭，原来不管你要多少，都给你一个最大号餐盘并铺满（padding），盘子很多地方是空的还得端着走（白占资源）。变长 FlashAttention 是改成"流水线传送带"：把所有人的实际饭量首尾相接放上同一条传送带（packed），只在每个人的饭之间放一道隔板（<code>cu_seqlens</code>），既不浪费盘子，也不会让你的饭和别人的混在一起（因果 + 边界）。</div>
+
+  <h3 class="step">5 · 我能学到什么 / 延伸思考</h3>
+  <div class="takeaway">
+    <div class="ctitle">可复用的工程思想</div>
+    <ul>
+      <li><b>只优化最贵的一段、其余保持不变。</b>不重写整个声码器，只替换 transformer 注意力，把改动面和风险都压到最小。</li>
+      <li><b>新旧并存、按条件路由 + 兜底回退。</b>流式走老路、非流式走新路，不满足条件回退 SDPA——永远留一条已知正确的退路。</li>
+      <li><b>诚实地承认"非 bit-identical"，并用消融实验定位漂移来源。</b>比起声称"完全等价"，量化漂移幅度 + 排除法定位，更可信也更专业。</li>
+      <li><b>对"差一"语义差异极度敏感</b>（窗口大小那段注释），这是跨实现替换内核的核心功力。</li>
+    </ul>
+  </div>
+  <p><b>想深入可以再补：</b>注意力机制与 KV cache 原理 → FlashAttention 论文（分块 softmax / 不落地中间矩阵）→ 变长 attention 的 <code>cu_seqlens</code> 约定 → RoPE 的数学推导 → 音频 codec（如残差向量量化 RVQ）与声码器（HiFi-GAN 一类）的基础。</p>
+  </div>
+</details>
+
+<!-- ================= PR 843 ================= -->
+<details class="card" id="pr843">
+  <summary>
+    <span class="prnum">#843</span>
+    <span>
+      <div class="prtitle">[TTS] Validate generation batch policies (#836 W1)</div>
+      <div class="prmeta"><span class="tag2 t-merged">MERGED</span><span class="tag2 t-omni">多阶段</span> 作者 <b>luojiaxuan</b> · 合并于 2026-06-22 02:26 UTC · <a href="https://github.com/sgl-project/sglang-omni/pull/843">查看 PR ↗</a></div>
+    </span>
+    <span class="chev">▶</span>
+  </summary>
+  <div class="body">
+
+  <h3 class="step">1 · PR 概览</h3>
+  <p class="lead"><b>一句话：</b>新增一个统一的"生成阶段批处理策略校验器"，把所有 SGLang 后端的 TTS / Omni 模型（Higgs、MOSS、MOSS-Local、Qwen3-TTS、Voxtral、FishAudio S2-Pro、Qwen3-Omni talker）的 CUDA Graph、torch.compile、最大并发等配置，在启动时强制检查一遍——配置不自洽就直接报错，而不是等到线上跑崩。</p>
+
+  <h3 class="step">2 · 它解决了什么问题</h3>
+  <p>SGLang-Omni 支持七八个不同的语音模型，每个模型在 <code>stages.py</code> 里各自写一套启动参数（<code>overrides</code> 字典）。这里面有几个参数互相<b>必须配套</b>，但以前是各写各的、容易写错：</p>
+  <ul>
+    <li><code>max_running_requests</code>：最大并发请求数（引擎同时处理多少条）。</li>
+    <li><code>cuda_graph_max_bs</code> / <code>cuda_graph_bs</code>：CUDA Graph 捕获的最大批大小、以及具体捕获哪些批大小（"分桶"列表）。</li>
+    <li><code>torch_compile_max_bs</code>：torch.compile 编译覆盖到的最大批大小。</li>
+    <li>模型自己分配的批缓冲区容量（如 KV cache、采样池的行数）。</li>
+  </ul>
+  <div class="callout"><b>痛点：</b>如果 <code>cuda_graph_max_bs</code> 比 <code>max_running_requests</code> 小，那么当并发冲高、批大小超过 CUDA Graph 覆盖范围时，引擎要么回退到慢的 eager 模式、要么直接越界崩溃。更隐蔽的是 FishAudio S2-Pro 这种模型，<code>torch.compile</code> 只编到 batch=16，但实际并发能到 64——大批次时性能悬崖式下跌，却没人在启动时拦住它。这类"配置漂移"在生产里极难排查，因为启动一切正常，只在特定负载下出问题。</div>
+
+  <h3 class="step">3 · 具体做了什么改动</h3>
+  <h4>核心文件</h4>
+  <ul>
+    <li><code>sglang_omni/scheduling/generation_batch_policy.py</code> <b>（新增，196 行）</b>——校验器与默认分桶生成器。</li>
+    <li>七个模型的 <code>stages.py</code> 各自接入这个校验器（Higgs / MOSS / MOSS-Local / Qwen3-TTS / Voxtral / FishAudio S2-Pro / Qwen3-Omni talker）。</li>
+    <li>两个模型（Higgs、FishAudio）还暴露了"模型侧真实缓冲区容量"的属性，供校验器交叉核对。</li>
+  </ul>
+
+  <h4>关键代码 A：默认 CUDA Graph 分桶，对齐 SGLang 原生桶</h4>
+<pre><code class="language-python">def build_default_cuda_graph_bs(max_bs: int) -> list[int]:
+    max_bs = int(max_bs)
+    if max_bs < 1:
+        raise ValueError("max_bs must be >= 1")
+    values = [1, 2, 4, 8, 12]          # 小批次密集采样
+    values.extend(range(16, 257, 8))   # 16~256，每 8 一档
+    values.extend(range(272, 512, 16)) # 256~512，每 16 一档
+    values.extend(range(512, max_bs + 1, 32))  # 512 以上，每 32 一档
+    values = [bs for bs in values if bs <= max_bs]
+    if not values or values[-1] != max_bs:
+        values.append(max_bs)          # 保证最后一桶正好等于 max_bs
+    return values</code></pre>
+  <p>这段的用意是：<b>不要让"校验"反而缩小了 CUDA Graph 的覆盖范围</b>。它生成的分桶刻意和 SGLang 默认捕获的桶一致——小批次密、大批次疏（因为小批次更常见、也更需要精细优化）。比如 <code>max_bs=64</code> 会得到 <code>[1,2,4,8,12,16,24,32,40,48,56,64]</code>。</p>
+
+  <h4>关键代码 B：校验器的核心判断</h4>
+<pre><code class="language-python"># CUDA Graph 开启时：max(cuda_graph_bs) 必须正好等于 cuda_graph_max_bs
+if max(cuda_graph_bs) != cuda_graph_max_bs:
+    errors.append("max(cuda_graph_bs) must match cuda_graph_max_bs ...")
+
+# CUDA Graph 的最大批必须 >= 最大并发，否则高并发时没图可用
+if cuda_graph_max_bs < max_running_requests:
+    errors.append("cuda_graph_max_bs must cover max_running_requests ...")
+
+# 只有当 torch.compile 真的开启时，才要求它覆盖最大并发
+if torch_compile_enabled and torch_compile_max_bs < max_running_requests:
+    errors.append("torch_compile_max_bs must cover max_running_requests ...")
+
+# 模型实际分配的缓冲区，必须能装下最大并发
+if normalized_model_buffer_bs < max_running_requests:
+    errors.append("model_buffer_bs must cover max_running_requests ...")
+
+if errors:
+    raise ValueError(f"{model_name} invalid generation batch policy: " + "; ".join(errors))</code></pre>
+  <p>逻辑可以归纳成一句话：<b>"凡是声明能跑 N 路并发，那么 CUDA Graph、torch.compile、模型缓冲区这三道关卡，每一道都必须 ≥ N。"</b> 任何一道没覆盖到，启动即 <code>ValueError</code> 失败（fail fast，快速失败），而不是留到线上炸。</p>
+
+  <h4>关键代码 C：模型侧暴露真实容量，做"交叉核对"</h4>
+  <p>光看配置不够——配置写得对，但模型<i>实际分配</i>的缓冲区可能更小。所以 Higgs 和 FishAudio 把真实容量暴露成属性：</p>
+<pre><code class="language-python"># FishAudio S2-Pro：从已分配的 KV cache 张量第 0 维直接读出真实批容量
+@property
+def kv_cache_max_batch_size(self) -> int:
+    kv_cache = self.layers[0].attention.kv_cache
+    return int(kv_cache.k_cache.shape[0])   # k_cache 形状是 [batch, ...]
+
+# 取 VQ 解码缓冲 与 KV cache 两者的较小值，作为真实可用批上限
+def _resolve_s2pro_model_buffer_bs(model):
+    return min(int(model.vq_decode_max_batch_size),
+               int(model._audio_decoder.kv_cache_max_batch_size))</code></pre>
+  <p>这里的精髓是<b>取 min</b>：一个请求要同时占用"VQ 解码缓冲"和"KV cache"两块资源，木桶效应下，真实并发上限是两者里更小的那个。校验器拿这个真实值和 <code>max_running_requests</code> 对比，杜绝"配置吹牛、缓冲不够"。</p>
+
+  <h4>顺带的实际收益</h4>
+  <p>因为强制对齐，FishAudio S2-Pro 的 torch.compile 从只编到 <code>max_batch_size=16</code> 提升到 <code>64</code>（覆盖了它真实的 64 路并发）。Higgs 暴露了 <code>sampler_pool_max_running_requests</code>，Qwen3-Omni talker 也补齐了显式的 <code>cuda_graph_bs / max_running_requests / torch_compile_max_bs</code>。PR 还附了大量 benchmark 证明这些对齐<b>没有引入性能回退</b>（多数模型在噪声范围内持平）。</p>
+
+  <h3 class="step">4 · 涉及的知识点（重点）</h3>
+
+  <div class="concept">
+    <div class="ctitle">CUDA Graph</div>
+    <div class="three">
+      <span><b>它是什么：</b>把一连串 GPU 内核调用"录制"成一张静态图，之后用一次"重放"代替成百上千次逐个 launch。</span>
+      <span><b>为什么需要它：</b>小模型 / 小批次推理时，瓶颈往往不是算力，而是 CPU 逐个发射内核的开销（kernel launch overhead）。CUDA Graph 把这部分开销几乎抹平。代价是图按"固定形状"录制，所以要预先为<b>每个会用到的批大小</b>各录一张——这就是"分桶（buckets）"。</span>
+      <span><b>本 PR 怎么用：</b>校验 <code>cuda_graph_bs</code> 这些桶的最大值要等于 <code>cuda_graph_max_bs</code>、且要 ≥ 最大并发，保证任何实际批大小都有一张录好的图可用。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">torch.compile</div>
+    <div class="three">
+      <span><b>它是什么：</b>PyTorch 2.x 的即时编译器，把动态 Python 模型代码编译成融合后的高效内核。</span>
+      <span><b>为什么需要它：</b>同样为了减少开销、融合算子、提速。但它也要针对具体形状/批大小编译，超出编译覆盖的批大小会触发重新编译或回退，性能骤降。</span>
+      <span><b>本 PR 怎么用：</b>只在 <code>enable_torch_compile=True</code> 时才强制要求 <code>torch_compile_max_bs ≥ max_running_requests</code>（关掉时不卡），把 S2-Pro 从 16 提到 64。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">max_running_requests（最大并发 / continuous batching 的容量）</div>
+    <div class="three">
+      <span><b>它是什么：</b>推理引擎同一时刻最多并行处理多少条请求。在 SGLang 这类系统里，请求是动态进出的（continuous batching，连续批处理）。</span>
+      <span><b>为什么需要它：</b>它决定了 KV cache、采样池、CUDA Graph 等所有"按批分配"的资源该开多大。它是这套校验的"基准线 N"。</span>
+      <span><b>本 PR 怎么用：</b>所有其他上限都必须 ≥ 它；模型真实缓冲区也必须能装下它。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">Fail Fast（快速失败）与不变量校验（Invariant Validation）</div>
+    <div class="three">
+      <span><b>它是什么：</b>把"系统必须始终成立的前提（不变量）"在最早的时刻（启动时）显式检查，一旦违反立刻报错退出。</span>
+      <span><b>为什么需要它：</b>配置类 Bug 如果拖到运行时才暴露，现场可能是奇怪的越界 / 性能悬崖，极难定位。在启动时一句清晰的 <code>ValueError</code> 能省下几小时排查。</span>
+      <span><b>本 PR 怎么用：</b>整个 <code>validate_generation_batch_policy</code> 就是把这些不变量集中、显式地写出来并强制执行。</span>
+    </div>
+  </div>
+
+  <div class="analogy"><b>类比：</b>这像飞机起飞前的检查单（checklist）。"载客 N 人 → 救生衣 ≥ N、氧气面罩 ≥ N、安全带 ≥ N"，任何一项不够，飞机根本不许起飞，而不是飞到半空才发现救生衣不够。本 PR 就是给七个 TTS 模型装上了同一份起飞检查单。</div>
+
+  <h3 class="step">5 · 我能学到什么 / 延伸思考</h3>
+  <div class="takeaway">
+    <div class="ctitle">可复用的工程思想</div>
+    <ul>
+      <li><b>把分散在各处、容易写错的"隐式约定"，抽成一个集中、显式、可测试的校验器。</b>这是治理"配置漂移"的标准手法。</li>
+      <li><b>配置不能只信声明，要和"运行时真实分配的资源"交叉核对</b>（读 KV cache 张量的真实形状、取 min）。</li>
+      <li><b>"快速失败"优于"悄悄降级"：</b>宁可启动直接报错，也不要线上留一个性能悬崖。</li>
+      <li><b>给每条规则都配单元测试</b>（新增 134 行测试，覆盖每种违规场景），让校验器本身也可信。</li>
+    </ul>
+  </div>
+  <p><b>想深入可以再补：</b>CUDA Graph 捕获/重放机制 → torch.compile（TorchDynamo/Inductor）的形状特化 → continuous batching 与 KV cache 分页 → "契约式设计 / Design by Contract"中的前置条件（precondition）思想。</p>
+  </div>
+</details>
+
+<!-- ================= PR 864 ================= -->
+<details class="card" id="pr864">
+  <summary>
+    <span class="prnum">#864</span>
+    <span>
+      <div class="prtitle">[MOSS] Raise colocated codec_mem_reserve 0.05→0.15 for CI VRAM headroom</div>
+      <div class="prmeta"><span class="tag2 t-merged">MERGED</span><span class="tag2 t-omni">显存/KV</span> 作者 <b>JiaxinD</b> · 合并于 2026-06-23 02:57 UTC · <a href="https://github.com/sgl-project/sglang-omni/pull/864">查看 PR ↗</a></div>
+    </span>
+    <span class="chev">▶</span>
+  </summary>
+  <div class="body">
+
+  <h3 class="step">1 · PR 概览</h3>
+  <p class="lead"><b>一句话：</b>把 MOSS-TTS Local "同卡共置（colocated）"模式下给声码器预留的显存比例 <code>codec_mem_reserve</code> 从 <code>0.05</code> 抬到 <code>0.15</code>（一行改动），从而把 AR 引擎实际可用的 <code>mem_fraction_static</code> 从 0.85 降到 0.70，给同卡上的声码器和解码激活腾出约 12 GB 余量，避免 CI 在 96GB H20 上贴着显存上限跑、随时 OOM。</p>
+
+  <h3 class="step">2 · 它解决了什么问题</h3>
+  <p>"同卡共置（colocated）"是指：一个 CI worker 独占一张卡，把<b>整条流水线（预处理 + AR 引擎 + 声码器）全塞进同一张 GPU 的同一个进程</b>。这三者要共享同一块显存，必须分蛋糕：</p>
+  <ul>
+    <li>总预算 <code>_COLOCATED_TOTAL_GPU_MEMORY_FRACTION = 0.90</code>（整卡的 90%）。</li>
+    <li>AR 引擎的有效份额 = 总预算 0.90 − 声码器预留 <code>codec_mem_reserve</code>。原来预留 0.05，所以 AR 拿 0.85。</li>
+  </ul>
+  <div class="callout"><b>痛点：</b>AR 引擎拿 0.85 时，它会用这份显存去开 <b>KV cache 池</b>。实测在 80GB H100 上，这个池被撑到约 39.5 万 token，是真实需要量（<code>max_running_requests 16 × context_length 8192 = 131072</code> token）的约 <b>3 倍</b>——严重过度预留。AR 把显存吃得太狠，留给声码器（第二个 codec 实例）和解码激活的空间就不够了。在更大的 96GB H20 上，这个"过度预抓"的绝对值更大，于是 CI 的两个 worker 逼近 ~97.6 GB / 96GB（约 99.6%），离 OOM 只剩几百 MiB。</div>
+
+  <h3 class="step">3 · 具体做了什么改动</h3>
+  <p>核心就一行，在 <code>sglang_omni/models/moss_tts_local/config.py</code>：</p>
+<pre><code class="language-python"># colocated 同卡共置的显存契约
+_COLOCATED_TOTAL_GPU_MEMORY_FRACTION = 0.90
+- _COLOCATED_CODEC_MEM_RESERVE = 0.05   # 声码器只预留 5% → AR 拿 0.85（过度预留 KV 池）
++ _COLOCATED_CODEC_MEM_RESERVE = 0.15   # 声码器预留 15% → AR 降到 0.70，腾出余量
+_AR_MEM_FRACTION_STATIC = 0.85</code></pre>
+  <p>作者强调：<code>mem_fraction_static</code> <b>只决定 KV cache 池开多大，不改变任何生成数学</b>（权重、采样、声码器都没动）。降到 0.70 后，KV 池仍约为真实需求的 2.35 倍，绰绰有余，所以请求准入 / 抢占行为不变、输出逐比特相同。这是一个"零行为风险"的容量旋钮调整。</p>
+  <table>
+    <tr><th>有效份额</th><th>KV 池 token 数</th><th>相对真实需求(131072)</th><th>空载 VRAM</th></tr>
+    <tr><td>0.85（改前）</td><td class="num">395457</td><td class="num">3.02×</td><td class="num">77089 MiB</td></tr>
+    <tr><td>0.70（改后）</td><td class="num">308460</td><td class="num">2.35×</td><td class="num">64883 MiB</td></tr>
+  </table>
+  <p>净省约 <span class="good">12206 MiB（≈11.9 GB）</span>，且 n=3 重复测量方差为 0（完全确定性）。外推到 96GB H20：峰值约从 97.6 GB 降到约 83 GB，腾出约 14 GB。</p>
+
+  <h3 class="step">4 · 涉及的知识点（重点）</h3>
+
+  <div class="concept">
+    <div class="ctitle">KV Cache（键值缓存）</div>
+    <div class="three">
+      <span><b>它是什么：</b>自回归生成时，每生成一个新 token 都要和前面所有 token 做注意力。把前面 token 算过的 Key / Value 向量缓存下来，避免每步重算，就是 KV cache。</span>
+      <span><b>为什么需要它：</b>没有它，生成第 n 个 token 就要重算前 n−1 个的注意力，复杂度爆炸。有了它，每步只算增量。代价是它<b>极占显存</b>，且占用 ∝ 并发数 × 序列长度。</span>
+      <span><b>本 PR 怎么用：</b><code>mem_fraction_static</code> 决定 KV 池预抓多少显存。本 PR 发现它被开得过大（3×需求），收一收就省出十几 GB。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">mem_fraction_static（静态显存份额）</div>
+    <div class="three">
+      <span><b>它是什么：</b>SGLang 的关键旋钮，指定"预先静态抓取整卡多大比例的显存来建 KV 池"。</span>
+      <span><b>为什么需要它：</b>推理系统倾向于一次性预抓显存，避免运行时频繁分配/碎片化。但抓太多会挤占同卡上别的组件。</span>
+      <span><b>本 PR 怎么用：</b>通过抬高 codec 预留，间接把 AR 的有效 <code>mem_fraction_static</code> 从 0.85 压到 0.70，给声码器让路。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">Colocation（同卡共置）</div>
+    <div class="three">
+      <span><b>它是什么：</b>把流水线的多个阶段（预处理 / AR / 声码器）放在同一张 GPU、同一进程里跑，而不是分散到多卡多进程。</span>
+      <span><b>为什么需要它：</b>省卡、省机间通信、CI 里一个 worker 一张卡就够。但所有阶段要抢同一块显存，必须精细分配预算。</span>
+      <span><b>本 PR 怎么用：</b>正是 colocated 模式下"AR 太贪、声码器没饭吃"导致逼近 OOM，本 PR 重新切分显存蛋糕。</span>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="ctitle">OOM（Out Of Memory）与 Headroom（余量）</div>
+    <div class="three">
+      <span><b>它是什么：</b>OOM 即显存耗尽导致进程崩溃；headroom 指刻意留出的安全余量。</span>
+      <span><b>为什么需要它：</b>显存用量会随负载、序列长度、碎片波动；贴着上限跑，任何抖动都会触发 OOM。</span>
+      <span><b>本 PR 怎么用：</b>从"99.6% 占用、几百 MiB 余量"改成留出约 14 GB headroom，让 CI 稳定不挂。</span>
+    </div>
+  </div>
+
+  <div class="analogy"><b>类比：</b>三个人合住一间屋（同卡），原来 AR 这个室友把客厅 85% 都堆了自己的杂物（其实他只需要不到一半），结果声码器室友连转身的地方都没有，屋子随时挤爆（OOM）。本 PR 让 AR 把杂物收到 70%——他自己依然够用（KV 池仍是需求的 2.35 倍），却给全屋腾出了走道。</div>
+
+  <h3 class="step">5 · 我能学到什么 / 延伸思考</h3>
+  <div class="takeaway">
+    <div class="ctitle">可复用的工程思想</div>
+    <ul>
+      <li><b>"一行改动"也要拿数据说话。</b>作者给出 A/B 实测、方差为 0、外推说明，把一个看似随手的常数改动论证到无可辩驳。</li>
+      <li><b>分清"改容量"与"改行为"。</b>明确指出此改动只动 KV 池大小、不动生成数学，输出 bit-identical，从而把评审风险降到最低。</li>
+      <li><b>过度预留 = 隐性浪费。</b>默认值未必最优，量一量真实需求（131072 token），常能发现 3× 的水分。</li>
+      <li><b>共享资源系统要为最贪的组件设"预留护栏"</b>（reserve），而不是放任先到先得。</li>
+    </ul>
+  </div>
+  <p><b>想深入可以再补：</b>KV cache 显存的精确计算（层数 × 头数 × head_dim × 2 × dtype 字节 × token 数）→ 分页 KV cache（PagedAttention）→ GPU 显存分配器与碎片 → 多模型 colocation 的显存调度。</p>
+  </div>
+</details>
+
+<!-- ================= CI 简述 ================= -->
+<h2 class="section">基础设施 PR · 简述</h2>
+
+<details class="card" id="pr863">
+  <summary>
+    <span class="prnum">#863</span>
+    <span>
+      <div class="prtitle">[CI] Calibration 2026/06/22</div>
+      <div class="prmeta"><span class="tag2 t-merged">MERGED</span><span class="tag2 t-ci">CI</span> 作者 <b>zhaochenyang20</b> · 合并于 2026-06-22 22:53 UTC · <a href="https://github.com/sgl-project/sglang-omni/pull/863">查看 PR ↗</a></div>
+    </span>
+    <span class="chev">▶</span>
+  </summary>
+  <div class="body">
+  <p class="lead"><b>做了什么：</b>这是一次例行的 CI 性能/质量阈值"再校准"。在 2×H20 上把 Qwen3-ASR、MOSS-TTS（流式 + 非流式）等工作负载各跑 5 遍，取"5 次里最差的一次（worst-of-5）"作为新的门槛值，写回测试文件。</p>
+  <p><b>为什么需要：</b>CI 里有一堆"性能不能比基线差太多""WER 不能超过 X%"的硬门槛。但硬件、驱动、随机性会让指标天然波动，门槛设太紧会频繁误报（flaky），太松又拦不住真回退。定期用"最差值"重新标定，能让门槛既贴近真实能力、又留出噪声容忍。</p>
+  <p><b>亮点数字：</b>非流式 MOSS 吞吐门槛 <code>throughput_qps</code> 从 6.185 收紧到 9.558（<span class="good">+54.5%</span>，说明前期 #822/#843 等优化把实际吞吐拉高了，于是门槛也跟着抬高以锁住成果）；流式 WER 门槛从 2.62% 放宽到 3.05%（流式质量波动更大，适当放松避免误报）。</p>
+  <div class="concept">
+    <div class="ctitle">Worst-of-N 标定 / Flaky 测试治理</div>
+    <div class="three">
+      <span><b>它是什么：</b>多次重复测量，取最不利的一次作为阈值，而不是取平均。</span>
+      <span><b>为什么需要它：</b>阈值要保证"即使运气最差也能过"，否则 CI 会随机红，浪费团队信任。</span>
+      <span><b>本 PR 怎么用：</b>每个指标跑 5 次取 worst，再"收紧（优化生效就抬门槛）"或"放宽（波动大就让步）"地写回。</span>
+    </div>
+  </div>
+  <div class="takeaway"><div class="ctitle">能学到什么</div><b>性能是会回退的资产，门槛要随真实能力动态维护。</b>把优化成果用更严的阈值"焊死"，同时对天生抖动的指标留余地——这是性能 CI 长期可信的关键。延伸：统计显著性、回归基线管理、flaky test 检测。</div>
+  </div>
+</details>
+
+<details class="card" id="pr857">
+  <summary>
+    <span class="prnum">#857</span>
+    <span>
+      <div class="prtitle">[CI] Restart latest Omni CI for targeted reruns</div>
+      <div class="prmeta"><span class="tag2 t-merged">MERGED</span><span class="tag2 t-ci">CI</span> 作者 <b>Ratish1</b> · 合并于 2026-06-22 15:59 UTC · <a href="https://github.com/sgl-project/sglang-omni/pull/857">查看 PR ↗</a></div>
+    </span>
+    <span class="chev">▶</span>
+  </summary>
+  <div class="body">
+  <p class="lead"><b>做了什么：</b>修复 <code>/tag-and-rerun-ci moss|higgs</code> 这类斜杠命令的重跑逻辑——之前它会去重跑一个"较旧的失败运行"，而不是最新的那次，导致看起来像是命令只把 CI 取消了。</p>
+  <p><b>根因（很有教学价值）：</b>斜杠命令给 PR 打的标签是用 <code>GITHUB_TOKEN</code> 加的，而<b>用 <code>GITHUB_TOKEN</code> 触发的事件不会再级联触发新的工作流运行</b>（GitHub 防无限循环的安全设定）。所以不能指望"打完标签会自动产生一次新的带标签运行"。旧逻辑又只在"已完成的失败/跳过运行"里挑，于是挑中了过时的那次；当一个更新的运行已存在时，Omni 的 PR 级并发控制还会把这个过时重跑取消掉，UI 上就显示成"命令只取消了 CI"。</p>
+  <p><b>怎么修：</b>先按 <code>(workflow_id, event)</code> 选出<b>每类工作流的最新一次运行</b>再决定重跑谁；对定向的 moss/higgs 命令，直接对"最新的 PR Omni CI 运行"做整体 full-rerun，让运行时重新读取最新的目标标签；若它还在排队/进行中，则先取消、等取消完成、再整体重跑。还显式安装了 <code>requests</code> 因为处理器现在直接调 GitHub REST 接口做取消/重跑。</p>
+  <div class="concept">
+    <div class="ctitle">GITHUB_TOKEN 不级联触发工作流</div>
+    <div class="three">
+      <span><b>它是什么：</b>GitHub Actions 的一条安全规则——用自带的 <code>GITHUB_TOKEN</code> 做的写操作（如打标签）不会再触发新的工作流，以防自我递归。</span>
+      <span><b>为什么需要它：</b>否则一个工作流改仓库 → 触发自己 → 无限循环。</span>
+      <span><b>本 PR 怎么用：</b>正因为打标签不会自动产生新运行，所以处理器必须<b>主动</b>用 REST API 去重跑最新那次运行，才能让新标签生效。</span>
+    </div>
+  </div>
+  <div class="takeaway"><div class="ctitle">能学到什么</div><b>自动化里"事件不触发"和"挑错了对象"是最隐蔽的一类 Bug。</b>修复关键是：永远显式锁定"最新对象"，并理解平台的事件触发边界（哪些操作不会级联）。延伸：CI/CD 编排、GitHub Actions 并发组（concurrency group）、事件驱动系统的幂等与最新性。</div>
+  </div>
+</details>
+
+<footer>
+  <p>本日报由自动化例程于 2026-06-23 生成 · 数据来源：GitHub <code>sgl-project/sglang-omni</code> · 抓取窗口 merged ≥ 2026-06-22（过去约 24 小时）</p>
+  <p>讲解深度优先于覆盖广度：#822 / #843 / #864 为深度解读，#863 / #857 为基础设施简述。</p>
+</footer>
+
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded',function(){
+    if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){try{hljs.highlightElement(b);}catch(e){}});}
+  });
+</script>
+</body>
+</html>
