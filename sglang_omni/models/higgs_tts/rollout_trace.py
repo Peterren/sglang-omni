@@ -27,8 +27,13 @@ def build_omni_rollout_trace(
 ) -> dict[str, Any]:
     """Build the ``meta_info.omni_rollout`` dict from a delayed ``[L, N]`` code
     matrix and aligned ``[L, N]`` selected-action logprobs (``None`` if not
-    requested). Raises ``ValueError`` on shape disagreement or a non-finite
-    logprob at a trainable action position.
+    requested).
+
+    The logprob contract is the sampler's canonical Higgs RL signal: fp32
+    selected-action values from full-vocab ``log_softmax(logits / T)`` at the
+    sampled code. Greedy rows (``temperature ~= 0`` or ``top_k == 1``) use raw
+    logits. Raises ``ValueError`` on shape disagreement or a non-finite logprob
+    at a trainable action position.
     """
     if delayed_codes.ndim != 2:
         raise ValueError(
