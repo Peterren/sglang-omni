@@ -56,8 +56,8 @@ def _build_runner(
     runner._async_enabled = async_enabled
     runner._staging_slot = 0
     runner._host_staging_buffers = []
-    runner._lp_host_buffers = None
-    runner._lp_slot = 0
+    runner._logprob_host_buffers = None
+    runner._logprob_slot = 0
     runner._async_query_hit = 0
     runner._async_query_miss = 0
     runner.model = SimpleNamespace(
@@ -287,8 +287,8 @@ def test_async_real_pinned_path_matches_sync():
         runner._async_enabled = async_enabled
         runner._staging_slot = 0
         runner._host_staging_buffers = []
-        runner._lp_host_buffers = None
-        runner._lp_slot = 0
+        runner._logprob_host_buffers = None
+        runner._logprob_slot = 0
         runner._async_query_hit = 0
         runner._async_query_miss = 0
         runner.model = SimpleNamespace(

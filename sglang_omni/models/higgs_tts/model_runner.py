@@ -34,12 +34,12 @@ class HiggsTTSModelRunner(ModelRunner):
         self._outbox: Any | None = None
         self._vocoder_target = "vocoder"
         # Ping-pong pinned host buffers for the async-decode logprob D2H.
-        self._lp_host_buffers: list[torch.Tensor] | None = None
-        self._lp_slot = 0
+        self._logprob_host_buffers: list[torch.Tensor] | None = None
+        self._logprob_slot = 0
 
-    def _next_lp_host_staging(self, device_buf: torch.Tensor) -> torch.Tensor:
-        if self._lp_host_buffers is None:
-            self._lp_host_buffers = [
+    def _next_logprob_host_staging(self, device_buf: torch.Tensor) -> torch.Tensor:
+        if self._logprob_host_buffers is None:
+            self._logprob_host_buffers = [
                 torch.empty(
                     device_buf.shape,
                     dtype=device_buf.dtype,
@@ -48,8 +48,8 @@ class HiggsTTSModelRunner(ModelRunner):
                 )
                 for _ in range(2)
             ]
-        buf = self._lp_host_buffers[self._lp_slot]
-        self._lp_slot ^= 1
+        buf = self._logprob_host_buffers[self._logprob_slot]
+        self._logprob_slot ^= 1
         return buf
 
     def set_stream_outbox(self, outbox: Any) -> None:
@@ -103,8 +103,10 @@ class HiggsTTSModelRunner(ModelRunner):
         staging = self._decode_pack_gpu(n_real)
         host_buf = self._next_host_staging(self.model._cg_collect_staging)
         host_buf[:n_real].copy_(staging[:n_real], non_blocking=True)
-        lp_host = self._next_lp_host_staging(self.model._cg_logprobs_BN)
-        lp_host[:n_real].copy_(self.model._cg_logprobs_BN[:n_real], non_blocking=True)
+        logprob_host = self._next_logprob_host_staging(self.model._cg_logprobs_BN)
+        logprob_host[:n_real].copy_(
+            self.model._cg_logprobs_BN[:n_real], non_blocking=True
+        )
         # Set next_token_ids (cb0) from GPU state now, with NO host sync, so the
         # AR input chain (next step's input_ids = this step's output_ids) is
         # available at launch — the host collect (post_decode_resolve) lags by
@@ -116,7 +118,7 @@ class HiggsTTSModelRunner(ModelRunner):
         result.next_token_ids = (
             self.model._cg_codes_BN[:n_real, 0].clamp_min(0).to(torch.long).clone()
         )
-        return host_buf, lp_host
+        return host_buf, logprob_host
 
     def post_decode_resolve(
         self, host_buf, result, forward_batch, schedule_batch, requests
@@ -129,10 +131,10 @@ class HiggsTTSModelRunner(ModelRunner):
         if len(requests) == 0:
             return
         n_real = len(requests)
-        host_buf, lp_host = host_buf
+        host_buf, logprob_host = host_buf
         self._decode_collect_host(
             host_buf[:n_real],
-            lp_host[:n_real],
+            logprob_host[:n_real],
             result,
             requests,
             next_token_device=None,
