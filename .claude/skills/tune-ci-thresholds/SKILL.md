@@ -552,7 +552,7 @@ python .claude/skills/tune-ci-thresholds/tune.py --model tts run \
 python .claude/skills/tune-ci-thresholds/tune.py --model tts run \
   --stages tts_moss --repeats 5 --output-dir .tune-runs/<timestamp>_tts_moss_r5
 
-# Stage 1 only (Qwen3-ASR on SeedTTS EN 20-sample correctness subset):
+# Stage 1 only (Qwen3-ASR on the full SeedTTS EN set):
 python .claude/skills/tune-ci-thresholds/tune.py --model tts run \
   --stages qwen3_asr --repeats 5 --output-dir .tune-runs/<timestamp>_tts_qwen3_asr_r5
 ```
@@ -577,7 +577,7 @@ Notes:
   In `--model tts`, this correctness gate sets `QWEN3_ASR_CI_CONCURRENCY=2`
   to match the stable TTS stage-1 baseline. Standalone `--model qwen3-asr-v1`
   leaves the test default at **32**.
-- Sample count for strict audit: **`SEEDTTS_ASR_CORRECTNESS_SAMPLES`** (=20),
+- Sample count for strict audit: **`SEEDTTS_ASR_CORRECTNESS_SAMPLES`** (=1088),
   JSON `summary.evaluated` / `summary.total_samples`.
 - **CI slack:** tune.py writes P95 reference constants only; assertions use
   derived `*_THRESHOLD` values with **10% slack** (`THRESHOLD_SLACK_HIGHER=0.9`,

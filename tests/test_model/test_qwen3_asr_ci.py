@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """Qwen3-ASR correctness CI for SGLang Omni.
 
-The test uses the first 20 English SeedTTS samples as a lightweight speech
-corpus. It compares normalized transcriptions from the SGLang Omni Qwen3-ASR
-router against the dataset reference text. Transcription, WER, and speed metrics
-are computed by the shared benchmark path imported from
+The test uses the full English SeedTTS set as the speech corpus. It compares
+normalized transcriptions from the SGLang Omni Qwen3-ASR router against the
+dataset reference text. Transcription, WER, and speed metrics are computed by
+the shared benchmark path imported from
 ``benchmarks.eval.benchmark_qwen3_asr_concurrency`` (``run_asr_transcription`` /
 ``build_asr_eval_results``); this gate only launches the router, runs one pass,
 and applies thresholds.
@@ -36,16 +36,16 @@ from tests.utils import MetricCheckCollector, apply_wer_slack
 QWEN3_ASR_CI_MODEL_PATH = QWEN3_ASR_MODEL_PATH
 QWEN3_ASR_CONCURRENCY = int(os.getenv("QWEN3_ASR_CI_CONCURRENCY", "32"))
 QWEN3_ASR_WARMUP_REQUESTS = QWEN3_ASR_CONCURRENCY * 2
-SEEDTTS_ASR_CORRECTNESS_SAMPLES = 20
+SEEDTTS_ASR_CORRECTNESS_SAMPLES = 1088
 
 # P95 reference values calibrated by tune.py (worst-of-N).
-SEEDTTS_ASR_CORPUS_WER_MAX = 0.007
-SEEDTTS_ASR_SAMPLE_WER_MAX = 0.0667
-QWEN3_ASR_THROUGHPUT_MIN = 16.56
-QWEN3_ASR_LATENCY_MEAN_MAX_S = 0.12
-QWEN3_ASR_LATENCY_P95_MAX_S = 0.15629807815421373
-QWEN3_ASR_RTF_MEAN_MAX = 0.0236
-QWEN3_ASR_RTF_P95_MAX = 0.0298
+SEEDTTS_ASR_CORPUS_WER_MAX = 0.0138
+SEEDTTS_ASR_SAMPLE_WER_MAX = 0.2858
+QWEN3_ASR_THROUGHPUT_MIN = 19.037993701018273
+QWEN3_ASR_LATENCY_MEAN_MAX_S = 0.105
+QWEN3_ASR_LATENCY_P95_MAX_S = 0.128
+QWEN3_ASR_RTF_MEAN_MAX = 0.0228
+QWEN3_ASR_RTF_P95_MAX = 0.0297
 
 THRESHOLD_SLACK_HIGHER = 0.9
 THRESHOLD_SLACK_LOWER = 1.1

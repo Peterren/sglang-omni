@@ -7,7 +7,7 @@ qwen3_asr_wer:
     QWEN3_ASR_CI_CONCURRENCY: "2"
   context_vars:
     - SEEDTTS_ASR_CORRECTNESS_SAMPLES
-  test_file_sha256: e6a360a039864aeba2f6309ae54c2276227d71dbf6c2fe649e8b69809b1cba88
+  test_file_sha256: f074fec525338b23dc0bcde26708f9d5a49e58b1ce1b0fd87f7f3cbbb0cae1e9
   last_discovered_at: 2026-06-16T05:27:59Z
   sample_counts:
     total:
@@ -45,7 +45,7 @@ qwen3_asr_speed:
     QWEN3_ASR_CI_CONCURRENCY: "2"
   context_vars:
     - SEEDTTS_ASR_CORRECTNESS_SAMPLES
-  test_file_sha256: e6a360a039864aeba2f6309ae54c2276227d71dbf6c2fe649e8b69809b1cba88
+  test_file_sha256: f074fec525338b23dc0bcde26708f9d5a49e58b1ce1b0fd87f7f3cbbb0cae1e9
   last_discovered_at: 2026-06-16T05:27:59Z
   sample_counts:
     total:
