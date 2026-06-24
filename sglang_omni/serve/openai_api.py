@@ -1063,31 +1063,16 @@ def _build_generate_response(
         type=finish_type,
         length=completion_tokens if finish_type == "length" else None,
     )
-    if req.return_omni_rollout and result.omni_rollout is None:
+    if result.omni_rollout is None and (
+        req.return_omni_rollout
+        or (req.return_logprob and result.output_token_logprobs is None)
+    ):
         raise HTTPException(
             status_code=501,
-            detail="backend did not return omni_rollout for return_omni_rollout=true",
-        )
-    # Audio-only rollouts carry logprobs in omni_rollout, not output_token_logprobs.
-    if (
-        req.return_logprob
-        and result.output_token_logprobs is None
-        and not req.return_omni_rollout
-    ):
-        if result.audio is not None:
-            raise HTTPException(
-                status_code=501,
-                detail=(
-                    "backend did not return audio rollout logprobs; set "
-                    "return_omni_rollout=true to receive Higgs audio logprobs "
-                    "in meta_info.omni_rollout"
-                ),
-            )
-        raise HTTPException(
-            status_code=500,
             detail=(
-                "backend did not return output_token_logprobs for "
-                "return_logprob=true"
+                "backend did not return requested logprobs; expected "
+                "output_token_logprobs for text or meta_info.omni_rollout for "
+                "audio (set return_omni_rollout=true for audio logprobs)"
             ),
         )
     if (

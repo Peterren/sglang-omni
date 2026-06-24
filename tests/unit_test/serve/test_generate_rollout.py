@@ -192,7 +192,7 @@ def test_generate_rejects_missing_logprobs_when_requested() -> None:
         },
     )
 
-    assert resp.status_code == 500
+    assert resp.status_code == 501
     assert "output_token_logprobs" in resp.text
 
 
