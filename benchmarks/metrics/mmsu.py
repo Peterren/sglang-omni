@@ -68,10 +68,11 @@ def print_mmsu_summary(
     metrics: dict[str, Any],
     model_name: str,
     *,
+    benchmark_name: str = "MMSU",
     speed_metrics: dict[str, Any] | None = None,
 ) -> None:
     print("\n" + "=" * SPEED_LINE_WIDTH)
-    print(f"  MMSU Results - {model_name}")
+    print(f"  {benchmark_name} Results - {model_name}")
     print("=" * SPEED_LINE_WIDTH)
     print(f"  Total samples:    {metrics['total_samples']}")
     print(
