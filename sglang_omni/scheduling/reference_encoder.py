@@ -1,4 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
+"""Reusable reference-audio encode mechanics (RFC template T2a).
+
+The framework owns the *mechanics* — a content-addressed LRU with single-flight
+miss coalescing (:class:`ReferenceEncodeCache`) and concurrent-encode batching
+(:class:`BatchedReferenceEncoder`) — while each model owns its encode function
+and its cache-key policy. Cache keys are *not* re-derived here: callers pass a
+key computed by the existing, multi-modal ``preprocessing/cache_key.py``
+(``reference_path_cache_key`` / ``compute_media_cache_key``), so there is no
+second audio-normalization path to keep in sync.
+"""
+
 from __future__ import annotations
 
 import concurrent.futures
