@@ -1063,6 +1063,8 @@ def _build_generate_response(
         type=finish_type,
         length=completion_tokens if finish_type == "length" else None,
     )
+    # (Jingwen): Validate that return_logprob has a backend carrier: text token
+    # logprobs or omni_rollout action logprobs, depending on modality.
     if result.omni_rollout is None and (
         req.return_omni_rollout
         or (req.return_logprob and result.output_token_logprobs is None)
