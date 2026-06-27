@@ -20,7 +20,7 @@
 #   STREAMING_BENCHMARK_MAX_SAMPLES = None  (full SeedTTS EN set for streaming)
 # - Voice-clone artifacts live under per-variant dirs in pytest tmp_path:
 #   vc_nonstream_c16/ and vc_stream_c16/ (speed_results.json, wer_results.json,
-#   similarity_results.json and utmos_results.json for nonstream).
+#   voice_copy_margin_results.json and utmos_results.json for nonstream).
 # - WER thresholds are corpus-level only; each TTS preset has its own symbol
 #   namespace in tts_ci_config.py (Higgs: HIGGS_VC_* / _HIGGS_VC_*; MOSS:
 #   MOSS_VC_* / _MOSS_VC_*). Per-sample WER caps and generation failure
@@ -137,8 +137,8 @@ metric_sources:
             total: "test_voice_cloning_non_streami0/vc_nonstream_c16/wer_results.json::summary.total_samples"
             ok: "test_voice_cloning_non_streami0/vc_nonstream_c16/wer_results.json::summary.evaluated"
           similarity:
-            total: "test_voice_cloning_non_streami0/vc_nonstream_c16/similarity_results.json::summary.total_samples"
-            ok: "test_voice_cloning_non_streami0/vc_nonstream_c16/similarity_results.json::summary.evaluated"
+            total: "test_voice_cloning_non_streami0/vc_nonstream_c16/voice_copy_margin_results.json::summary.total_samples"
+            ok: "test_voice_cloning_non_streami0/vc_nonstream_c16/voice_copy_margin_results.json::summary.evaluated"
           utmos:
             total: "test_voice_cloning_non_streami0/vc_nonstream_c16/utmos_results.json::summary.total_samples"
             ok: "test_voice_cloning_non_streami0/vc_nonstream_c16/utmos_results.json::summary.evaluated"
@@ -148,7 +148,7 @@ metric_sources:
           latency_mean_s: "summary.latency_mean_s"
           rtf_mean: "summary.rtf_mean"
           corpus_wer: "test_voice_cloning_non_streami0/vc_nonstream_c16/wer_results.json::summary.wer_corpus"
-          similarity_mean: "test_voice_cloning_non_streami0/vc_nonstream_c16/similarity_results.json::summary.speaker_similarity_mean"
+          similarity_margin: "test_voice_cloning_non_streami0/vc_nonstream_c16/voice_copy_margin_results.json::summary.speaker_similarity_margin_mean"
           utmos_mean: "test_voice_cloning_non_streami0/vc_nonstream_c16/utmos_results.json::summary.utmos_mean"
       stream:
         constant_filter: "^HIGGS_VC_STREAM_.*$|^MOSS_VC_STREAM_.*$"
