@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang Omni 每日 PR 学习日报 · 2026-06-27</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --card2:#1c2330; --border:#30363d;
+    --text:#e6edf3; --muted:#9da7b3; --accent:#7c5cff; --accent2:#39d3bb;
+    --green:#3fb950; --orange:#ffa657; --red:#ff7b72; --blue:#79c0ff;
+    --code-bg:#0b0f17; --kw:#ff7b72; --str:#a5d6ff; --com:#8b949e; --fn:#d2a8ff; --num:#79c0ff;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Helvetica,Arial,sans-serif;
+    line-height:1.75; font-size:16px;
+  }
+  .wrap{max-width:980px; margin:0 auto; padding:32px 22px 80px;}
+  header.top{
+    background:linear-gradient(135deg,#1a1340 0%,#0d1117 60%);
+    border:1px solid var(--border); border-radius:18px; padding:34px 32px; margin-bottom:26px;
+    box-shadow:0 8px 40px rgba(124,92,255,.12);
+  }
+  header.top h1{margin:0 0 6px; font-size:30px; letter-spacing:.3px;}
+  header.top .sub{color:var(--muted); font-size:15px;}
+  .badges{margin-top:18px; display:flex; flex-wrap:wrap; gap:10px;}
+  .badge{background:var(--card2); border:1px solid var(--border); border-radius:999px; padding:5px 14px; font-size:13px; color:var(--accent2);}
+  .badge.alt{color:var(--orange)}
+  .badge.b3{color:var(--blue)}
+
+  .overview{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px 26px; margin-bottom:30px;}
+  .overview h2{margin:0 0 12px; font-size:19px;}
+  .ov-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin:16px 0;}
+  .ov-cell{background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:14px;}
+  .ov-cell .n{font-size:26px; font-weight:700; color:var(--accent);}
+  .ov-cell .l{font-size:13px; color:var(--muted);}
+  .toc a{color:var(--blue); text-decoration:none;}
+  .toc a:hover{text-decoration:underline;}
+  .toc li{margin:4px 0;}
+
+  details.card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    margin-bottom:22px; overflow:hidden;
+  }
+  details.card[open]{box-shadow:0 6px 30px rgba(0,0,0,.35);}
+  summary{
+    cursor:pointer; list-style:none; padding:20px 24px; display:flex; align-items:flex-start; gap:14px;
+    user-select:none;
+  }
+  summary::-webkit-details-marker{display:none}
+  summary:hover{background:var(--card2);}
+  .pr-num{flex:0 0 auto; background:var(--accent); color:#fff; font-weight:700; border-radius:8px; padding:4px 11px; font-size:14px;}
+  .pr-head{flex:1;}
+  .pr-head .t{font-size:18px; font-weight:650; line-height:1.4;}
+  .pr-head .m{font-size:13px; color:var(--muted); margin-top:5px;}
+  .status{display:inline-block; font-size:12px; padding:2px 9px; border-radius:999px; background:rgba(63,185,80,.15); color:var(--green); border:1px solid rgba(63,185,80,.4);}
+  .chev{flex:0 0 auto; color:var(--muted); transition:transform .2s; margin-top:4px;}
+  details[open] .chev{transform:rotate(90deg);}
+
+  .body{padding:6px 28px 28px;}
+  .body h3{
+    font-size:16px; margin:26px 0 10px; padding-left:12px; border-left:4px solid var(--accent);
+    color:#fff;
+  }
+  .body h4{font-size:14.5px; color:var(--accent2); margin:18px 0 6px;}
+  .body p{margin:9px 0;}
+  .body ul{margin:8px 0; padding-left:22px;}
+  .body li{margin:5px 0;}
+  .lead{color:var(--muted); font-style:italic; border-left:3px solid var(--border); padding-left:14px; margin:10px 0 18px;}
+
+  pre{
+    background:var(--code-bg); border:1px solid var(--border); border-radius:10px;
+    padding:16px 18px; overflow-x:auto; font-size:13px; line-height:1.6;
+    font-family:"SF Mono",ui-monospace,"JetBrains Mono",Consolas,Menlo,monospace;
+  }
+  code.inline{background:var(--card2); border:1px solid var(--border); border-radius:5px; padding:1px 6px; font-size:13.5px; color:var(--accent2); font-family:ui-monospace,Consolas,monospace;}
+  .kw{color:var(--kw)} .str{color:var(--str)} .com{color:var(--com); font-style:italic} .fn{color:var(--fn)} .num{color:var(--num)} .op{color:#ff7b72}
+  .add{color:var(--green)} .del{color:var(--red)}
+
+  .concept{background:var(--card2); border:1px solid var(--border); border-left:4px solid var(--accent2); border-radius:10px; padding:14px 18px; margin:14px 0;}
+  .concept .name{font-weight:700; color:var(--accent2); font-size:15px;}
+  .concept .seg{margin-top:8px;}
+  .concept .seg b{color:var(--blue);}
+  .analogy{background:rgba(255,166,87,.08); border:1px dashed rgba(255,166,87,.45); border-radius:8px; padding:10px 14px; margin:10px 0; font-size:14.5px;}
+  .analogy::before{content:"🧩 类比　"; color:var(--orange); font-weight:700;}
+
+  table.bench{width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;}
+  table.bench th,table.bench td{border:1px solid var(--border); padding:7px 10px; text-align:right;}
+  table.bench th:first-child,table.bench td:first-child{text-align:left;}
+  table.bench thead{background:var(--card2);}
+  table.bench .good{color:var(--green); font-weight:600;}
+
+  .takeaway{background:linear-gradient(135deg,rgba(124,92,255,.10),rgba(57,211,187,.06)); border:1px solid var(--border); border-radius:10px; padding:14px 18px; margin:14px 0;}
+  .footer{text-align:center; color:var(--muted); font-size:13px; margin-top:50px; border-top:1px solid var(--border); padding-top:22px;}
+  a.prlink{color:var(--blue);}
+  .tag{display:inline-block; font-size:11.5px; padding:1px 8px; border-radius:6px; margin-right:6px; background:var(--card2); border:1px solid var(--border); color:var(--muted);}
+  .tag.tts{color:var(--accent2)} .tag.perf{color:var(--orange)} .tag.kernel{color:var(--blue)}
+
+  /* ---- Print / PDF: light theme, vector-friendly, much smaller file ---- */
+  @media print{
+    :root{
+      --bg:#ffffff; --card:#ffffff; --card2:#f5f6f8; --border:#d0d7de;
+      --text:#1f2328; --muted:#57606a; --code-bg:#f6f8fa;
+      --accent:#6639ff; --accent2:#0f9488; --green:#1a7f37; --orange:#bc4c00; --blue:#0a52c2;
+      --kw:#cf222e; --str:#0a3069; --com:#6e7781; --fn:#8250df; --num:#0550ae;
+    }
+    body{background:#fff; color:var(--text); font-size:12.5px; line-height:1.6;}
+    .wrap{max-width:100%; padding:0;}
+    header.top{background:#f3f0ff; box-shadow:none;}
+    details.card{box-shadow:none; break-inside:auto; border-color:var(--border);}
+    details.card[open]{box-shadow:none;}
+    summary{background:#f5f6f8;}
+    .chev{display:none;}
+    pre{background:#f6f8fa; font-size:11px; white-space:pre-wrap; word-break:break-word; break-inside:avoid;}
+    .concept,.takeaway,.analogy,table.bench{break-inside:avoid;}
+    .pr-num{background:var(--accent); color:#fff;}
+    .badge,.ov-cell,.overview,.concept,.takeaway{background:#f5f6f8;}
+    a{color:var(--blue);}
+    h3{page-break-after:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>🎧 SGLang&nbsp;Omni 每日 PR 学习日报</h1>
+  <div class="sub">仓库：<a class="prlink" href="https://github.com/sgl-project/sglang-omni/">sgl-project/sglang-omni</a> ｜ 报告日期：2026-06-27 ｜ 统计窗口：过去 24 小时内 merged 的 PR</div>
+  <div class="badges">
+    <span class="badge">共 2 个 merged PR</span>
+    <span class="badge alt">主题：TTS 语音合成</span>
+    <span class="badge b3">主题：流式推理 / 性能优化</span>
+    <span class="badge">面向「完全小白」深度讲解</span>
+  </div>
+</header>
+
+<section class="overview">
+  <h2>📌 当日概览</h2>
+  <p>今天两个被合并的 PR 都集中在 <b>SGLang Omni 的 TTS（Text-to-Speech，文字转语音）子系统</b>——也就是 Omni 多模态模型里负责「把模型生成的离散音频 token 变成真实声音波形」与「让语音生成更快」的那两个阶段。一个修流式声码器（vocoder）的默认值耦合问题，一个给 Qwen3-TTS 的采样热路径做性能优化。</p>
+  <div class="ov-grid">
+    <div class="ov-cell"><div class="n">2</div><div class="l">Merged PRs</div></div>
+    <div class="ov-cell"><div class="n">2</div><div class="l">涉及 TTS 模型 (MOSS / Qwen3)</div></div>
+    <div class="ov-cell"><div class="n">+20%</div><div class="l">Qwen3-TTS 吞吐提升</div></div>
+    <div class="ov-cell"><div class="n">2</div><div class="l">新增/扩充单元测试</div></div>
+  </div>
+  <h4 style="color:var(--accent2)">本期目录</h4>
+  <ul class="toc">
+    <li><a href="#pr888">#888 · [MOSS] 解耦流式声码器「首块默认值」与「合批 join floor」</a> <span class="tag tts">TTS</span><span class="tag">流式</span></li>
+    <li><a href="#pr871">#871 · 优化 Qwen3-TTS predictor 采样热路径（+20% 吞吐）</a> <span class="tag tts">TTS</span><span class="tag perf">性能</span><span class="tag kernel">Triton Kernel</span></li>
+  </ul>
+  <p style="color:var(--muted); font-size:14px; margin-top:14px;">💡 本报告遵循「<b>讲透 &gt; 讲多</b>」原则：每个 PR 都从背景痛点 → 改动逻辑 → 逐块代码 → 知识点扫盲 → 延伸思考五个层次展开，把你当成该领域完全小白。</p>
+</section>
+
+<!-- ================= PR 888 ================= -->
+<details class="card" id="pr888" open>
+  <summary>
+    <span class="pr-num">#888</span>
+    <span class="pr-head">
+      <span class="t">[MOSS] Decouple streaming vocoder first-chunk default from the coalesce join floor</span>
+      <span class="m"><span class="status">● Merged</span> ｜ 作者 <b>JiaxinD</b> ｜ 合并于 2026-06-26 20:55 UTC ｜ <a class="prlink" href="https://github.com/sgl-project/sglang-omni/pull/888">查看 PR ↗</a></span>
+    </span>
+    <span class="chev">▶</span>
+  </summary>
+  <div class="body">
+
+    <h3>1 · PR 概览</h3>
+    <p class="lead">一句话：把 MOSS-TTS 流式声码器里「一个变量同时干两件事」的设计拆成两个独立变量，让「第一个音频块的大小」和「合批时的最小拼接门槛」互不干扰，消除一个潜在的配置「踩坑点」。</p>
+    <ul>
+      <li><b>标题</b>：[MOSS] Decouple streaming vocoder first-chunk default from the coalesce join floor</li>
+      <li><b>编号 / 作者 / 状态</b>：#888 ／ JiaxinD（COLLABORATOR）／ ✅ Merged</li>
+      <li><b>链接</b>：<a class="prlink" href="https://github.com/sgl-project/sglang-omni/pull/888">github.com/sgl-project/sglang-omni/pull/888</a></li>
+      <li><b>改动规模</b>：3 个文件（声码器实现 + 工厂函数 + 单元测试），改动很小但概念清晰，是一个典型的「消除技术债 / 配置反模式」的 PR。</li>
+    </ul>
+
+    <h3>2 · 它解决了什么问题</h3>
+    <p>要理解这个 PR，先要知道什么是 <b>流式声码器（streaming vocoder）</b>。TTS 模型先生成一串「离散音频 token」（codec frames，可以理解为压缩后的声音编号），声码器（vocoder）负责把这串编号「解码」还原成你耳朵能听的真实波形（PCM）。「流式」是指：不等整句话生成完，而是一边生成一边解码、一边播放，这样用户能更快听到第一个字的声音。</p>
+    <p>这里有一个关键指标叫 <b>TTFC（Time To First Chunk，首块到达时间）</b>——用户从发出请求到听到第一声的延迟。为了让 TTFC 尽量短，工程上会让<b>第一个音频块做得很小</b>（只解码 1 帧就立刻吐给用户），这样首声来得快；之后再用大块（比如 25 帧）保证整体吞吐效率。</p>
+    <p><b>痛点在哪？</b> 原来的代码用了<u>同一个变量 <code class="inline">initial_chunk_frames</code>（工厂默认值 = 5）去同时控制两件完全不同的事</u>：</p>
+    <ul>
+      <li><b>事情 A：首块回退默认值</b> —— 当一个流式请求没有显式指定第一块多大时，用它当兜底值。</li>
+      <li><b>事情 B：合批的「join floor」（拼接地板 / 最小合并门槛）</b> —— 多个并发请求合并成一次 GPU forward 时，缓冲区要攒够多少帧才参与合并。</li>
+    </ul>
+    <p>更微妙的是：真正的线上路径（OpenAI 兼容的 speech API）其实早就把首块默认成 <b>1</b> 了——serve 层的 <code class="inline">_build_extra_params</code> 会注入 <code class="inline">RAW_PCM_DEFAULT_INITIAL_CODEC_CHUNK_FRAMES = 1</code>。所以正常 API 调用走的是「首块 = 1」。<b>但是</b>，如果有调用方绕过 serve 层、直接到达声码器（bypass caller），它就会回退到声码器自己的默认 <b>5</b>，而不是生产环境真正的 <b>1</b>。</p>
+    <div class="analogy">想象一个水龙头上只有一个旋钮，却同时控制「水温」和「水量」。平时你家管道（serve 层）已经预设好水量了感觉不到问题；可一旦有人直接接到龙头上（bypass），就会发现水量跟你以为的不一样。这个 PR 就是把这一个旋钮拆成两个独立旋钮。</p></div>
+    <p>作者明确说这是<b>低严重度</b>问题（只影响 TTFC，不是正确性 bug，且 API 主路径不受影响），但「两个硬编码默认值互相打架」本身就是一个值得清除的 footgun（自己给自己埋的坑）。这正体现了一种成熟的工程态度：<i>即使不是 bug，反模式也要趁早消除</i>。</p>
+
+    <h3>3 · 具体做了什么改动</h3>
+    <h4>涉及的核心文件</h4>
+    <ul>
+      <li><code class="inline">sglang_omni/models/moss_tts_local/stages.py</code> —— 声码器执行器的<b>工厂函数</b> <code class="inline">create_vocoder_executor</code>（对外暴露的默认值入口）。</li>
+      <li><code class="inline">sglang_omni/models/moss_tts_local/streaming_vocoder.py</code> —— 流式声码器的<b>核心实现</b>（调度 + 合批逻辑）。</li>
+      <li><code class="inline">tests/unit_test/moss_tts_local/test_streaming_vocoder.py</code> —— 新增一个测试锁住新行为。</li>
+    </ul>
+
+    <h4>改动一：工厂函数把「一个默认值」拆成「两个默认值」</h4>
+    <pre><span class="com"># stages.py · create_vocoder_executor 的参数签名</span>
+  stream_chunk_frames: int = <span class="num">25</span>,
+<span class="del">- initial_chunk_frames: int = 5</span>
+<span class="add">+ # 首块小(1)→低 TTFC；coalesce_floor_frames(5) 是另一件事：稳态合批的拼接地板</span>
+<span class="add">+ initial_chunk_frames: int = 1,</span>     <span class="com"># ← 改成 1，与 serve 层线上默认对齐</span>
+<span class="add">+ coalesce_floor_frames: int = 5,</span>   <span class="com"># ← 新增独立变量，承接原来的 5</span>
+  ...
+  <span class="com"># 往下游构造时，把新变量也透传进去</span>
+  initial_chunk_frames=initial_chunk_frames,
+<span class="add">+ coalesce_floor_frames=coalesce_floor_frames,</span></pre>
+    <p><b>逐行解释：</b>原来只有 <code class="inline">initial_chunk_frames = 5</code> 一个参数。现在：(1) 把它的默认值从 <code class="inline">5</code> 改成 <code class="inline">1</code>，让「绕过 serve 的调用方」的首块也和线上一样小；(2) 新增一个 <code class="inline">coalesce_floor_frames = 5</code>，专门接管原来那个「5」所代表的合批门槛职责。这样原来的 5 没有凭空消失，只是搬到了正确的、语义清晰的变量里。</p>
+
+    <h4>改动二：声码器实现里存下新变量，并做边界保护</h4>
+    <pre><span class="com"># streaming_vocoder.py · __init__</span>
+  self._default_initial_chunk_frames = max(
+      <span class="num">0</span>, min(<span class="fn">int</span>(initial_chunk_frames), <span class="fn">int</span>(stream_chunk_frames))
+  )
+<span class="add">+ self._coalesce_floor_frames = max(</span>
+<span class="add">+     0, min(int(coalesce_floor_frames), int(stream_chunk_frames))</span>
+<span class="add">+ )</span></pre>
+    <p><b>这段在做什么？</b> <code class="inline">max(0, min(x, stream_chunk_frames))</code> 是一个经典的「<b>clamp（夹取）</b>」写法：把用户传进来的值强制限制在 <code class="inline">[0, stream_chunk_frames]</code> 这个合法区间内。为什么？因为「合批门槛」不可能是负数，也不可能比「一整块的大小」还大（否则永远凑不齐），所以这里防御性地把它钳住。新变量 <code class="inline">_coalesce_floor_frames</code> 和已有的首块变量用了完全一样的保护逻辑，保持一致性。</p>
+
+    <h4>改动三：合批逻辑改读新变量（核心一行）</h4>
+    <pre><span class="com"># streaming_vocoder.py · _pump_streams()</span>
+<span class="com"># 文档串解释：每个缓冲区越过阈值的 stream 都会被解码；</span>
+<span class="com"># 「到点」的 stream 会和缓冲超过 join floor 的同伴“拼”进同一次 forward。</span>
+  join_floor = max(
+      <span class="num">1</span>, min(
+<span class="del">-         self._default_initial_chunk_frames or 5,</span>
+<span class="add">+         self._coalesce_floor_frames or 5,</span>
+          self._stream_chunk_frames
+      )
+  )</pre>
+    <p><b>这是整个 PR 的「灵魂一行」。</b> 之前 <code class="inline">join_floor</code>（合批拼接地板）是从「首块默认值」算出来的——所以你一旦改首块默认值（5→1），合批门槛就会被连带改成 1，破坏稳态合批效率。改完之后，<code class="inline">join_floor</code> 改读专属的 <code class="inline">_coalesce_floor_frames</code>，于是：首块默认值放心地降到 1（TTFC 更低），而 <code class="inline">join_floor</code> 仍然稳稳保持 5（合批效率不变）。<code class="inline">or 5</code> 是个兜底：万一新变量是 0/None，仍退回 5。</p>
+    <p>正因为 <code class="inline">join_floor</code> 的最终取值没变（还是 5），作者在 PR 描述里特别强调：<b>不需要重新做性能 / 覆盖率 / bit 级一致性回测</b>——这是「只调和默认值、不动数学逻辑」的改动，影响面被精确地控制住了。这是非常专业的「变更影响分析」。</p>
+
+    <h4>改动四：新增测试，把「解耦」这个不变量钉死</h4>
+    <pre><span class="kw">def</span> <span class="fn">test_factory_default_decouples_first_chunk_from_join_floor</span>(monkeypatch):
+    scheduler = _make_scheduler(monkeypatch, processor, stream_chunk_frames=<span class="num">10</span>)
+    <span class="kw">assert</span> scheduler._default_initial_chunk_frames == <span class="num">1</span>   <span class="com"># 首块默认 = 1</span>
+    <span class="kw">assert</span> scheduler._coalesce_floor_frames == <span class="num">5</span>          <span class="com"># 合批门槛仍 = 5</span>
+    ...
+    sizes = [_decode_audio(m.data).shape[<span class="num">1</span>] // SAMPLES_PER_FRAME ...]
+    <span class="kw">assert</span> sizes[<span class="num">0</span>] == <span class="num">1</span>                                   <span class="com"># 真的吐了一个 1 帧的首块</span>
+    np.testing.<span class="fn">assert_array_equal</span>(                          <span class="com"># 流式拼起来 == 离线整解，逐样本相等</span>
+        _concat_stream_audio(messages, <span class="str">"req"</span>),
+        reference_waveform(rows[:, <span class="num">1</span>:]).numpy(),
+    )</pre>
+    <p><b>这个测试的价值：</b>它不仅断言两个变量取到了期望值（1 和 5 各司其职），更关键的最后一步用 <code class="inline">assert_array_equal</code> 验证——<b>把流式解码出来的所有小块拼接起来，必须和「不分块、一次性离线解码」的结果<u>逐个采样点完全相等</u></b>。也就是说：为了降 TTFC 而把首块切到 1，绝不能让声音失真。这是流式音频里最重要的正确性保证（streaming == offline）。</p>
+
+    <h3>4 · 涉及的知识点（重点扫盲）</h3>
+
+    <div class="concept">
+      <div class="name">① Vocoder（声码器）</div>
+      <div class="seg"><b>它是什么：</b>把「声学/编码特征」还原成可播放波形（PCM 采样点）的模块。在神经 TTS 里，模型通常先产出离散的 codec token（很省带宽的「声音压缩编号」），声码器再把它解码成几万 Hz 的真实音频。</div>
+      <div class="seg"><b>为什么需要它：</b>语言模型本质只会吐 token，不会直接吐声波。声码器是 token→声音之间的「翻译官」，决定最终音质和延迟。</div>
+      <div class="seg"><b>本 PR 里：</b>讨论的就是「流式」声码器——边收 token 边解码边播放，本 PR 调的是它何时吐第一块、何时把多个请求合批解码。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">② TTFC / 流式（Streaming）</div>
+      <div class="seg"><b>它是什么：</b>TTFC = Time To First Chunk，用户听到第一声的延迟。流式 = 不等整句生成完就分块逐步返回。</div>
+      <div class="seg"><b>为什么需要它：</b>对话式语音助手里，「开口快」比「整体快」更影响体感。哪怕总时长一样，先听到声音的体验远好于干等。</div>
+      <div class="seg"><b>本 PR 里：</b>把首块默认值降到 1 帧，就是为了压低 TTFC——第一块越小，越快能解码并送出去。</div>
+      <div class="analogy">就像视频网站：与其让你等整部片缓冲完，不如先缓冲前几秒立刻播放，剩下的边播边下。首块越小，「转圈圈」时间越短。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">③ Coalescing / 合批（Batching）与 Join Floor</div>
+      <div class="seg"><b>它是什么：</b>Coalesce 指把多个并发请求「凑」到一次 GPU 计算里。Join floor（拼接地板）= 一个请求的缓冲区至少攒够多少帧，才有资格被「拉进」这次合批。</div>
+      <div class="seg"><b>为什么需要它：</b>GPU 一次算 1 个请求和一次算 8 个请求耗时差不多，所以「攒一攒一起算」能极大提升吞吐。但攒太久又会增加延迟，所以要设一个最小门槛来平衡。</div>
+      <div class="seg"><b>本 PR 里：</b><code class="inline">join_floor=5</code> 表示稳态下要攒够 5 帧才合批。这个值被从「首块默认值」里独立出来，保证降首块时不会误伤合批效率。</div>
+      <div class="analogy">像拼车：司机不会乘客一上车就立刻发车（太低效），也不会等满 20 人（太慢）。「至少 5 人就发」就是 join floor——一个吞吐与延迟的折中点。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">④ Footgun 与「关注点分离」(Separation of Concerns)</div>
+      <div class="seg"><b>它是什么：</b>Footgun = 设计上容易让人「自己打中自己脚」的坑。关注点分离 = 一个变量/函数只负责一件事。</div>
+      <div class="seg"><b>为什么需要它：</b>当一个变量身兼两职，改动其中一个用途必然牵连另一个，未来维护者极易踩坑。拆开后每个旋钮语义单一、可独立调。</div>
+      <div class="seg"><b>本 PR 里：</b>把 <code class="inline">initial_chunk_frames</code> 一拆为二，正是「关注点分离」的教科书式应用。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">⑤ Clamp（夹取）与防御性编程</div>
+      <div class="seg"><b>它是什么：</b><code class="inline">max(0, min(x, upper))</code> 把任意输入强制限制到合法区间 [0, upper]。</div>
+      <div class="seg"><b>为什么需要它：</b>配置值可能来自用户/上游，不可信。把它钳到合法范围能防止非法值（负数、过大值）导致后续逻辑崩溃或死循环（比如门槛比块还大永远凑不齐）。</div>
+      <div class="seg"><b>本 PR 里：</b>新变量沿用了和旧变量一样的 clamp，保持代码风格与安全性一致。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">⑥ 流式正确性：Streaming == Offline</div>
+      <div class="seg"><b>它是什么：</b>一条铁律——无论你怎么切块、怎么合批，把流式产出的所有块拼起来，必须和「一次性离线解码」逐采样点完全相同。</div>
+      <div class="seg"><b>为什么需要它：</b>流式只是「分期交付」，不能改变内容。若分块导致边界处波形不连续，会有可听的爆音/卡顿。</div>
+      <div class="seg"><b>本 PR 里：</b>测试用 <code class="inline">assert_array_equal</code> 严格校验这条铁律，确保降 TTFC 不牺牲音质。</div>
+    </div>
+
+    <h3>5 · 我能学到什么 / 延伸思考</h3>
+    <div class="takeaway">
+      <b>可复用的工程思想：</b>
+      <ul>
+        <li><b>一个变量只做一件事。</b>当你发现「改 A 会莫名影响 B」，往往就是一个变量被复用成了两种语义，该拆。</li>
+        <li><b>消除「默认值打架」。</b>同一概念在不同层（serve 层 vs 声码器层）有两个不一致的默认值，是隐藏 bug 的温床。让它们对齐，或抽成单一常量。</li>
+        <li><b>精准的变更影响分析。</b>作者论证「join_floor 取值没变 → 无需性能回测」，把改动风险讲得清清楚楚，是高质量 PR 的标志。</li>
+        <li><b>用测试钉住「不变量」而非「实现」。</b>测试断言的是「首块=1 且 join_floor=5 且 流式==离线」这些性质，而不是某行代码怎么写。</li>
+      </ul>
+      <b>想深入可再学：</b>神经声码器原理（HiFi-GAN / BigVGAN / 流式 codec decoder）、音频分帧与重叠相加（overlap-add）、在线服务的 batching 调度策略（continuous batching）、TTFC/RTF 等语音服务延迟指标。
+    </div>
+  </div>
+</details>
+
+<!-- ================= PR 871 ================= -->
+<details class="card" id="pr871" open>
+  <summary>
+    <span class="pr-num">#871</span>
+    <span class="pr-head">
+      <span class="t">Optimize Qwen3-TTS predictor sampling hot path</span>
+      <span class="m"><span class="status">● Merged</span> ｜ 作者 <b>luojiaxuan</b> ｜ 合并于 2026-06-26 18:16 UTC ｜ <a class="prlink" href="https://github.com/sgl-project/sglang-omni/pull/871">查看 PR ↗</a></span>
+    </span>
+    <span class="chev">▶</span>
+  </summary>
+  <div class="body">
+
+    <h3>1 · PR 概览</h3>
+    <p class="lead">一句话：给 Qwen3-TTS 语音生成里「每生成一个音频 token 都要跑无数次」的采样热路径动三处刀——用 PyTorch 原生 GQA 省掉 KV 复制、写一个 Triton 自定义 kernel 把采样一次算完、缓存位置张量避免重复分配——最终把吞吐提升约 20%、长尾延迟 p99 降一半。</p>
+    <ul>
+      <li><b>标题</b>：Optimize Qwen3-TTS predictor sampling hot path</li>
+      <li><b>编号 / 作者 / 状态</b>：#871 ／ luojiaxuan（COLLABORATOR）／ ✅ Merged（Fixes part of #870）</li>
+      <li><b>链接</b>：<a class="prlink" href="https://github.com/sgl-project/sglang-omni/pull/871">github.com/sgl-project/sglang-omni/pull/871</a></li>
+      <li><b>改动规模</b>：新增 1 个 Triton kernel 文件 + 改 1 个模型文件 + 新增 1 个测试文件。是一个「实打实的性能优化」PR，附带 B200 上完整 1088 条基准。</li>
+    </ul>
+
+    <h3>2 · 它解决了什么问题</h3>
+    <p>先建立画面：Qwen3-TTS 生成语音时有一个叫 <b>predictor（code predictor，码本预测器）</b>的小模型，它要<b>一个 token 一个 token 地自回归生成</b>音频码（codec tokens）。「自回归」意味着第 N 个 token 依赖前 N-1 个，没法并行，只能一步步来——这就是典型的 <b>hot path（热路径）</b>：一段被执行成千上万次、哪怕单次省几微秒、累积起来也极可观的代码。</p>
+    <p>作者用性能剖析（profiling）发现这条热路径上有三处浪费：</p>
+    <ul>
+      <li><b>痛点 A：KV 张量被反复「物化」(materialize)。</b>注意力用了 GQA（分组查询注意力），Q 的头数比 K/V 的头数多。老代码用 <code class="inline">_repeat_kv</code> 手动把 K、V 复制成和 Q 一样多的头，再喂给注意力函数。这个复制会真实地<b>分配并写出一大块显存</b>，每个 token、每一层都做一遍，纯属浪费。</li>
+      <li><b>痛点 B：采样要走好几个独立算子。</b>从概率里「带种子地」抽一个 token（seeded sampling，为了可复现），老路径要 softmax → 处理 top-p → 调用通用的 multinomial 采样，多次 GPU kernel 启动 + 中间张量。对一个只有几十~上千个候选（small-k）的小采样来说，开销占比过高。</li>
+      <li><b>痛点 C：每个 token 都重新 <code class="inline">repeat</code> 一次位置张量。</b>predictor 每步都要构造「当前在第几个位置」的张量，老代码每步都 <code class="inline">.repeat(batch_size)</code> 重新分配一次小张量——量不大，但在最内层循环里反复分配，也是可优化的碎片开销。</li>
+    </ul>
+    <div class="analogy">把热路径想成工厂流水线上每秒重复几百次的那个工位。即便每次只浪费 0.1 秒，一天下来就是巨大产能损失。这个 PR 就是去这个工位上「捡」三处可省的动作：别反复搬同样的料（KV 复制）、把三道工序合成一道（采样 kernel）、别每次现做夹具（位置张量）。</p></div>
+
+    <h3>3 · 具体做了什么改动</h3>
+    <h4>涉及的核心文件</h4>
+    <ul>
+      <li><b>新增</b> <code class="inline">sglang_omni/models/qwen3_tts/sampling_kernels.py</code> —— 一个可选的 Triton 采样 kernel（136 行），核心是「带种子的 Gumbel 采样」。</li>
+      <li><b>修改</b> <code class="inline">sglang_omni/models/qwen3_tts/sglang_model.py</code> —— 三处优化都落在这里（GQA、调用新 kernel、缓存位置张量）。</li>
+      <li><b>新增</b> <code class="inline">tests/unit_test/qwen3_tts/test_sampling_kernels.py</code> —— 证明新 kernel 的结果和原 SGLang 采样「逐元素完全相等」，且在 CPU 上正确回退。</li>
+    </ul>
+
+    <h4>改动 A：用 PyTorch 原生 GQA，删掉手动 KV 复制</h4>
+    <pre><span class="com"># sglang_model.py · _predictor_cached_self_attention</span>
+<span class="del">- groups = attn.num_heads // attn.num_kv_heads</span>
+<span class="del">- cached_k = _repeat_kv(cached_k, groups)   # 手动把 K 复制 groups 份</span>
+<span class="del">- cached_v = _repeat_kv(cached_v, groups)   # 手动把 V 复制 groups 份</span>
+<span class="del">- attn_output = F.scaled_dot_product_attention(q, cached_k, cached_v, is_causal=False)</span>
+<span class="add">+ num_kv_groups = attn.num_heads // attn.num_kv_heads</span>
+<span class="add">+ if num_kv_groups == 1:                       # 头数相等 → 普通注意力</span>
+<span class="add">+     attn_output = F.scaled_dot_product_attention(q, cached_k, cached_v, is_causal=False)</span>
+<span class="add">+ else:                                        # Q 头多于 KV 头 → 让 SDPA 自己处理分组</span>
+<span class="add">+     attn_output = F.scaled_dot_product_attention(</span>
+<span class="add">+         q, cached_k, cached_v, is_causal=False, enable_gqa=True)</span></pre>
+    <p><b>逐块解释：</b>注意力机制要拿 Query 去和 Key/Value 做点积。GQA 里 Q 有很多头、K/V 只有少数头，需要让多个 Q 头「共享」同一组 K/V。老办法是<b>物理复制</b>：把 K、V 在内存里真的复刻 <code class="inline">groups</code> 份凑成一样多——费显存、费带宽。新办法是把 <code class="inline">enable_gqa=True</code> 直接交给 PyTorch 的 <code class="inline">scaled_dot_product_attention</code>（SDPA），让它在 kernel 内部「逻辑上」处理共享，<b>根本不分配那块复制内存</b>。<code class="inline">num_kv_groups == 1</code>（无需分组）时走普通分支，避免无谓开 GQA 开关。</p>
+
+    <h4>改动 B：一个 Triton kernel 把「带种子采样」一次算完</h4>
+    <p>这是本 PR 技术含量最高的部分。新文件 <code class="inline">sampling_kernels.py</code> 用 Triton 写了一个在 GPU 上「一个 block 处理一行」的采样 kernel。它做的事是 <b>Gumbel-Max 采样</b>：</p>
+    <pre><span class="com"># 概念骨架（节选自 _seeded_gumbel_sample_sorted_kernel）</span>
+row = tl.<span class="fn">program_id</span>(<span class="num">0</span>)              <span class="com"># 这个 GPU 程序实例负责第 row 行（即 batch 里第 row 个请求）</span>
+seed = tl.<span class="fn">load</span>(seeds + row)         <span class="com"># 取该行的随机种子（保证可复现）</span>
+pos  = tl.<span class="fn">load</span>(positions + row)     <span class="com"># 取该行的位置（不同位置→不同随机流）</span>
+<span class="com"># 用 murmur3 哈希把 (seed, pos, col) 混成一个伪随机 32 位整数 h</span>
+h = <span class="fn">_murmur3_mix</span>(h, seed_lo); h = <span class="fn">_murmur3_mix</span>(h, seed_hi)
+h = <span class="fn">_murmur3_mix</span>(h, pos);     h = <span class="fn">_murmur3_mix</span>(h, col)
+h = <span class="fn">_fmix32</span>(h)
+u = h / <span class="num">4294967295.0</span>             <span class="com"># 把整数 h 归一化到 (0,1] 的均匀分布 u</span>
+gumbel = -tl.<span class="fn">log</span>(-tl.<span class="fn">log</span>(u))     <span class="com"># 把均匀分布变成 Gumbel 噪声</span>
+scores = weights + gumbel          <span class="com"># 关键：log 概率 + Gumbel 噪声</span>
+rank = <span class="fn">argmax</span>(scores)             <span class="com"># 取最大者 → 等价于按概率多项式采样</span>
+token = sorted_idx[row, rank]      <span class="com"># 映射回真实 token id 并写出</span></pre>
+    <p><b>为什么这样能等价于「按概率随机抽一个」？</b> 这就是著名的 <b>Gumbel-Max trick</b>：对每个候选的 log 概率加上一份独立的 Gumbel 噪声，再取 argmax，得到的结果在数学上<u>严格等价于</u>按 softmax 概率做多项式采样。妙处在于：argmax 是个无分支、可在一个 kernel 里一次扫完的操作，比「算 CDF → 二分查找」之类的多项式采样更适合 GPU 并行。</p>
+    <p><b>种子怎么保证可复现？</b> 它没有用「真随机数发生器」，而是用 <b>murmur3 哈希</b>把 <code class="inline">(seed, position, column)</code> 三元组确定性地搅成一个伪随机数。只要种子和位置一样，产生的「随机」就一模一样——这对 TTS 这种需要「同样输入复现同样语音」的场景至关重要。</p>
+    <p>Python 侧的入口函数 <code class="inline">sample_from_sorted_probs_with_seed_small_k</code> 是一个谨慎的「快路径 + 回退」设计：</p>
+    <pre><span class="kw">def</span> <span class="fn">sample_from_sorted_probs_with_seed_small_k</span>(probs, sorted_idx, seeds, positions):
+    <span class="kw">if</span> _seeded_gumbel_sample_sorted_kernel <span class="kw">is</span> <span class="kw">None</span> <span class="kw">or</span> <span class="kw">not</span> probs.is_cuda ...:
+        <span class="kw">return</span> <span class="kw">None</span>           <span class="com"># 没装 Triton / 不在 GPU → 返回 None，让调用方走老路径</span>
+    <span class="kw">if</span> num_cols &lt;= <span class="num">0</span> <span class="kw">or</span> num_cols &gt; <span class="num">1024</span>:
+        <span class="kw">return</span> <span class="kw">None</span>           <span class="com"># 候选超过 1024（不再是 small-k）→ 放弃快路径</span>
+    block_size = <span class="fn">_next_power_of_2</span>(num_cols)   <span class="com"># Triton block 需 2 的幂</span>
+    _seeded_gumbel_sample_sorted_kernel[(batch_size,)](...)  <span class="com"># 启动 kernel，每行一个 program</span>
+    <span class="kw">return</span> out</pre>
+    <p><b>这段的设计哲学很值得学：</b>新 kernel 是「<b>optional（可选）</b>」的——它只在「装了 Triton + 数据在 CUDA + 候选数 ≤ 1024」时才接管；任何一个条件不满足就 <code class="inline">return None</code>，调用方随即回退到原有的 <code class="inline">_sample_seeded_categorical</code> 老路径。这保证了：优化是「锦上添花」，绝不破坏在 CPU、无 Triton 环境或大词表下的可用性。</p>
+    <p>对应在 <code class="inline">sglang_model.py</code> 里的接线：</p>
+    <pre>sampled = <span class="fn">sample_from_sorted_probs_with_seed_small_k</span>(sorted_probs, sorted_idx, seeds, sub_positions)
+<span class="kw">if</span> sampled <span class="kw">is</span> <span class="kw">not</span> <span class="kw">None</span>:
+    <span class="kw">return</span> sampled.to(torch.long)     <span class="com"># 快路径命中，直接返回</span>
+<span class="com"># 否则继续走原来的 _sample_seeded_categorical(...) 兜底</span></pre>
+
+    <h4>改动 C：预先缓存位置张量，消除每步的 repeat 分配</h4>
+    <pre><span class="com"># __init__ 里一次性把位置展开成 [predictor_len, max_batch_size] 并 .contiguous()</span>
+<span class="add">+ self._predictor_position_rows = (</span>
+<span class="add">+     self._predictor_positions[:, None].expand(predictor_len, max_batch_size).contiguous()</span>
+<span class="add">+ )</span>
+
+<span class="com"># 内层循环里：不再每步现 repeat，直接切一行出来</span>
+<span class="del">- positions = self._predictor_positions[cache_len:cache_len+1].repeat(batch_size)</span>
+<span class="add">+ positions = self._predictor_position_rows[cache_len, :batch_size]</span></pre>
+    <p><b>解释：</b>predictor 每生成一个 token 都需要一个长度为 batch_size 的「当前位置」张量。老代码每步用 <code class="inline">.repeat(batch_size)</code> <b>新分配</b>一个张量。新代码在初始化时就把所有位置预先铺成一张二维表 <code class="inline">[位置, batch]</code> 并固定在显存里，循环里只是<b>切片（slice）一行</b>——切片是「零拷贝」的视图操作，不分配新内存。<code class="inline">.contiguous()</code> 确保这张表内存连续、后续访问高效。这是「<b>把循环内的重复分配提到循环外一次性预计算</b>」的经典优化。</p>
+
+    <h4>性能结果（B200，Qwen3-TTS 0.6B，SeedTTS EN 全量 1088 条）</h4>
+    <table class="bench">
+      <thead><tr><th>指标</th><th>main 基线</th><th>本 PR</th><th>变化</th></tr></thead>
+      <tbody>
+        <tr><td>WER 字错率</td><td>2.40%</td><td>2.33%</td><td class="good">-0.08pp（不退化）</td></tr>
+        <tr><td>输出吞吐 (tok/s)</td><td>115.9</td><td>139.3</td><td class="good">+20.2%</td></tr>
+        <tr><td>音频吞吐 (audio-sec/s)</td><td>9.274</td><td>11.142</td><td class="good">+20.1%</td></tr>
+        <tr><td>请求吞吐 (req/s)</td><td>1.567</td><td>1.883</td><td class="good">+20.2%</td></tr>
+        <tr><td>平均延迟 (s)</td><td>8.766</td><td>7.594</td><td class="good">-13.4%</td></tr>
+        <tr><td>延迟 p99 (s)</td><td>145.556</td><td>97.342</td><td class="good">-33.1%</td></tr>
+        <tr><td>RTF p99</td><td>4.3561</td><td>2.1098</td><td class="good">-51.6%</td></tr>
+      </tbody>
+    </table>
+    <p>注意 <b>WER（字错率）几乎不变甚至略降</b>——这证明优化是「纯加速、不改变输出分布」。尤其 <b>p99 长尾延迟几乎砍半</b>，对线上服务的稳定性体感意义重大。作者还诚实地写明：之前尝试过的 copy/add Triton 融合「实测更慢，所以没放进这个 PR」——这是很好的工程诚信。</p>
+
+    <h3>4 · 涉及的知识点（重点扫盲）</h3>
+
+    <div class="concept">
+      <div class="name">① 自回归生成与 Hot Path（热路径）</div>
+      <div class="seg"><b>它是什么：</b>自回归 = 第 N 个输出依赖前面所有输出，只能串行一步步生成。热路径 = 被执行极高频次、最该优化的那段代码。</div>
+      <div class="seg"><b>为什么需要它：</b>语音/文本生成本质是逐 token 的，每个 token 都要跑一遍 predictor。这段代码每秒跑成百上千次，单次省一点点累积收益巨大。</div>
+      <div class="seg"><b>本 PR 里：</b>三处优化全部精准命中 predictor 的逐 token 内层循环——优化热路径才划算。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">② GQA（Grouped-Query Attention 分组查询注意力）& KV Cache</div>
+      <div class="seg"><b>它是什么：</b>标准多头注意力里 Q/K/V 头数相等；GQA 让多个 Q 头共享少量 K/V 头，省显存省带宽。KV Cache 是把已生成 token 的 K、V 缓存起来，避免每步重算。</div>
+      <div class="seg"><b>为什么需要它：</b>自回归推理中 K/V 占大量显存带宽，GQA 大幅压缩 KV 体积，是现代 LLM/TTS 的标配。</div>
+      <div class="seg"><b>本 PR 里：</b>原代码为对齐头数手动 <code class="inline">_repeat_kv</code> 物理复制 K/V；改用 PyTorch SDPA 的 <code class="inline">enable_gqa=True</code> 在 kernel 内部隐式共享，省掉这块复制内存。</div>
+      <div class="analogy">GQA 像公司里 8 个销售（Q 头）共用 2 个客服后台（KV 头）。老办法是给每个销售各印一份完整客服资料（复制）；新办法是大家直接查同一个共享数据库（enable_gqa），省纸省空间。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">③ SDPA（Scaled Dot-Product Attention）</div>
+      <div class="seg"><b>它是什么：</b>PyTorch 内置的高度优化注意力函数 <code class="inline">torch.nn.functional.scaled_dot_product_attention</code>，会自动选 FlashAttention 等高效后端。</div>
+      <div class="seg"><b>为什么需要它：</b>手写注意力既慢又容易出错；用官方融合算子能拿到接近极致的性能，还自带 GQA、causal mask 等开关。</div>
+      <div class="seg"><b>本 PR 里：</b>通过给 SDPA 传 <code class="inline">enable_gqa=True</code>，把「KV 共享」这件事下沉到算子内部，省掉外面的手动复制。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">④ Triton 与自定义 GPU Kernel</div>
+      <div class="seg"><b>它是什么：</b>Triton 是一种用 Python 语法写 GPU kernel 的语言/编译器。<code class="inline">@triton.jit</code> 标注的函数会被编译成 GPU 代码；<code class="inline">tl.program_id</code>、<code class="inline">tl.load/store</code> 是它的并行原语。</div>
+      <div class="seg"><b>为什么需要它：</b>当一串操作可以「融合」成一个 kernel 时，能省掉多次 kernel 启动开销和中间张量的读写，比拼接多个 PyTorch 算子快得多。</div>
+      <div class="seg"><b>本 PR 里：</b>把「softmax 概率 → 加噪 → argmax → 映射回 token」这一串采样逻辑写进<b>一个</b> kernel，每个 GPU program 处理一行（一个请求），一次扫完。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">⑤ Gumbel-Max Trick（采样的核心数学）</div>
+      <div class="seg"><b>它是什么：</b>给每个候选的 log 概率加一份独立 Gumbel 噪声，再取 argmax，结果严格等价于按 softmax 概率做多项式采样。</div>
+      <div class="seg"><b>为什么需要它：</b>多项式采样通常要算 CDF + 查找，分支多、不利 GPU 并行；Gumbel-Max 只需「加噪 + argmax」，天然适合一次并行扫描。</div>
+      <div class="seg"><b>本 PR 里：</b>kernel 正是用 <code class="inline">scores = weights + gumbel; rank = argmax(scores)</code> 实现采样，是它能「一次算完」的关键。</div>
+      <div class="analogy">像抽奖：与其按概率切一条数轴再扔飞镖找区间，不如给每个奖项摇一个带权重的随机分，谁分最高谁中——数学上完全一样，但「比大小」比「找区间」好算得多。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">⑥ Seeded / 可复现采样 与 哈希伪随机（murmur3）</div>
+      <div class="seg"><b>它是什么：</b>带种子采样 = 给定相同 seed 与 position，每次抽到的 token 完全一致。这里用 murmur3 哈希把 (seed,pos,col) 确定性地变成伪随机数。</div>
+      <div class="seg"><b>为什么需要它：</b>语音/文本生成需要可复现（debug、A/B、回归测试都要求同输入同输出）；用哈希而非全局 RNG，能让每个元素独立、无状态、可并行地产生「随机」。</div>
+      <div class="seg"><b>本 PR 里：</b>kernel 内用 <code class="inline">_murmur3_mix</code> 把种子和位置混出随机流，配合测试 <code class="inline">torch.equal</code> 验证与原 SGLang <code class="inline">multinomial_with_seed</code> 逐元素相等——既快又不改变结果。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">⑦ Small-k 快路径 + 回退（Graceful Fallback）</div>
+      <div class="seg"><b>它是什么：</b>只在「候选数小（≤1024）+ 在 GPU + 有 Triton」时启用快 kernel，否则返回 None 退回通用路径。</div>
+      <div class="seg"><b>为什么需要它：</b>专用 kernel 往往只在特定规模下才占优；超出适用域要能优雅退回，保证正确性与跨环境可用性，而不是硬上导致崩溃或变慢。</div>
+      <div class="seg"><b>本 PR 里：</b>入口函数层层 <code class="inline">return None</code> 守卫 + 测试专门验证「CPU 上回退为 None」，体现「优化可选、正确性兜底」的稳健设计。</div>
+    </div>
+
+    <div class="concept">
+      <div class="name">⑧ 循环不变量外提 / 预分配（避免热路径里反复 alloc）</div>
+      <div class="seg"><b>它是什么：</b>把循环里每次都重复计算/分配、但其实不变的东西，提到循环外算一次。这里是预先铺好位置表，循环内只切片。</div>
+      <div class="seg"><b>为什么需要它：</b>GPU 上反复 <code class="inline">repeat</code>/分配小张量会触发显存分配器与额外 kernel，碎片化开销在高频循环里被放大。切片是零拷贝视图，几乎免费。</div>
+      <div class="seg"><b>本 PR 里：</b><code class="inline">_predictor_position_rows</code> 在 init 时 <code class="inline">expand().contiguous()</code> 一次成型，逐 token 循环只做 <code class="inline">[cache_len, :batch_size]</code> 切片。</div>
+    </div>
+
+    <h3>5 · 我能学到什么 / 延伸思考</h3>
+    <div class="takeaway">
+      <b>可复用的工程思想：</b>
+      <ul>
+        <li><b>先 profiling 再优化。</b>三处改动都精准落在 predictor 逐 token 热路径——优化前先量「哪里慢、跑多少次」，别凭直觉乱优化。</li>
+        <li><b>用框架原生能力替代手写。</b><code class="inline">enable_gqa=True</code> 一个参数就省掉整段手动 KV 复制——优先看官方算子有没有现成开关，再考虑自己造轮子。</li>
+        <li><b>算子融合（kernel fusion）。</b>把多个小算子合并成一个自定义 kernel，省下 kernel 启动与中间张量读写，是 GPU 优化的核心手段之一。</li>
+        <li><b>优化要「可选 + 可回退」。</b>快路径用守卫条件层层把关，不满足就优雅退回，保证不破坏任何环境。</li>
+        <li><b>用「数值等价」测试守护性能优化。</b><code class="inline">torch.equal</code> 验证新旧结果逐元素一致 + 全量基准 WER 不退化，证明「只变快、不变质」。</li>
+        <li><b>诚实记录失败尝试。</b>「copy/add 融合实测更慢，故未纳入」——把负结果写进 PR，是高质量协作的体现。</li>
+      </ul>
+      <b>想深入可再学：</b>Triton 编程模型（program/grid/block、tl.load/store/mask）、FlashAttention 与 SDPA 后端、GQA/MQA 原理、Gumbel-Softmax/Gumbel-Max 推导、采样算子（top-k/top-p/temperature）的 GPU 实现、CUDA Graph 与 continuous batching、以及如何用 Nsight/torch profiler 定位热路径。
+    </div>
+  </div>
+</details>
+
+<div class="footer">
+  <p>本日报由自动化例程于 2026-06-27 生成 ｜ 数据来源：GitHub <code class="inline">sgl-project/sglang-omni</code> ｜ 统计窗口：merged in last 24h</p>
+  <p>讲解深度优先 · 完全小白友好 · 适合长期归档复习 🗂️</p>
+</div>
+
+</div>
+</body>
+</html>

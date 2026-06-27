@@ -47,3 +47,4 @@ benchmarks/eval/*.edit.lock
 qwen3_asr_concurrency_results.json
 .claude/*
 !.claude/skills/
+scratchpad/
