@@ -83,10 +83,11 @@ def load_mmau_samples(
     repo_id: str = "lmms-lab/mmau",
     split: str = "test_mini",
 ) -> list[MmauSample]:
-    data_files = None
+    load_kwargs: dict[str, Any] = {"split": split}
     if repo_id == "lmms-lab/mmau" and split in {"test", "test_mini"}:
-        data_files = {split: f"data/{split}-*.parquet"}
-    ds = load_dataset(repo_id, split=split, data_files=data_files)
+        load_kwargs["data_files"] = {split: f"data/{split}-*.parquet"}
+        load_kwargs["verification_mode"] = "no_checks"
+    ds = load_dataset(repo_id, **load_kwargs)
     ds = ds.cast_column("audio", Audio(decode=False))
     category_set = {c.strip() for c in (categories or []) if c.strip()} or None
     task_set = {t.strip() for t in (tasks or []) if t.strip()} or None

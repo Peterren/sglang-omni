@@ -62,6 +62,7 @@ def download_dataset(repo_id: str, *, quiet: bool = False) -> None:
             dataset_id,
             split=split,
             data_files={split: f"data/{split}-*.parquet"},
+            verification_mode="no_checks",
         )
     else:
         load_dataset(repo_id)

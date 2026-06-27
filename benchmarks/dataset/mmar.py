@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import random
 import tarfile
@@ -13,6 +14,8 @@ from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 
 from benchmarks.dataset.mmsu import normalize_text
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -45,6 +48,13 @@ def _match_answer(choices: list[str], answer: str) -> int | None:
     for i, choice in enumerate(choices):
         if normalize_text(choice) == norm:
             return i
+    candidates = [
+        i
+        for i, choice in enumerate(choices)
+        if norm and (norm in normalize_text(choice) or normalize_text(choice) in norm)
+    ]
+    if len(candidates) == 1:
+        return candidates[0]
     return None
 
 
@@ -109,6 +119,14 @@ def load_mmar_samples(
             continue
         choices = [str(choice).strip() for choice in row["choices"]]
         answer = str(row["answer"]).strip()
+        answer_index = _match_answer(choices, answer)
+        if answer_index is None:
+            logger.warning(
+                "Skipping MMAR sample %s with unmatched answer %r",
+                row.get("id"),
+                answer,
+            )
+            continue
         samples.append(
             MmarSample(
                 sample_id=str(row["id"]),
@@ -116,7 +134,7 @@ def load_mmar_samples(
                 question=str(row["question"]).strip(),
                 choices=choices,
                 answer_text=answer,
-                answer_index=_match_answer(choices, answer),
+                answer_index=answer_index,
                 task_name=modality,
                 category=category,
                 sub_category=str(
