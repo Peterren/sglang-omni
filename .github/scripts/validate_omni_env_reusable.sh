@@ -48,9 +48,7 @@ if ! bash "${SCRIPT_DIR}/verify_omni_installed_pins.sh" "${VENV_NAME}"; then
 fi
 
 PYTHON="${OMNI_CI_HOME}/${VENV_NAME}/bin/python"
-if ! "${PYTHON}" -m pip check >/dev/null 2>&1; then
-  echo "pip check reported broken dependencies:" >&2
-  "${PYTHON}" -m pip check >&2 || true
+if ! bash "${SCRIPT_DIR}/omni_uv_pip_check.sh" "${PYTHON}"; then
   exit 1
 fi
 

@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import re
-import subprocess
 import sys
 import tomllib
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 _EXACT_PIN = re.compile(r"^([A-Za-z0-9][A-Za-z0-9._-]*)\s*==\s*([^,\s]+)")
@@ -26,23 +26,21 @@ def _exact_pins(pyproject_path: Path) -> dict[str, str]:
     return pins
 
 
-def _pip_version(python: str, distribution: str) -> str | None:
-    candidates = [distribution]
-    lowered = distribution.lower()
-    if lowered not in candidates:
-        candidates.append(lowered)
+def _installed_version(distribution: str) -> str | None:
+    candidates = [
+        distribution,
+        distribution.lower(),
+        distribution.lower().replace("_", "-"),
+    ]
+    seen: set[str] = set()
     for candidate in candidates:
-        proc = subprocess.run(
-            [python, "-m", "pip", "show", candidate],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        if proc.returncode != 0:
+        if candidate in seen:
             continue
-        for line in proc.stdout.splitlines():
-            if line.startswith("Version:"):
-                return line.split(":", 1)[1].strip()
+        seen.add(candidate)
+        try:
+            return version(candidate)
+        except PackageNotFoundError:
+            continue
     return None
 
 
@@ -59,7 +57,7 @@ def main() -> int:
     missing: list[str] = []
 
     for distribution, expected in sorted(pins.items()):
-        installed = _pip_version(python, distribution)
+        installed = _installed_version(distribution)
         if installed is None:
             missing.append(f"{distribution}=={expected}")
             continue
@@ -80,7 +78,7 @@ def main() -> int:
     if missing or mismatches:
         return 1
 
-    print(f"Verified {len(pins)} exact dependency pins in {python}")
+    print(f"Verified {len(pins)} exact dependency pins via {python}")
     return 0
 
 
