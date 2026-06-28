@@ -69,7 +69,6 @@ def _build_runner(
         _cg_active_step_count=torch.zeros(n, dtype=torch.long),
         _cg_was_done=torch.tensor(was_done),
         _cg_codes_BN=torch.tensor(codes_BN),
-        _cg_logprobs_BN=torch.zeros((n, n_codebooks), dtype=torch.float32),
         _cg_collect_staging=torch.zeros((n, n_codebooks + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(n, dtype=torch.int32),
@@ -87,7 +86,12 @@ def _build_runner(
     ]
     datas = [
         SimpleNamespace(
-            req=reqs[i], output_codes=[], output_logprobs=[], generation_done=False
+            req=reqs[i],
+            output_codes=[],
+            output_logprobs=[],
+            return_omni_rollout=False,
+            return_logprob=False,
+            generation_done=False,
         )
         for i in range(n)
     ]
@@ -304,7 +308,6 @@ def test_async_real_pinned_path_matches_sync():
             _cg_codes_BN=torch.tensor(
                 [[1, 1, 1], [7, 8, 9], [20, 1, 2], [EOC_ID, 3, 4]], device=dev
             ),
-            _cg_logprobs_BN=torch.zeros((n, 3), dtype=torch.float32, device=dev),
             _cg_collect_staging=torch.zeros((n, 3 + 2), dtype=torch.long, device=dev),
             _sampler_pool=SimpleNamespace(
                 delay_count=torch.zeros(n, dtype=torch.int32, device=dev),
@@ -320,7 +323,12 @@ def test_async_real_pinned_path_matches_sync():
         ]
         datas = [
             SimpleNamespace(
-                req=reqs[i], output_codes=[], output_logprobs=[], generation_done=False
+                req=reqs[i],
+                output_codes=[],
+                output_logprobs=[],
+                return_omni_rollout=False,
+                return_logprob=False,
+                generation_done=False,
             )
             for i in range(n)
         ]

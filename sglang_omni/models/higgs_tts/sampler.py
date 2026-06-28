@@ -320,13 +320,12 @@ def batched_step(
     top_k_buf: torch.Tensor | None = None,
     boc_id: int = BOC_ID,
     eoc_id: int = EOC_ID,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> torch.Tensor:
     """Eager-path wrapper: gather pool state by ``row_indices``, call
     :func:`batched_step_direct`, scatter the new state back. Done rows
     return :data:`STOP_CODE` with state untouched.
 
-    Returns ``(out_codes, logprobs_BN)`` -- see :func:`batched_step_direct` for
-    the selected-action logprob semantics.
+    Returns ``out_codes``.
     """
     delay_count = state.delay_count[row_indices]
     eoc_countdown = state.eoc_countdown[row_indices]
@@ -342,7 +341,6 @@ def batched_step(
         new_generation_done,
         new_last_codes,
         new_step_count,
-        logprobs_BN,
     ) = batched_step_direct(
         logits_BNV,
         delay_count,
@@ -364,7 +362,7 @@ def batched_step(
     state.last_codes[row_indices] = new_last_codes
     state.step_count[row_indices] = new_step_count
 
-    return out_codes, logprobs_BN
+    return out_codes
 
 
 def batched_step_direct(
@@ -388,17 +386,13 @@ def batched_step_direct(
     torch.Tensor,
     torch.Tensor,
     torch.Tensor,
-    torch.Tensor,
 ]:
     """CG-friendly state machine: state in/out as direct ``[B, ...]`` tensors,
     no ``state``/``row_indices`` indirection. Caller persists the returned
     new state. See :func:`batched_step` for arg semantics.
 
     ``seeds``/``step_count`` (both ``[B]``) make seeded rows reproducible; the
-    returned ``new_step_count`` advances active rows for the next step. Also
-    returns ``logprobs_BN``: the selected-action logprob of each sampled code,
-    gathered before the delay/EOC overwrite (so masked positions carry a
-    meaningless value). Always computed -- cheap and branchless for CG capture.
+    returned ``new_step_count`` advances active rows for the next step.
     """
     B, N, _ = logits_BNV.shape
     device = logits_BNV.device
@@ -414,10 +408,6 @@ def batched_step_direct(
         seeds_B=seeds,
         step_B=step_count,
     )
-    logprobs_BN = selected_token_logprobs(
-        logits_BNV, codes_BN, temperature=temperature, top_k_buf=top_k_buf
-    )
-
     cb_idx = torch.arange(N, device=device).unsqueeze(0).expand(B, N)
     in_delay = (delay_count < N).unsqueeze(-1)
     delay_mask = in_delay & (cb_idx > delay_count.unsqueeze(-1))
@@ -462,7 +452,6 @@ def batched_step_direct(
         new_generation_done,
         new_last_codes,
         new_step_count,
-        logprobs_BN,
     )
 
 

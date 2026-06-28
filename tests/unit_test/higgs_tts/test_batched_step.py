@@ -90,7 +90,7 @@ def test_batched_matches_per_row_delay_window():
         logits = _peaky_logits(target)
 
         codes_pr = _run_per_row(logits, pool_pr, row_indices)
-        codes_bt, _ = batched_step(
+        codes_bt = batched_step(
             logits, pool_bt, row_indices, temperature=temp_t, top_k_buf=top_k_buf
         )
 
@@ -118,7 +118,7 @@ def test_batched_matches_per_row_eoc_winddown():
         target = torch.randint(0, V - 2, (B, N), device=DEVICE)
         logits = _peaky_logits(target)
         codes_pr = _run_per_row(logits, pool_pr, row_indices)
-        codes_bt, _ = batched_step(
+        codes_bt = batched_step(
             logits, pool_bt, row_indices, temperature=temp_t, top_k_buf=top_k_buf
         )
         assert torch.equal(codes_pr, codes_bt)
@@ -128,7 +128,7 @@ def test_batched_matches_per_row_eoc_winddown():
     target[:, 0] = EOC_ID
     logits = _peaky_logits(target)
     codes_pr = _run_per_row(logits, pool_pr, row_indices)
-    codes_bt, _ = batched_step(
+    codes_bt = batched_step(
         logits, pool_bt, row_indices, temperature=temp_t, top_k_buf=top_k_buf
     )
     assert torch.equal(codes_pr, codes_bt)
@@ -144,7 +144,7 @@ def test_batched_matches_per_row_eoc_winddown():
         target = torch.randint(0, V - 2, (B, N), device=DEVICE)
         logits = _peaky_logits(target)
         codes_pr = _run_per_row(logits, pool_pr, row_indices)
-        codes_bt, _ = batched_step(
+        codes_bt = batched_step(
             logits, pool_bt, row_indices, temperature=temp_t, top_k_buf=top_k_buf
         )
         assert torch.equal(codes_pr, codes_bt), f"mismatch at wind-down step {k}"
@@ -173,7 +173,7 @@ def test_batched_done_row_returns_stop_and_freezes_state():
     target = torch.randint(0, V - 2, (2, N), device=DEVICE)
     logits = _peaky_logits(target)
 
-    codes, _ = batched_step(
+    codes = batched_step(
         logits, pool, row_indices, temperature=temp_t, top_k_buf=top_k_buf
     )
 
@@ -221,7 +221,7 @@ def test_batched_matches_per_row_mixed_phases():
         target = torch.randint(0, V - 2, (3, N), device=DEVICE)
         logits = _peaky_logits(target)
         codes_pr = _run_per_row(logits, pool_pr, row_indices)
-        codes_bt, _ = batched_step(
+        codes_bt = batched_step(
             logits, pool_bt, row_indices, temperature=temp_t, top_k_buf=top_k_buf
         )
         assert torch.equal(codes_pr, codes_bt), f"mixed-phase mismatch at t={t}"
@@ -263,7 +263,7 @@ def test_batched_step_mixed_top_k_per_row_filter():
     top_k_buf = torch.tensor([K_MAX, 5], dtype=torch.long, device="cuda")
 
     # Must not raise — old code checked uniformity of top_k across rows.
-    codes, _ = batched_step(
+    codes = batched_step(
         logits.contiguous(),
         pool,
         row_indices,

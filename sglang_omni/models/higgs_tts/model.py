@@ -167,9 +167,6 @@ class HiggsTTSModel(nn.Module):
         self._rid_to_row: dict[str, int] = {}
         self._free_rows: list[int] = list(range(self._max_batch_size))
         self._output_codes: dict[str, list[torch.Tensor]] = {}
-        # Per-step selected-action logprobs (eager prefill path).
-        self._output_logprobs: dict[str, list[torch.Tensor]] = {}
-
         cg_device = self.backbone.model.embed_tokens.weight.device
         self._cg_row_indices = torch.zeros(
             pool_size, dtype=torch.long, device=cg_device
@@ -186,10 +183,6 @@ class HiggsTTSModel(nn.Module):
         )
         self._cg_codes_BN = torch.zeros(
             pool_size, num_codebooks, dtype=torch.long, device=cg_device
-        )
-        # Selected-action logprobs for the current decode step (CG path).
-        self._cg_logprobs_BN = torch.zeros(
-            pool_size, num_codebooks, dtype=torch.float32, device=cg_device
         )
         # Note(Jiaxin): Packs codes_BN | was_done | active_generation_done into one buffer.
         self._cg_collect_staging = torch.zeros(
@@ -267,7 +260,6 @@ class HiggsTTSModel(nn.Module):
         if row is not None:
             self._free_rows.append(row)
         self._output_codes.pop(req_id, None)
-        self._output_logprobs.pop(req_id, None)
 
     def reset_request(self, req_id: str) -> None:
         self.release_row(req_id)
@@ -333,7 +325,7 @@ class HiggsTTSModel(nn.Module):
 
         was_done = self._sampler_pool.generation_done[row_indices].clone()
 
-        codes_BN, logprobs_BN = batched_step(
+        codes_BN = batched_step(
             logits_BNV,
             self._sampler_pool,
             row_indices,
@@ -345,12 +337,10 @@ class HiggsTTSModel(nn.Module):
         # Note(yichi): One D2H per step to skip STOP-sentinel rows in the Python append loop.
         was_done_cpu = was_done.cpu().tolist()
         codes_BN = codes_BN.detach().to(torch.long)
-        logprobs_BN = logprobs_BN.detach()
         for b in range(batch_size):
             if was_done_cpu[b]:
                 continue
             self._output_codes.setdefault(req_ids[b], []).append(codes_BN[b])
-            self._output_logprobs.setdefault(req_ids[b], []).append(logprobs_BN[b])
 
         text_vocab_size = self.backbone.config.vocab_size
         return torch.zeros(
@@ -390,7 +380,6 @@ class HiggsTTSModel(nn.Module):
             new_generation_done_B,
             new_last_codes_BN,
             new_step_count_B,
-            logprobs_BN,
         ) = batched_step_direct(
             logits_BNV,
             delay_count_B,
@@ -413,7 +402,6 @@ class HiggsTTSModel(nn.Module):
         self._cg_active_generation_done[:batch_size] = new_generation_done_B
         self._cg_active_last_codes[:batch_size] = new_last_codes_BN
         self._cg_codes_BN[:batch_size] = codes_BN
-        self._cg_logprobs_BN[:batch_size] = logprobs_BN
 
         text_vocab_size = self.backbone.config.vocab_size
         return torch.zeros(
