@@ -232,9 +232,7 @@ def _start_qwen3_omni_tp2(
     from tests.test_model.omni_router_utils import ManagedRouterHandle
 
     model_path = QWEN3_OMNI_TEST_MODEL_PATH
-    is_short_thinker_context = (
-        thinker_max_seq_len != QWEN3_OMNI_TP2_THINKER_MAX_SEQ_LEN
-    )
+    is_short_thinker_context = thinker_max_seq_len != QWEN3_OMNI_TP2_THINKER_MAX_SEQ_LEN
     thinker_mem_fraction = (
         QWEN3_OMNI_FP8_TP2_THINKER_MEM_FRACTION
         if is_short_thinker_context
