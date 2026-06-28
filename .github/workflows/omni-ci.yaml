@@ -6,7 +6,8 @@ name: Omni CI
 #                    └───────────┴──────────┴──────────────┴──► cleanup (dispatch only)
 #
 # PR-scoped homes (/github/home/pr-<N>) persist on the runner for reuse across
-# pushes (runner TTL, e.g. 3 days). setup validates completeness before reuse;
+# pushes (runner TTL, e.g. 3 days). reconcile_omni_ci_env.sh validates fingerprint,
+# pins, imports, and pip check before reuse; otherwise rebuilds OMNI_CI_HOME.
 # cleanup-pr-ci-home-on-close.yaml removes the home when the PR closes.
 
 
@@ -125,12 +126,12 @@ jobs:
         shell: bash
         run: |
           echo "OMNI_CI_HOME=${OMNI_CI_HOME}"
-          if bash .github/scripts/validate_omni_env_complete.sh omni; then
+          if bash .github/scripts/validate_omni_env_reusable.sh omni; then
             echo "action=reuse" >> "${GITHUB_OUTPUT}"
-            echo "Existing PR environment is complete; reusing cache and refreshing editable install."
+            echo "Existing environment passes reuse gate; will refresh editable install."
           else
             echo "action=rebuild" >> "${GITHUB_OUTPUT}"
-            echo "PR environment missing or incomplete; will prepare or rebuild."
+            echo "Environment missing or drifted; will reconcile or rebuild."
           fi
 
       - uses: ./.github/actions/omni-setup
@@ -158,6 +159,10 @@ jobs:
       - name: Mark PR environment complete
         shell: bash
         run: bash .github/scripts/mark_omni_env_complete.sh omni
+
+      - name: Verify setup completion marker
+        shell: bash
+        run: bash .github/scripts/validate_omni_env_complete.sh omni
 
   pick-tts-model:
     name: pick TTS model
