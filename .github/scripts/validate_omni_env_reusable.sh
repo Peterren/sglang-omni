@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Strict gate for reusing an existing OMNI_CI_HOME venv across workflow runs.
 #
-# Checks path safety, pyproject.toml fingerprint, import probe, exact == pins,
-# and pip dependency consistency. Does not require .omni-env-complete (downstream
-# jobs use this gate; only setup writes the marker after models are ensured).
+# Checks path safety, pyproject.toml fingerprint, import probe, and exact == pins.
+# Does not run uv pip check (override-dependencies produce expected resolver warnings).
+# Does not require .omni-env-complete (downstream jobs use this gate; setup writes marker).
 set -euo pipefail
 
 if [ "$#" -ne 1 ]; then
@@ -47,9 +47,7 @@ if ! bash "${SCRIPT_DIR}/verify_omni_installed_pins.sh" "${VENV_NAME}"; then
   exit 1
 fi
 
-PYTHON="${OMNI_CI_HOME}/${VENV_NAME}/bin/python"
-if ! bash "${SCRIPT_DIR}/omni_uv_pip_check.sh" "${PYTHON}"; then
-  exit 1
-fi
+# uv pip check is not a CI gate: this stack uses [tool.uv] override-dependencies
+# (e.g. protobuf>=6.x) that uv resolves intentionally but pip check still flags.
 
 echo "OMNI CI environment reusable: ${OMNI_CI_HOME} (venv=${VENV_NAME}, deps_hash=${DEPS_HASH})"

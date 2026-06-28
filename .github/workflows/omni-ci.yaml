@@ -7,7 +7,7 @@ name: Omni CI
 #
 # PR-scoped homes (/github/home/pr-<N>) persist on the runner for reuse across
 # pushes (runner TTL, e.g. 3 days). reconcile_omni_ci_env.sh validates fingerprint,
-# pins, imports, and pip check before reuse; otherwise rebuilds OMNI_CI_HOME.
+# pins, and imports before reuse; otherwise rebuilds OMNI_CI_HOME.
 # cleanup-pr-ci-home-on-close.yaml removes the home when the PR closes.
 
 

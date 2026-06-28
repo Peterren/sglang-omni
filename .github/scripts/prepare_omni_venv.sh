@@ -52,10 +52,6 @@ if ! python -c "from whisper.normalizers import EnglishTextNormalizer" 2>/dev/nu
   uv pip install --force-reinstall --no-deps --no-cache openai-whisper==20250625
 fi
 
-if ! bash "${SCRIPT_DIR}/omni_uv_pip_check.sh" "${HOST}/bin/python"; then
-  exit 1
-fi
-
 if ! bash "${SCRIPT_DIR}/validate_omni_venv_imports.sh" "${VENV_NAME}"; then
   exit 1
 fi
