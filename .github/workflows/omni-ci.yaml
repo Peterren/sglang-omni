@@ -218,7 +218,10 @@ jobs:
     uses: ./.github/workflows/test-tts-ci.yaml
     with:
       tts_ci_model: ${{ needs.pick-tts-model.outputs.tts_ci_model }}
-      omni_ci_home: ${{ env.OMNI_CI_HOME }}
+      omni_ci_home: >-
+        ${{ github.event_name == 'pull_request'
+            && format('/github/home/pr-{0}', github.event.pull_request.number)
+            || format('/github/home/run-{0}', github.run_id) }}
     secrets: inherit
 
   qwen3-omni-ci:
@@ -229,7 +232,10 @@ jobs:
       needs.setup.result == 'success'
     uses: ./.github/workflows/test-qwen3-omni-ci.yaml
     with:
-      omni_ci_home: ${{ env.OMNI_CI_HOME }}
+      omni_ci_home: >-
+        ${{ github.event_name == 'pull_request'
+            && format('/github/home/pr-{0}', github.event.pull_request.number)
+            || format('/github/home/run-{0}', github.run_id) }}
     secrets: inherit
 
   pr-test:
@@ -239,7 +245,10 @@ jobs:
       needs.setup.result == 'success'
     uses: ./.github/workflows/test.yaml
     with:
-      omni_ci_home: ${{ env.OMNI_CI_HOME }}
+      omni_ci_home: >-
+        ${{ github.event_name == 'pull_request'
+            && format('/github/home/pr-{0}', github.event.pull_request.number)
+            || format('/github/home/run-{0}', github.run_id) }}
     secrets: inherit
 
   cleanup:
