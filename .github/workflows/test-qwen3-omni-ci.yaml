@@ -2,6 +2,12 @@ name: Qwen3-Omni CI
 
 on:
   workflow_call:
+    inputs:
+      omni_ci_home:
+        description: PR-scoped CI home from the parent omni-ci workflow.
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -10,8 +16,8 @@ permissions:
 
 env:
   OMNI_CI_HOME: >-
-    ${{ github.event_name == 'pull_request'
-        && format('/github/home/pr-{0}', github.event.pull_request.number)
+    ${{ inputs.omni_ci_home != ''
+        && inputs.omni_ci_home
         || format('/github/home/run-{0}', github.run_id) }}
   PYTORCH_ALLOC_CONF: expandable_segments:True
 

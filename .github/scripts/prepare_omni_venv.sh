@@ -43,6 +43,7 @@ if [ "${reuse_venv}" = true ]; then
 fi
 
 echo "Preparing fresh ${HOST} (deps changed or venv missing/corrupt)"
+rm -f "${OMNI_CI_HOME}/.omni-env-complete"
 rm -rf "${OMNI_CI_HOME}"
 mkdir -p "${OMNI_CI_HOME}"
 uv venv "${HOST}" -p 3.11

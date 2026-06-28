@@ -2,11 +2,17 @@ name: PR Test
 
 on:
   workflow_call:
+    inputs:
+      omni_ci_home:
+        description: PR-scoped CI home from the parent omni-ci workflow.
+        type: string
+        required: false
+        default: ""
 
 env:
   OMNI_CI_HOME: >-
-    ${{ github.event_name == 'pull_request'
-        && format('/github/home/pr-{0}', github.event.pull_request.number)
+    ${{ inputs.omni_ci_home != ''
+        && inputs.omni_ci_home
         || format('/github/home/run-{0}', github.run_id) }}
 
 # Invoked by omni-ci.yaml after shared setup (first suite in the omni-ci

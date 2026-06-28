@@ -3,7 +3,11 @@ name: Omni CI
 # DAG:
 #   preflight ──► setup ──► pr-test ──► tts-ci ──► qwen3-omni-ci
 #                    │           │          │              │
-#                    └───────────┴──────────┴──────────────┴──► cleanup
+#                    └───────────┴──────────┴──────────────┴──► cleanup (dispatch only)
+#
+# PR-scoped homes (/github/home/pr-<N>) persist on the runner for reuse across
+# pushes (runner TTL, e.g. 3 days). setup validates completeness before reuse;
+# cleanup-pr-ci-home-on-close.yaml removes the home when the PR closes.
 
 
 on:
@@ -116,6 +120,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Assess CI environment completeness
+        id: env_state
+        shell: bash
+        run: |
+          echo "OMNI_CI_HOME=${OMNI_CI_HOME}"
+          if bash .github/scripts/validate_omni_env_complete.sh omni; then
+            echo "action=reuse" >> "${GITHUB_OUTPUT}"
+            echo "Existing PR environment is complete; reusing cache and refreshing editable install."
+          else
+            echo "action=rebuild" >> "${GITHUB_OUTPUT}"
+            echo "PR environment missing or incomplete; will prepare or rebuild."
+          fi
+
       - uses: ./.github/actions/omni-setup
         with:
           venv-name: omni
@@ -137,6 +154,10 @@ jobs:
             "${QWEN3_ASR_MODEL_PATH}" \
             "${TTS_MODEL_PATH}" \
             "${MOSS_TTS_MODEL_PATH}"
+
+      - name: Mark PR environment complete
+        shell: bash
+        run: bash .github/scripts/mark_omni_env_complete.sh omni
 
   pick-tts-model:
     name: pick TTS model
@@ -197,6 +218,7 @@ jobs:
     uses: ./.github/workflows/test-tts-ci.yaml
     with:
       tts_ci_model: ${{ needs.pick-tts-model.outputs.tts_ci_model }}
+      omni_ci_home: ${{ env.OMNI_CI_HOME }}
     secrets: inherit
 
   qwen3-omni-ci:
@@ -206,6 +228,8 @@ jobs:
       always() && !cancelled() &&
       needs.setup.result == 'success'
     uses: ./.github/workflows/test-qwen3-omni-ci.yaml
+    with:
+      omni_ci_home: ${{ env.OMNI_CI_HOME }}
     secrets: inherit
 
   pr-test:
@@ -214,14 +238,17 @@ jobs:
     if: >-
       needs.setup.result == 'success'
     uses: ./.github/workflows/test.yaml
+    with:
+      omni_ci_home: ${{ env.OMNI_CI_HOME }}
     secrets: inherit
 
   cleanup:
-    name: cleanup - reclaim host cache
+    name: cleanup - reclaim ephemeral run home
     needs: [setup, tts-ci, qwen3-omni-ci, pr-test]
     if: >-
       always() && !cancelled() &&
-      needs.setup.result == 'success'
+      needs.setup.result == 'success' &&
+      github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, h100]
     timeout-minutes: 5
     container:
