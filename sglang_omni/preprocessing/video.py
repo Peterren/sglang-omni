@@ -38,7 +38,6 @@ class _VideoDecodeCacheEntry:
 
 
 _video_decode_cache: OrderedDict[str, _VideoDecodeCacheEntry] = OrderedDict()
-_video_decode_cache_bytes = 0
 _video_decode_cache_lock = threading.Lock()
 
 
@@ -47,10 +46,8 @@ class VideoDecodeError(RuntimeError):
 
 
 def clear_video_decode_cache() -> None:
-    global _video_decode_cache_bytes
     with _video_decode_cache_lock:
         _video_decode_cache.clear()
-        _video_decode_cache_bytes = 0
 
 
 def _video_decode_cache_enabled() -> bool:
@@ -122,7 +119,6 @@ def _put_video_decode_cache(
     video: torch.Tensor,
     sample_fps: float,
 ) -> None:
-    global _video_decode_cache_bytes
     if key is None or not isinstance(video, torch.Tensor):
         return
     max_bytes = _video_decode_cache_max_bytes()
@@ -132,18 +128,16 @@ def _put_video_decode_cache(
     if nbytes <= 0 or nbytes > max_bytes:
         return
     with _video_decode_cache_lock:
-        old = _video_decode_cache.pop(key, None)
-        if old is not None:
-            _video_decode_cache_bytes -= old.nbytes
-        while _video_decode_cache and _video_decode_cache_bytes + nbytes > max_bytes:
+        _video_decode_cache.pop(key, None)
+        current_bytes = sum(entry.nbytes for entry in _video_decode_cache.values())
+        while _video_decode_cache and current_bytes + nbytes > max_bytes:
             _, evicted = _video_decode_cache.popitem(last=False)
-            _video_decode_cache_bytes -= evicted.nbytes
+            current_bytes -= evicted.nbytes
         _video_decode_cache[key] = _VideoDecodeCacheEntry(
             video=video,
             sample_fps=sample_fps,
             nbytes=nbytes,
         )
-        _video_decode_cache_bytes += nbytes
 
 
 class VideoMediaIO(MediaIO[tuple[torch.Tensor, float, Any | None]]):
