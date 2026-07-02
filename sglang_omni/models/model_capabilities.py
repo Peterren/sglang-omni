@@ -45,14 +45,10 @@ def _module_model_capabilities(module: ModuleType) -> ModelCapabilities | None:
     capabilities = getattr(module, "CAPABILITIES", None)
     if capabilities is None:
         return None
-    return _ensure_model_capabilities(
-        capabilities, f"{module.__name__}.CAPABILITIES"
-    )
+    return _ensure_model_capabilities(capabilities, f"{module.__name__}.CAPABILITIES")
 
 
-def _ensure_model_capabilities(
-    capabilities: object, source: str
-) -> ModelCapabilities:
+def _ensure_model_capabilities(capabilities: object, source: str) -> ModelCapabilities:
     if not isinstance(capabilities, ModelCapabilities):
         raise TypeError(f"{source} must be a ModelCapabilities instance")
     return capabilities

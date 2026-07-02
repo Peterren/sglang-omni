@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import importlib
-from dataclasses import FrozenInstanceError, MISSING, fields
+from dataclasses import MISSING, FrozenInstanceError, fields
 
 import pytest
 
@@ -115,9 +115,9 @@ def test_tts_model_package_exports_capabilities(architecture: str) -> None:
 
 @pytest.mark.parametrize("architecture", EXPECTED_TTS_CAPABILITIES)
 def test_get_model_capabilities_for_tts_architecture(architecture: str) -> None:
-    assert get_model_capabilities(architecture) == EXPECTED_TTS_CAPABILITIES[
-        architecture
-    ]
+    assert (
+        get_model_capabilities(architecture) == EXPECTED_TTS_CAPABILITIES[architecture]
+    )
 
 
 def test_get_model_capabilities_for_non_tts_and_unknown_architectures() -> None:
@@ -126,9 +126,10 @@ def test_get_model_capabilities_for_non_tts_and_unknown_architectures() -> None:
 
 
 def test_get_model_capabilities_resolves_registered_alias() -> None:
-    assert get_model_capabilities("MossTTSDelay") == EXPECTED_TTS_CAPABILITIES[
-        "MossTTSDelayModel"
-    ]
+    assert (
+        get_model_capabilities("MossTTSDelay")
+        == EXPECTED_TTS_CAPABILITIES["MossTTSDelayModel"]
+    )
 
 
 def test_model_capabilities_are_static_architecture_metadata() -> None:
@@ -168,7 +169,9 @@ def test_launcher_model_capabilities_log_summary_uses_static_architecture() -> N
     assert summary["batch_vocoder"] is True
 
 
-def test_launcher_emits_model_capabilities_log(caplog: pytest.LogCaptureFixture) -> None:
+def test_launcher_emits_model_capabilities_log(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     config_cls = PIPELINE_CONFIG_REGISTRY.get_config(
         "VoxtralTTSForConditionalGeneration"
     )
