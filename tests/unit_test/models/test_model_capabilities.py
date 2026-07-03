@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import importlib
+import sys
 from dataclasses import MISSING, FrozenInstanceError, fields
+from types import ModuleType
 
 import pytest
 
@@ -12,10 +14,6 @@ from sglang_omni.models.model_capabilities import (
     get_model_capabilities,
 )
 from sglang_omni.models.registry import PIPELINE_CONFIG_REGISTRY
-from sglang_omni.serve.launcher import (
-    _log_model_capabilities,
-    _model_capabilities_log_summary,
-)
 
 EXPECTED_TTS_CAPABILITIES = {
     "Qwen3TTSForConditionalGeneration": ModelCapabilities(
@@ -44,7 +42,7 @@ EXPECTED_TTS_CAPABILITIES = {
         supports_batch_vocoder=True,
         supports_streaming_vocoder=True,
         supports_cuda_graph=True,
-        supports_torch_compile=False,
+        supports_torch_compile=True,
     ),
     "FishQwen3OmniForCausalLM": ModelCapabilities(
         supports_reference_audio=True,
@@ -62,15 +60,6 @@ EXPECTED_TTS_CAPABILITIES = {
     ),
 }
 
-TTS_PACKAGE_NAMES = {
-    "fishaudio_s2_pro",
-    "higgs_tts",
-    "moss_tts",
-    "moss_tts_local",
-    "qwen3_tts",
-    "voxtral_tts",
-}
-
 
 def _package_for_architecture(architecture: str):
     config_cls = PIPELINE_CONFIG_REGISTRY.configs.get(architecture)
@@ -78,14 +67,21 @@ def _package_for_architecture(architecture: str):
     return importlib.import_module(config_cls.__module__.rsplit(".", 1)[0])
 
 
-def test_expected_tts_capabilities_cover_registered_tts_configs() -> None:
-    registered_tts_architectures = {
+def _capability_required_architectures() -> set[str]:
+    return {
         config_cls.architecture
-        for config_cls in PIPELINE_CONFIG_REGISTRY.configs.values()
-        if config_cls.__module__.split(".")[-2] in TTS_PACKAGE_NAMES
+        for config_cls in set(PIPELINE_CONFIG_REGISTRY.configs.values())
+        if getattr(config_cls, "requires_model_capabilities", False)
     }
 
-    assert registered_tts_architectures == set(EXPECTED_TTS_CAPABILITIES)
+
+def test_expected_capabilities_cover_registered_required_configs() -> None:
+    assert _capability_required_architectures() == set(EXPECTED_TTS_CAPABILITIES)
+
+
+def test_required_model_capability_configs_resolve_capabilities() -> None:
+    for architecture in sorted(_capability_required_architectures()):
+        assert get_model_capabilities(architecture) is not None
 
 
 def test_model_capabilities_are_frozen_and_explicit() -> None:
@@ -125,6 +121,29 @@ def test_get_model_capabilities_for_non_tts_and_unknown_architectures() -> None:
     assert get_model_capabilities("UnknownArchitecture") is None
 
 
+def test_get_model_capabilities_rejects_malformed_capabilities_export(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    package_name = "tests.unit_test.models.fake_bad_capabilities"
+    fake_package = ModuleType(package_name)
+    fake_package.CAPABILITIES = object()
+
+    class FakeConfig:
+        pass
+
+    FakeConfig.__module__ = f"{package_name}.config"
+
+    monkeypatch.setitem(sys.modules, package_name, fake_package)
+    monkeypatch.setitem(
+        PIPELINE_CONFIG_REGISTRY.configs,
+        "MalformedCapabilitiesModel",
+        FakeConfig,
+    )
+
+    with pytest.raises(TypeError, match="must be a ModelCapabilities instance"):
+        get_model_capabilities("MalformedCapabilitiesModel")
+
+
 def test_get_model_capabilities_resolves_registered_alias() -> None:
     assert (
         get_model_capabilities("MossTTSDelay")
@@ -143,6 +162,8 @@ def test_model_capabilities_are_static_architecture_metadata() -> None:
 
 
 def test_launcher_model_capabilities_log_summary() -> None:
+    from sglang_omni.serve.launcher import _model_capabilities_log_summary
+
     config_cls = PIPELINE_CONFIG_REGISTRY.get_config("Qwen3TTSForConditionalGeneration")
     summary = _model_capabilities_log_summary(
         config_cls(model_path="Qwen/Qwen3-TTS-12Hz-0.6B-Base")
@@ -159,6 +180,8 @@ def test_launcher_model_capabilities_log_summary() -> None:
 
 
 def test_launcher_model_capabilities_log_summary_uses_static_architecture() -> None:
+    from sglang_omni.serve.launcher import _model_capabilities_log_summary
+
     config_cls = PIPELINE_CONFIG_REGISTRY.get_config("Qwen3TTSForConditionalGeneration")
     summary = _model_capabilities_log_summary(
         config_cls(model_path="Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice")
@@ -172,6 +195,8 @@ def test_launcher_model_capabilities_log_summary_uses_static_architecture() -> N
 def test_launcher_emits_model_capabilities_log(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    from sglang_omni.serve.launcher import _log_model_capabilities
+
     config_cls = PIPELINE_CONFIG_REGISTRY.get_config(
         "VoxtralTTSForConditionalGeneration"
     )
@@ -182,3 +207,21 @@ def test_launcher_emits_model_capabilities_log(
     assert '"architecture": "VoxtralTTSForConditionalGeneration"' in caplog.text
     assert '"reference_audio": false' in caplog.text
     assert '"batch_vocoder": false' in caplog.text
+
+
+def test_launcher_model_capabilities_warning_isolated(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from sglang_omni.serve import launcher
+
+    def fail_summary(_pipeline_config: object) -> None:
+        raise RuntimeError("capability lookup failed")
+
+    monkeypatch.setattr(launcher, "_model_capabilities_log_summary", fail_summary)
+    config_cls = PIPELINE_CONFIG_REGISTRY.get_config("Qwen3TTSForConditionalGeneration")
+
+    with caplog.at_level("WARNING", logger="sglang_omni.serve.launcher"):
+        launcher._log_model_capabilities(config_cls(model_path="dummy"))
+
+    assert "Failed to resolve model capabilities for startup log" in caplog.text

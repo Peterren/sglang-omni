@@ -10,10 +10,24 @@ from types import ModuleType
 
 @dataclass(frozen=True)
 class ModelCapabilities:
-    """Static capability declaration for a TTS model architecture.
+    """Static capability declaration for a model architecture.
 
-    These flags describe what a model architecture can support, not what a
-    specific pipeline instance enables for a checkpoint or deployment.
+    These flags describe what a model architecture can support. Concrete
+    checkpoint and deployment policy stays with ``PipelineConfig`` methods. For
+    example, a Qwen3-TTS CustomVoice checkpoint can reject uploaded reference
+    audio even though the architecture declares reference-audio support.
+
+    Fields:
+    - supports_reference_audio: the architecture can condition on reference
+      audio when the selected checkpoint/deployment allows it.
+    - supports_batch_vocoder: the architecture can produce batched waveform
+      output.
+    - supports_streaming_vocoder: the architecture can stream vocoder output
+      before the full generation payload is complete.
+    - supports_cuda_graph: the architecture has a CUDA graph path.
+    - supports_torch_compile: the architecture has an owned ``torch.compile``
+      path, including codec, codebook, or frame-sampler compiles. This is not
+      limited to the generic SGLang ``enable_torch_compile`` server arg.
     """
 
     supports_reference_audio: bool
