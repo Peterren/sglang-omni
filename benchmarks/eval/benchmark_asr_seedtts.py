@@ -99,12 +99,11 @@ def _worker_delta(before: dict | None, after: dict | None) -> dict:
 
 async def run_asr_seedtts_once(
     samples: list[SampleInput],
-    *,
     host: str,
     port: int,
+    concurrency: int,
     model_path: str = QWEN3_ASR_MODEL_PATH,
     lang: str = "en",
-    concurrency: int,
     warmup: int = 0,
 ) -> dict:
     """Run one SeedTTS ASR benchmark pass and return WER/speed/worker metrics."""
