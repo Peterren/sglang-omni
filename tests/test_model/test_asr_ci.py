@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Qwen3-ASR correctness CI for SGLang Omni.
+"""ASR correctness CI for SGLang Omni.
 
 The test uses the full English SeedTTS set as the speech corpus. It compares
 normalized transcriptions from the SGLang Omni Qwen3-ASR router against the
@@ -71,7 +71,7 @@ def _require_cuda() -> None:
     import torch
 
     if not torch.cuda.is_available():
-        pytest.skip("CUDA is required for Qwen3-ASR correctness CI")
+        pytest.skip("CUDA is required for ASR correctness CI")
 
 
 @pytest.fixture(scope="module")
@@ -84,7 +84,7 @@ def seedtts_en_samples() -> list[SampleInput]:
 
 
 @pytest.fixture(scope="module")
-def qwen3_asr_router_server(
+def asr_router_server(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> ManagedRouterHandle:
     with launch_managed_router(
@@ -112,9 +112,9 @@ def _format_high_wer_sample(sample: dict) -> str:
 
 
 @pytest.mark.benchmark
-def test_qwen3_asr_matches_seedtts_reference_text(
+def test_asr_matches_seedtts_reference_text(
     seedtts_en_samples: list[SampleInput],
-    qwen3_asr_router_server: ManagedRouterHandle,
+    asr_router_server: ManagedRouterHandle,
     tmp_path_factory: pytest.TempPathFactory,
 ) -> None:
     _require_cuda()
@@ -128,14 +128,14 @@ def test_qwen3_asr_matches_seedtts_reference_text(
         checks.assert_all()
 
     with router_worker_traffic_guard(
-        qwen3_asr_router_server,
+        asr_router_server,
         label="Qwen3-ASR SeedTTS",
     ) as router_guard:
         results = asyncio.run(
             run_asr_seedtts_once(
                 seedtts_en_samples,
                 host="127.0.0.1",
-                port=qwen3_asr_router_server.port,
+                port=asr_router_server.port,
                 model_path=QWEN3_ASR_CI_MODEL_PATH,
                 lang="en",
                 concurrency=QWEN3_ASR_CONCURRENCY,
@@ -162,7 +162,7 @@ def test_qwen3_asr_matches_seedtts_reference_text(
             {
                 "summary": summary,
                 "speed": speed,
-                "router_ready_s": qwen3_asr_router_server.router_ready_s,
+                "router_ready_s": asr_router_server.router_ready_s,
             },
             indent=2,
         )
