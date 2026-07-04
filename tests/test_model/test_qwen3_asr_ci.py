@@ -3,10 +3,10 @@
 
 The test uses the full English SeedTTS set as the speech corpus. It compares
 normalized transcriptions from the SGLang Omni Qwen3-ASR router against the
-dataset reference text. Transcription, WER, and speed metrics are computed by
-the reusable single-pass entry point in ``benchmarks.eval.benchmark_asr_seedtts``;
-this gate only launches the router, runs one benchmark pass, and applies
-thresholds.
+dataset reference text.
+
+Author:
+chenyang zhao: https://github.com/zhaochenyang20
 """
 
 from __future__ import annotations
