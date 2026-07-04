@@ -1,19 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """ASR benchmark on SeedTTS reference audio (issue #646).
 
-Sweeps ASR transcription fan-out (concurrency) against a *running* Qwen3-ASR
-SGLang Omni router and reports, for each concurrency level, the metrics tracked
-in issue #646: corpus/per-sample WER, wall-clock, throughput, latency
-percentiles, RTF, and per-worker routing balance. This produces the repeatable
-concurrency-scaling data the issue's acceptance criteria ask for, and lets us
-decide the right ASR fan-out for SeedTTS EN transcription / WER workloads.
+This script transcribes the SeedTTS reference audio clips directly
+and compare them with reference scripts.
 
-This script transcribes the SeedTTS *reference* clips directly (no TTS
-generation step), so it isolates ASR behavior from TTS.
-
-This file is the executable CLI wrapper and CI-facing benchmark entry point.
-The Qwen3-ASR correctness gate imports run_asr_seedtts_once from this module,
-then applies CI thresholds to the same benchmark result shape.
+Author:
+chenyang zhao: https://github.com/zhaochenyang20
 
 Usage:
 
