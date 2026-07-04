@@ -22,9 +22,9 @@ fi
 VENV_NAME="$1"
 shift
 
-export HOME="${HOME:-/github/home}"
-export XDG_CACHE_HOME="${XDG_CACHE_HOME:-/github/home/.cache}"
-export HF_HOME="${HF_HOME:-/github/home/.cache/huggingface}"
+export HOME="${HOME:-${OMNI_CI_HOME:-/github/home}}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-${HOME}/.cache}"
+export HF_HOME="${HF_HOME:-${XDG_CACHE_HOME}/huggingface}"
 export HF_ENDPOINT="${HF_ENDPOINT:-https://huggingface.co}"
 export HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
 export HF_HUB_ENABLE_HF_TRANSFER="${HF_HUB_ENABLE_HF_TRANSFER:-0}"

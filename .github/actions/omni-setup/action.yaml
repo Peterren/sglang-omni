@@ -21,7 +21,7 @@ runs:
       shell: bash
       run: |
         echo "HOME=${OMNI_CI_HOME}" >> "${GITHUB_ENV}"
-        echo "HF_HOME=/github/home/.cache/huggingface" >> "${GITHUB_ENV}"
+        echo "HF_HOME=${OMNI_CI_HOME}/.cache/huggingface" >> "${GITHUB_ENV}"
         echo "MODELSCOPE_CACHE=/github/home/.cache/modelscope" >> "${GITHUB_ENV}"
         echo "XDG_CACHE_HOME=${OMNI_CI_HOME}/.cache" >> "${GITHUB_ENV}"
         echo "CUDA_CACHE_PATH=${OMNI_CI_HOME}/.nv/ComputeCache" >> "${GITHUB_ENV}"

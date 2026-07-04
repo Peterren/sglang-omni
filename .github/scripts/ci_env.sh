@@ -3,7 +3,7 @@
 set -a
 export OMNI_CI_HOME="${OMNI_CI_HOME:-/github/home/calibration}"
 export HOME="${OMNI_CI_HOME}"
-export HF_HOME=/github/home/.cache/huggingface
+export HF_HOME="${OMNI_CI_HOME}/.cache/huggingface"
 export MODELSCOPE_CACHE=/github/home/.cache/modelscope
 export XDG_CACHE_HOME="${OMNI_CI_HOME}/.cache"
 export CUDA_CACHE_PATH="${OMNI_CI_HOME}/.nv/ComputeCache"
