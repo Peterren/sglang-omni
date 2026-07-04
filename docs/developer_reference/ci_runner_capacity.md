@@ -21,6 +21,28 @@ not start more `self-hosted,h100` workers on the same host unless each worker
 has an explicit non-overlapping GPU slice and the workflows route jobs to that
 slice.
 
+## Exclusivity Requirement
+
+Omni CI benchmark and accuracy gates must treat the assigned GPU slice as
+exclusive for the full job lifetime. A clean pre-stage GPU is not enough: if a
+new unrelated process attaches to one of the same GPUs after the benchmark has
+started, throughput, latency, outlier WER, and CUDA memory behavior can become
+untrustworthy.
+
+Without Slurm or another resource scheduler, exclusivity has to be enforced at
+the host and runner layers:
+
+- Host policy reserves the CI GPU slice. Non-CI users and ad-hoc containers
+  must not be able to allocate those GPU device nodes while the runner is
+  online.
+- GitHub runner labels map to one specific slice. Actions should never be able
+  to schedule two workers onto the same physical GPUs.
+- CI preflight and post-stage cleanup remain useful, but they are verification
+  and recovery tools. They do not provide exclusive scheduling by themselves.
+
+`nvidia-smi` cleanup and memory thresholds catch stale processes before or after
+a stage. They cannot stop a new process from starting mid-stage.
+
 ## Queue Diagnosis
 
 Use the run jobs API to distinguish runner queue time from benchmark runtime:
@@ -66,6 +88,38 @@ Avoid registering extra workers with only the generic `h100` label on the same
 host while the workflows still hard-code `NVIDIA_VISIBLE_DEVICES=6,7`; that
 can schedule concurrent jobs onto the same GPUs.
 
+## Non-Slurm Isolation Options
+
+Use these options in order of strength.
+
+1. **Dedicated host or dedicated device nodes.** Reserve the CI GPUs for the
+   runner at the host policy level. On shared hosts, use device permissions,
+   udev rules, container runtime policy, or an equivalent access-control layer
+   so normal users and non-CI containers cannot open the reserved `/dev/nvidia*`
+   nodes. This is the only practical way to protect against non-cooperative
+   processes without Slurm. It does not protect against root or users with
+   unrestricted Docker access.
+2. **One runner per non-overlapping slice.** Register one Actions worker per
+   reserved slice and give it a slice-specific label. Update workflows so the
+   label and `NVIDIA_VISIBLE_DEVICES` agree. For example, a `h100-gpu67` runner
+   should be the only worker allowed to expose devices `6,7`.
+3. **Host lock as defense in depth.** A shared `flock` file can serialize CI
+   jobs that run on the same host when every runner wrapper and maintenance
+   script respects it. This prevents accidental overlap among cooperative CI
+   workers, but it does not stop an external process that ignores the lock.
+4. **Fail-fast contamination checks.** At job start, periodically during long
+   benchmarks, and during teardown, inspect `nvidia-smi --query-compute-apps`
+   for unexpected PIDs on the assigned GPUs. If a foreign PID appears, fail the
+   job and mark the run contaminated instead of publishing performance numbers.
+
+Avoid GPU `EXCLUSIVE_PROCESS` compute mode for the current Omni CI lane unless
+each stage has been audited to use only one CUDA process per GPU. The staged
+router/worker topology can involve multiple processes, so driver-level
+exclusive-process mode may reject legitimate CI children.
+
+Do not use MPS as an isolation mechanism. MPS improves sharing; it does not
+make benchmark results exclusive.
+
 ## Runner Maintenance Checklist
 
 Before marking runner capacity as healthy, verify:
@@ -74,10 +128,15 @@ Before marking runner capacity as healthy, verify:
   labels.
 - Each worker has a distinct runner name and actions-runner directory.
 - Each worker's container GPU slice is explicit and non-overlapping.
+- The assigned GPU slice is reserved against non-CI processes for the whole job
+  lifetime, not just cleaned before stage start.
 - The runner can mount `/dev/shm`, `/github/home`, and the shared Hugging Face
   cache with the same paths expected by Omni CI.
 - A manual MOSS Omni CI dispatch can reach `setup - omni venv` without waiting
   tens of minutes when the assigned GPU slice is idle.
+- A contamination drill that starts a foreign process on the slice either fails
+  to acquire the GPU or causes the CI guard to fail the run before any numbers
+  are treated as valid.
 
 If the project intentionally keeps a single H100 worker slot, treat long
 `self-hosted,h100` queues as expected capacity limits and say so in PR reviews
