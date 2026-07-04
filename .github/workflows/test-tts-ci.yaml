@@ -39,6 +39,8 @@ jobs:
         --user 1004:1004
         -e NVIDIA_VISIBLE_DEVICES=6,7
         -v /dev/shm:/dev/shm
+        -v /data/cache/huggingface:/github/home/.cache/huggingface
+        -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,6 +81,8 @@ jobs:
         --user 1004:1004
         -e NVIDIA_VISIBLE_DEVICES=6,7
         -v /dev/shm:/dev/shm
+        -v /data/cache/huggingface:/github/home/.cache/huggingface
+        -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -142,6 +146,8 @@ jobs:
         --user 1004:1004
         -e NVIDIA_VISIBLE_DEVICES=6,7
         -v /dev/shm:/dev/shm
+        -v /data/cache/huggingface:/github/home/.cache/huggingface
+        -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -195,6 +201,8 @@ jobs:
         --user 1004:1004
         -e NVIDIA_VISIBLE_DEVICES=6,7
         -v /dev/shm:/dev/shm
+        -v /data/cache/huggingface:/github/home/.cache/huggingface
+        -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
