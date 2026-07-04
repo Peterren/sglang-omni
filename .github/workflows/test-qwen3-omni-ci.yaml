@@ -18,7 +18,7 @@ env:
   OMNI_CI_HOME: >-
     ${{ inputs.omni_ci_home != ''
         && inputs.omni_ci_home
-        || format('/github/home/run-{0}', github.run_id) }}
+        || format('/data/omni-ci/run-{0}', github.run_id) }}
   PYTORCH_ALLOC_CONF: expandable_segments:True
 
 # Invoked by omni-ci.yaml after TTS CI. Restores omni only.
@@ -40,6 +40,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -80,6 +81,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -137,6 +139,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -181,6 +184,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -225,6 +229,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -270,6 +275,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -314,6 +320,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -358,6 +365,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -402,6 +410,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -448,6 +457,7 @@ jobs:
         -e NVIDIA_VISIBLE_DEVICES=6,7
         --cap-add=SYS_PTRACE
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:

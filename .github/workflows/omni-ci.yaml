@@ -9,10 +9,15 @@ name: Omni CI
 # failed unit/benchmark suite does not skip later suites. Only setup blocks all
 # downstream model CI.
 #
-# PR-scoped homes (/github/home/pr-<N>) persist on the runner for reuse across
+# PR-scoped homes (/data/omni-ci/pr-<N>) persist on the runner for reuse across
 # pushes (runner TTL, e.g. 3 days). reconcile_omni_ci_env.sh validates fingerprint,
 # pins, and imports before reuse; otherwise rebuilds OMNI_CI_HOME.
 # cleanup-pr-ci-home-on-close.yaml removes the home when the PR closes.
+#
+# OMNI_CI_HOME must live under /data/omni-ci (a persistent host bind mount), NOT
+# under /github/home: the runner's TempDirectoryManager wipes /github/home
+# (= _work/_temp/_github_home, its RUNNER_TEMP) at every job boundary, which would
+# delete the prepared venv between jobs and force every stage to rebuild.
 
 
 on:
@@ -39,8 +44,8 @@ permissions:
 env:
   OMNI_CI_HOME: >-
     ${{ github.event_name == 'pull_request'
-        && format('/github/home/pr-{0}', github.event.pull_request.number)
-        || format('/github/home/run-{0}', github.run_id) }}
+        && format('/data/omni-ci/pr-{0}', github.event.pull_request.number)
+        || format('/data/omni-ci/run-{0}', github.run_id) }}
   TTS_MODEL_PATH: bosonai/higgs-tts-3-4b
   MOSS_TTS_MODEL_PATH: OpenMOSS-Team/MOSS-TTS-Local-Transformer-v1.5
   QWEN3_ASR_MODEL_PATH: Qwen/Qwen3-ASR-1.7B
@@ -120,6 +125,7 @@ jobs:
         --rm
         -e NVIDIA_VISIBLE_DEVICES=6,7
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
@@ -243,8 +249,8 @@ jobs:
     with:
       omni_ci_home: >-
         ${{ github.event_name == 'pull_request'
-            && format('/github/home/pr-{0}', github.event.pull_request.number)
-            || format('/github/home/run-{0}', github.run_id) }}
+            && format('/data/omni-ci/pr-{0}', github.event.pull_request.number)
+            || format('/data/omni-ci/run-{0}', github.run_id) }}
     secrets: inherit
 
   tts-ci:
@@ -259,8 +265,8 @@ jobs:
       tts_ci_model: ${{ needs.pick-tts-model.outputs.tts_ci_model }}
       omni_ci_home: >-
         ${{ github.event_name == 'pull_request'
-            && format('/github/home/pr-{0}', github.event.pull_request.number)
-            || format('/github/home/run-{0}', github.run_id) }}
+            && format('/data/omni-ci/pr-{0}', github.event.pull_request.number)
+            || format('/data/omni-ci/run-{0}', github.run_id) }}
     secrets: inherit
 
   qwen3-omni-ci:
@@ -273,8 +279,8 @@ jobs:
     with:
       omni_ci_home: >-
         ${{ github.event_name == 'pull_request'
-            && format('/github/home/pr-{0}', github.event.pull_request.number)
-            || format('/github/home/run-{0}', github.run_id) }}
+            && format('/data/omni-ci/pr-{0}', github.event.pull_request.number)
+            || format('/data/omni-ci/run-{0}', github.run_id) }}
     secrets: inherit
 
   pr-test:
@@ -286,8 +292,8 @@ jobs:
     with:
       omni_ci_home: >-
         ${{ github.event_name == 'pull_request'
-            && format('/github/home/pr-{0}', github.event.pull_request.number)
-            || format('/github/home/run-{0}', github.run_id) }}
+            && format('/data/omni-ci/pr-{0}', github.event.pull_request.number)
+            || format('/data/omni-ci/run-{0}', github.run_id) }}
     secrets: inherit
 
   cleanup:
@@ -305,6 +311,7 @@ jobs:
         --rm
         -e NVIDIA_VISIBLE_DEVICES=6,7
         -v /dev/shm:/dev/shm
+        -v /data/omni-ci:/data/omni-ci
         -v /data/cache/huggingface:/github/home/.cache/huggingface
         -v /data/cache/huggingface:/root/.cache/huggingface
     steps:
