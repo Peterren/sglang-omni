@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 from typing import Any
 
@@ -105,7 +106,9 @@ class FishS2ProEngineBuilder(TtsEngineBuilder):
             server_args.enable_torch_compile = False
 
     def make_model_runner(self, model_worker: Any, output_proc: Any) -> Any:
-        from sglang_omni.models.fishaudio_s2_pro import model_runner as model_runner_mod
+        model_runner_mod = importlib.import_module(
+            "sglang_omni.models.fishaudio_s2_pro.model_runner"
+        )
 
         return model_runner_mod.FishS2ProModelRunner(model_worker, output_proc)
 
@@ -129,9 +132,11 @@ class FishS2ProEngineBuilder(TtsEngineBuilder):
         result_adapter: Any,
     ) -> Any:
         del model_worker, model_config
-        from sglang_omni.models.fishaudio_s2_pro.fish_scheduler import FishScheduler
+        fish_scheduler_mod = importlib.import_module(
+            "sglang_omni.models.fishaudio_s2_pro.fish_scheduler"
+        )
 
-        return FishScheduler(
+        return fish_scheduler_mod.FishScheduler(
             tree_cache=tree_cache,
             req_to_token_pool=req_to_token_pool,
             token_to_kv_pool_allocator=token_to_kv_pool_allocator,
