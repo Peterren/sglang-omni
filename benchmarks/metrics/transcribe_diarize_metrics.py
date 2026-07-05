@@ -557,8 +557,7 @@ def _compute_timestamp_der(
     collar: float = 0.0,
 ) -> _TimestampDerAggregate:
     per_sample = [
-        _timestamp_der_validity(reference, prediction)
-        for reference, prediction in rows
+        _timestamp_der_validity(reference, prediction) for reference, prediction in rows
     ]
     valid_items = [
         (index, reference, prediction)
@@ -791,11 +790,7 @@ def _timestamp_der_one(
             for start, end, _speaker in reference_segments + prediction_segments
             for point in (start, end)
         }
-        | {
-            point
-            for start, end in collar_regions
-            for point in (start, end)
-        }
+        | {point for start, end in collar_regions for point in (start, end)}
     )
 
     total = 0.0
