@@ -260,7 +260,16 @@ def managed_omni_server(
     logger.info(f"Starting server: {' '.join(cmd)}")
     if log_file is not None:
         log_file.parent.mkdir(parents=True, exist_ok=True)
-    proc = start_server_from_cmd(cmd, log_file, port, timeout=timeout)
+    try:
+        proc = start_server_from_cmd(cmd, log_file, port, timeout=timeout)
+    except Exception:
+        if wait_for_gpu_release:
+            logger.info("Server startup failed; running GPU cleanup before raising")
+            try:
+                wait_for_gpu_memory_release()
+            except Exception:
+                logger.exception("GPU cleanup failed after server startup failure")
+        raise
     try:
         yield
     finally:

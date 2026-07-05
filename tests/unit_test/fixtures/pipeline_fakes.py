@@ -265,6 +265,10 @@ def make_scheduler_accepting_gpu_id(gpu_id: int = -1, **kwargs: Any) -> FakeSche
     return scheduler
 
 
+def raising_scheduler_factory(**_: Any) -> FakeScheduler:
+    raise RuntimeError("scheduler factory failed")
+
+
 def identity_route(request_id: str, output: Any) -> str:
     del request_id, output
     return "aggregate"
