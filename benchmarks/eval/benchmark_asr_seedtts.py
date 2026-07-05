@@ -12,11 +12,16 @@ Usage:
     # Download the test set once:
     python -m benchmarks.dataset.prepare --dataset seedtts
 
-    # Launch Qwen3-ASR (DP=2 to match TTS CI):
-    python -m sglang_omni.cli serve \
-        --model-path Qwen/Qwen3-ASR-1.7B \
-        --dp-size 2 \
-        --port 8000
+    # Launch Qwen3-ASR behind the router, matching ASR CI
+    python -m sglang_omni_router.serve \
+        --host 0.0.0.0 \
+        --port 8000 \
+        --launcher-config examples/configs/qwen3_asr_router.yaml \
+        --policy least_request \
+        --health-success-threshold 1 \
+        --health-failure-threshold 2 \
+        --health-check-interval-secs 2 \
+        --log-level info
 
     # Sweep the issue's matrix (3 repeats each) over the full SeedTTS EN set:
     python -m benchmarks.eval.benchmark_asr_seedtts \
