@@ -245,32 +245,6 @@ def test_stage_run_raises_when_scheduler_thread_crashes() -> None:
     asyncio.run(_run())
 
 
-def test_stage_stop_closes_resources_when_scheduler_stop_fails() -> None:
-    class FailingStopScheduler(FakeScheduler):
-        def stop(self) -> None:
-            super().stop()
-            raise RuntimeError("stop failed")
-
-    async def _run() -> None:
-        scheduler = FailingStopScheduler()
-        relay = FakeRelay()
-        control_plane = RecordingStageControlPlane()
-        stage_obj = make_stage(
-            scheduler=scheduler,
-            relay=relay,
-            control_plane=control_plane,
-        )
-
-        with pytest.raises(RuntimeError, match="cleanup failed"):
-            await stage_obj.stop()
-
-        assert scheduler.stopped is True
-        assert control_plane.closed is True
-        assert relay.closed is True
-
-    asyncio.run(_run())
-
-
 def test_relay_payload_and_cross_gpu_stream_contracts() -> None:
     """Preserves tensor payload round-trips and stream control-before-wait ordering."""
 

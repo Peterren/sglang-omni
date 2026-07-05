@@ -455,27 +455,17 @@ def _run_process(
             )
         local_dispatcher.register_many(stages)
         asyncio.run(_start_and_run())
-    except (KeyboardInterrupt, SystemExit):
-        _cleanup_failed_stage_process(
+    except BaseException:
+        _cleanup_constructed_stages(
             stages,
-            spec,
-            log,
-            reason=f"stage process {spec.process_name} termination",
-        )
-        raise
-    except Exception:
-        _cleanup_failed_stage_process(
-            stages,
-            spec,
             log,
             reason=f"stage process {spec.process_name} failure",
         )
         raise
 
 
-def _cleanup_failed_stage_process(
+def _cleanup_constructed_stages(
     stages: list[Stage],
-    spec: StageWorkerProcessSpec,
     log: logging.Logger,
     *,
     reason: str,
@@ -498,13 +488,6 @@ def _cleanup_failed_stage_process(
             )
         finally:
             stage.scheduler = None
-
-    _destroy_torch_distributed_process_group(log)
-    _reclaim_process_cuda_memory(
-        _stage_gpu_ids(spec.stage_specs),
-        log,
-        reason=reason,
-    )
 
 
 def _stage_gpu_ids(stage_specs: Iterable[StageLaunchConfig]) -> list[int]:
@@ -539,19 +522,20 @@ def _reclaim_process_cuda_memory(
     reason: str,
 ) -> None:
     gpu_id_list = list(gpu_ids)
+    if not gpu_id_list:
+        return
     gc.collect()
     try:
         import torch
 
         if not torch.cuda.is_available():
             return
-        target_gpu_ids = gpu_id_list or list(range(torch.cuda.device_count()))
         log.warning(
             "Reclaiming CUDA memory after %s on gpu_ids=%s",
             reason,
-            target_gpu_ids,
+            gpu_id_list,
         )
-        for gpu_id in target_gpu_ids:
+        for gpu_id in gpu_id_list:
             try:
                 torch.cuda.set_device(int(gpu_id))
                 with suppress(Exception):
@@ -571,7 +555,7 @@ def _reclaim_process_cuda_memory(
         log.warning(
             "CUDA memory reclaim complete after %s on gpu_ids=%s",
             reason,
-            target_gpu_ids,
+            gpu_id_list,
         )
     except Exception as exc:
         log.warning(
@@ -791,28 +775,9 @@ def _construct_scheduler(
     if gpu_id is None:
         return factory(**factory_args)
 
-    try:
-        with gpu_startup_lock(int(gpu_id)) as lock_path:
-            log.info(
-                f"Acquired GPU startup lock for stage {spec.stage_name}: {lock_path}"
-            )
-            return factory(**factory_args)
-    except (KeyboardInterrupt, SystemExit):
-        _destroy_torch_distributed_process_group(log)
-        _reclaim_process_cuda_memory(
-            [int(gpu_id)],
-            log,
-            reason=f"scheduler construction termination for stage {spec.stage_name}",
-        )
-        raise
-    except Exception:
-        _destroy_torch_distributed_process_group(log)
-        _reclaim_process_cuda_memory(
-            [int(gpu_id)],
-            log,
-            reason=f"scheduler construction failure for stage {spec.stage_name}",
-        )
-        raise
+    with gpu_startup_lock(int(gpu_id)) as lock_path:
+        log.info(f"Acquired GPU startup lock for stage {spec.stage_name}: {lock_path}")
+        return factory(**factory_args)
 
 
 def get_stage_process_env(

@@ -123,12 +123,6 @@ class _RecordingLog:
             message = message % args
         self.messages.append(message)
 
-    def warning(self, message: str, *args, **kwargs) -> None:
-        del kwargs
-        if args:
-            message = message % args
-        self.messages.append(message)
-
 
 def test_gpu_scheduler_construction_uses_startup_lock(monkeypatch) -> None:
     """GPU stage factory construction is serialized per visible device."""
@@ -149,86 +143,6 @@ def test_gpu_scheduler_construction_uses_startup_lock(monkeypatch) -> None:
 
     assert isinstance(scheduler, FakeScheduler)
     assert seen_gpu_ids == [0]
-
-
-def test_gpu_scheduler_construction_failure_reclaims_cuda_memory(monkeypatch) -> None:
-    """Startup failure must explicitly drop allocator state before child exit."""
-    seen_gpu_ids: list[int] = []
-    reclaims: list[tuple[list[int], str]] = []
-
-    @contextmanager
-    def _fake_lock(gpu_id: int):
-        seen_gpu_ids.append(gpu_id)
-        yield Path("/tmp/test.lock")
-
-    def _fake_reclaim(gpu_ids, log, *, reason: str) -> None:
-        del log
-        reclaims.append((list(gpu_ids), reason))
-
-    monkeypatch.setattr(stage_workers, "gpu_startup_lock", _fake_lock)
-    monkeypatch.setattr(stage_workers, "_reclaim_process_cuda_memory", _fake_reclaim)
-    monkeypatch.setattr(
-        stage_workers,
-        "_destroy_torch_distributed_process_group",
-        lambda log: None,
-    )
-    spec = StageLaunchConfig(
-        stage_name="asr",
-        factory=fake_factory_path("raising_scheduler_factory"),
-        gpu_id=1,
-    )
-
-    with pytest.raises(RuntimeError, match="scheduler factory failed"):
-        stage_workers._construct_scheduler(spec, 1, _RecordingLog())
-
-    assert seen_gpu_ids == [1]
-    assert reclaims == [
-        ([1], "scheduler construction failure for stage asr"),
-    ]
-
-
-def test_failed_stage_process_cleanup_stops_stages_and_reclaims_cuda(
-    monkeypatch,
-) -> None:
-    reclaims: list[tuple[list[int], str]] = []
-    scheduler = FakeScheduler()
-
-    class _FakeStage:
-        name = "asr"
-
-        def __init__(self) -> None:
-            self.scheduler = scheduler
-            self._running = True
-            self.stopped = False
-
-        async def stop(self) -> None:
-            self.stopped = True
-            self._running = False
-            self.scheduler.stop()
-
-    def _fake_reclaim(gpu_ids, log, *, reason: str) -> None:
-        del log
-        reclaims.append((list(gpu_ids), reason))
-
-    monkeypatch.setattr(stage_workers, "_reclaim_process_cuda_memory", _fake_reclaim)
-    monkeypatch.setattr(
-        stage_workers,
-        "_destroy_torch_distributed_process_group",
-        lambda log: None,
-    )
-    stage = _FakeStage()
-    spec = _worker_spec(StageLaunchConfig(stage_name="asr", gpu_id=0))
-
-    stage_workers._cleanup_failed_stage_process(
-        [stage],
-        spec,
-        _RecordingLog(),
-        reason="startup failure",
-    )
-
-    assert stage.stopped is True
-    assert scheduler.stopped is True
-    assert reclaims == [([0], "startup failure")]
 
 
 def test_scheduler_applies_child_defaults_without_overriding_explicit_args(
