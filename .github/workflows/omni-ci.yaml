@@ -154,20 +154,6 @@ jobs:
         with:
           venv-name: omni
 
-      - name: Verify HF token can access all CI models
-        shell: bash
-        env:
-          HF_ENDPOINT: https://huggingface.co
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          bash .github/scripts/check_hf_model_access.sh omni \
-            Qwen/Qwen3-Omni-30B-A3B-Instruct \
-            marksverdhei/Qwen3-Omni-30B-A3B-FP8 \
-            "${QWEN3_ASR_MODEL_PATH}" \
-            "${MOSS_TRANSCRIBE_DIARIZE_MODEL_PATH}" \
-            "${TTS_MODEL_PATH}" \
-            "${MOSS_TTS_MODEL_PATH}"
-
       - name: Ensure CI model weights
         shell: bash
         env:
