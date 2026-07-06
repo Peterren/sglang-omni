@@ -786,29 +786,26 @@ def apply_partial_start_cli_overrides(
                 "--talker-partial-start currently supports only Qwen3-Omni "
                 f"talker; stage {stage.name!r} uses factory {stage.factory!r}"
             )
-    _apply_stage_factory_args_override(
+    _apply_factory_args_updates(
         pipeline_config,
-        stage_name=stage_name,
-        updates={"enable_partial_start": mode == "on"},
-        reason=f"talker partial-start mode to {mode!r}",
-        flag_name="--talker-partial-start",
+        matching_stages,
+        {"enable_partial_start": mode == "on"},
     )
     return pipeline_config
 
 
-def _apply_stage_factory_args_override(
+def _apply_factory_args_updates(
     pipeline_config: PipelineConfig,
-    *,
-    stage_name: str,
+    stages: list[StageConfig],
     updates: dict[str, object],
-    reason: str,
 ) -> None:
-    matching_stages = _find_matching_stages(
-        pipeline_config,
-        stage_name=stage_name,
-        reason=reason,
-    )
-    for stage in matching_stages:
+    """Apply factory_args + runtime_overrides updates to the given stages.
+
+    Callers compute their own matching stages (by stage_name for partial-start,
+    by factory for decode-mode) and pass them in; the update logic lives here
+    once so a signature change can't miss a copy.
+    """
+    for stage in stages:
         factory_args = dict(stage.factory_args or {})
         factory_args.update(updates)
         stage.factory_args = factory_args
@@ -840,9 +837,6 @@ def apply_decode_mode_cli_overrides(
         updates["async_decode_min_batch_size"] = int(async_lookahead_min_batch_size)
     if not updates:
         return pipeline_config
-    # Match by factory, not by stage name: the async-decode stage is named
-    # "tts_engine" for Higgs / MOSS-TTS-Local but "asr" for
-    # MOSS-Transcribe-Diarize.
     matching_stages = [
         stage
         for stage in pipeline_config.stages
@@ -854,14 +848,7 @@ def apply_decode_mode_cli_overrides(
             f"only {_ASYNC_DECODE_SUPPORTED_MODELS}; no stage in this pipeline "
             "uses a supported factory"
         )
-    for stage in matching_stages:
-        factory_args = dict(stage.factory_args or {})
-        factory_args.update(updates)
-        stage.factory_args = factory_args
-
-        stage_runtime_overrides = pipeline_config.runtime_overrides.get(stage.name)
-        if isinstance(stage_runtime_overrides, dict):
-            stage_runtime_overrides.update(updates)
+    _apply_factory_args_updates(pipeline_config, matching_stages, updates)
     return pipeline_config
 
 

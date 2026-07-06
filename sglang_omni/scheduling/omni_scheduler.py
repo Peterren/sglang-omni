@@ -1696,11 +1696,6 @@ class OmniScheduler:
             return
         keep = [i for i, was_finished in enumerate(pre_finished) if not was_finished]
         if len(keep) < len(batch.reqs):
-            # note (yichi): bugfix — free the decode slot the overrun step
-            # allocated for each dropped row: the request's own KV was already
-            # freed when it finished, and nothing else covers this extra
-            # per-step slot — leaking it drifts allocator state and breaks
-            # bit-reproducibility vs the sync loop.
             self._free_overrun_step_slots(
                 pending_step.forward_batch.out_cache_loc,
                 [i for i, was in enumerate(pre_finished) if was],
@@ -1731,21 +1726,12 @@ class OmniScheduler:
             self._handle_batch_failure(batch, exc)
 
     def _free_overrun_step_slots(self, out_cache_loc, drop_indices) -> None:
-        """Free the per-step decode KV slots allocated for rows whose request
-        already finished or retracted in a prior step (the lookahead overrun).
+        """Free the per-step decode KV slot for rows whose request finished or
+        retracted in a prior step (the lookahead overrun): ``prepare_for_decode``
+        allocated it but ``cache_finished_req`` truncates below it, so it leaks.
 
-        ``prepare_for_decode`` allocated one slot per row for this step and
-        counted it into ``kv_committed_len``. RadixCache's
-        ``cache_finished_req`` frees ``(origin+output)[:kv_committed_len]``,
-        which the actual token count truncates BELOW the overrun slot, so the
-        dropped rows' step slots would otherwise leak.
-
-        Only safe under RadixCache with page_size=1: ChunkCache frees
-        ``req_to_token[:kv_committed_len]`` directly — overrun slot included —
-        so a compensating free here would double-free (two requests would later
-        share one KV slot); paged allocators free whole pages, and the overrun
-        slot's page was already freed with the request's tail tokens. In those
-        configurations the request-side free covers the slot and we skip.
+        Only under RadixCache + page_size=1; ChunkCache/paged already free the slot
+        with the request, so compensating here would double-free — hence the gate.
         """
         if not drop_indices:
             return

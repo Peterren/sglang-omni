@@ -67,7 +67,6 @@ class _PendingStep:
     schedule_batch: Any  # to set .output_ids during resolve
     model_worker_batch: Any  # for the prefill-only finalize branch (unused in decode)
     batch_result: Any  # carries logits_output (device of next_token_ids)
-    n_real: int  # number of real (non-padding) rows this step
 
 
 class ModelRunner:
@@ -212,7 +211,6 @@ class ModelRunner:
             schedule_batch=schedule_batch,
             model_worker_batch=model_worker_batch,
             batch_result=batch_result,
-            n_real=len(scheduler_output.requests),
         )
 
     def execute_resolve(
@@ -486,14 +484,23 @@ class ModelRunner:
     def lookahead_eligible(self, batch: Any) -> bool:
         """Whether this batch may use one-step async-decode lookahead.
 
-        The default ``post_decode_launch`` samples at launch time, one step
-        before resolve appends the previous token to host ``req.output_ids``,
-        so ``_apply_repetition_penalty`` would read a one-token-stale history
-        and systematically diverge from the sync path — route those batches
-        synchronously. A runner whose collect has other sync-only fallbacks
-        overrides this. The scheduler's async gate consults it.
+        The default launch samples one step before resolve appends the previous
+        token to ``req.output_ids`` / the sglang penalizer state, so any sampling
+        term scored by output history (repetition / frequency / presence penalty,
+        ``min_new_tokens``) would read a one-token-stale view and diverge from
+        sync — gate those batches to sync. Over-gating only costs throughput,
+        under-gating is a silent divergence. Runners override for other fallbacks.
         """
-        return all(req.sampling_params.repetition_penalty == 1.0 for req in batch.reqs)
+
+        def _history_free(sp: Any) -> bool:
+            return (
+                sp.repetition_penalty == 1.0
+                and sp.frequency_penalty == 0.0
+                and sp.presence_penalty == 0.0
+                and sp.min_new_tokens == 0
+            )
+
+        return all(_history_free(req.sampling_params) for req in batch.reqs)
 
     def post_process_outputs(
         self,
@@ -506,22 +513,14 @@ class ModelRunner:
     def post_decode_launch(
         self, result: Any, forward_batch: Any, requests: list
     ) -> Any:
-        """Async-decode GPU half of ``post_decode``: run the step's collect,
-        publish ``result.next_token_ids``, and return the resolve payload
-        (``launch_buf``), either a device-side correctness snapshot of the
-        published state (no host copy) or a pinned host staging buffer an async
-        host copy filled; only the latter provides host-D2H overlap. The caller
-        records a CUDA event immediately after publication.
+        """Async-decode GPU half of ``post_decode``: sample now, publish
+        ``result.next_token_ids``, and return the resolve payload (``launch_buf``);
+        the caller records a CUDA event right after.
 
-        Default (plain-LM) implementation: sample on GPU now (the same
-        ``_sample_next_token_ids`` the sync path runs inside ``_finalize``),
-        then start a non-blocking D2H copy of the sampled ids into a pinned
-        ping-pong staging buffer. The base runner records the CUDA event right
-        after, so ``event.query()`` means the ids landed on the host. The
-        snapshot is required: the sampler output can alias step-reused buffers
-        that the next launch overwrites before this step's lagged resolve.
-        Runners whose decode collect is more than next_token_ids (codec models)
-        override this together with ``post_decode_resolve``.
+        Default (plain-LM): sample via ``_sample_next_token_ids`` and snapshot the
+        ids into a pinned ping-pong host buffer (required — the sampler output can
+        alias step-reused buffers the next launch overwrites). Codec runners whose
+        collect is more than next_token_ids override this with ``post_decode_resolve``.
         """
         if not requests:
             return None
@@ -543,13 +542,10 @@ class ModelRunner:
         schedule_batch: Any,
         requests: list,
     ) -> None:
-        """Async-decode host half of ``post_decode``: read ``launch_buf`` (the
-        launch's published collect, a device snapshot or pinned host staging)
-        and run the per-request collect loop, setting ``result.next_token_ids``.
-
-        Default (plain-LM): point ``result.next_token_ids`` at the pinned host
-        snapshot; the caller already waited on the launch event, so the copy is
-        complete and the shared ``_finalize`` tail reads it without a GPU sync.
+        """Async-decode host half of ``post_decode``: read ``launch_buf`` and set
+        ``result.next_token_ids``. Default (plain-LM): point it at the pinned host
+        snapshot — the caller already waited on the launch event, so ``_finalize``
+        reads it without a GPU sync.
         """
         del forward_batch, schedule_batch
         if launch_buf is None or not requests:
