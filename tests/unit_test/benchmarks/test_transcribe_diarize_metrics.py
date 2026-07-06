@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from argparse import Namespace
 from pathlib import Path
 
 import pytest
 
+from benchmarks.benchmarker.data import RequestResult
 from benchmarks.metrics.transcribe_diarize_metrics import (
     DiarizationRow,
+    _levenshtein_distance,
     clean_no_speaker,
     compute_diarization_metrics,
     split_clean_by_speaker,
@@ -18,12 +21,28 @@ from benchmarks.metrics.transcribe_diarize_metrics import (
 EVAL_SCRIPT_PATH = (
     Path(__file__).resolve().parents[3] / "benchmarks/eval/eval_transcribe_diarize.py"
 )
+LONG_EVAL_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "benchmarks/eval/eval_transcribe_diarize_long.py"
+)
 
 
 def _load_eval_module():
     spec = importlib.util.spec_from_file_location(
         "eval_transcribe_diarize_entry",
         EVAL_SCRIPT_PATH,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_long_eval_module():
+    spec = importlib.util.spec_from_file_location(
+        "eval_transcribe_diarize_long_entry",
+        LONG_EVAL_SCRIPT_PATH,
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -53,6 +72,25 @@ def test_split_clean_by_speaker_preserves_spoken_event_words() -> None:
         "[S1]": "我笑了",
         "[S2]": "ilovemusic",
     }
+
+
+@pytest.mark.parametrize(
+    ("reference", "prediction", "expected"),
+    [
+        ("", "", 0),
+        ("abc", "", 3),
+        ("", "abc", 3),
+        ("kitten", "sitting", 3),
+        ("你好世界", "你号世", 2),
+        ("[S1]abc", "abc[S2]", 7),
+    ],
+)
+def test_levenshtein_distance_matches_expected(
+    reference: str,
+    prediction: str,
+    expected: int,
+) -> None:
+    assert _levenshtein_distance(reference, prediction) == expected
 
 
 def test_compute_diarization_metrics_includes_timestamp_der_for_exact_match() -> None:
@@ -199,3 +237,53 @@ def test_extract_prediction_text_prefers_top_level_text_for_timestamps() -> None
     }
 
     assert extract_prediction_text(payload) == payload["text"]
+
+
+def test_long_eval_saves_and_loads_raw_asr_results(tmp_path: Path) -> None:
+    module = _load_long_eval_module()
+
+    args = Namespace(
+        repo_id="zhaochenyang20/AISHELL4",
+        split="validation",
+        audio_column="audio",
+        expected_column="transcription",
+        model_path="OpenMOSS-Team/MOSS-Transcribe-Diarize",
+        base_url=None,
+        host="127.0.0.1",
+        port=8001,
+        concurrency=16,
+        warmup=0,
+        request_rate=float("inf"),
+        request_timeout_s=1800,
+        max_new_tokens=65536,
+        max_samples=20,
+        output_dir=str(tmp_path),
+        asr_results_file="raw.json",
+    )
+    samples = [
+        module.Movies800Sample(
+            sample_id="sample-1",
+            audio_path="/tmp/sample-1.wav",
+            expected_text="[0.00][S01]hello[1.00]",
+        )
+    ]
+    outputs = [
+        RequestResult(
+            request_id="sample-1",
+            text="[0.00][S01]hello[1.00]",
+            is_success=True,
+            latency_s=1.2,
+            audio_duration_s=4.0,
+            rtf=0.3,
+        )
+    ]
+
+    path = module._save_asr_results(args, samples, outputs, wall_clock_s=1.3)
+    loaded_samples, loaded_outputs, loaded_config = module._load_asr_results(path)
+
+    assert loaded_config["request_rate"] == "inf"
+    assert loaded_config["max_new_tokens"] == 65536
+    assert loaded_samples == samples
+    assert loaded_outputs[0].request_id == "sample-1"
+    assert loaded_outputs[0].text == "[0.00][S01]hello[1.00]"
+    assert loaded_outputs[0].is_success is True

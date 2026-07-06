@@ -13,10 +13,12 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import mimetypes
 import sys
 import time
 from collections.abc import Mapping
+from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Final
 
@@ -46,6 +48,7 @@ from benchmarks.tasks.transcribe_diarize import (
 AISHELL4_REPO_ID: Final[str] = "zhaochenyang20/AISHELL4"
 MODEL_PATH: Final[str] = "OpenMOSS-Team/MOSS-Transcribe-Diarize"
 RESULTS_FILE: Final[str] = "transcribe_diarize_results.json"
+ASR_RESULTS_FILE: Final[str] = "transcribe_diarize_asr_results.json"
 DEFAULT_OUTPUT_DIR: Final[str] = "results/moss_transcribe_diarize_aishell4_long"
 DEFAULT_SERVER_MEM_FRACTION_STATIC: Final[float] = 0.80
 SUMMARY_ORDER: Final[tuple[str, ...]] = (
@@ -246,6 +249,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--server-timeout-s", type=int, default=600)
     parser.add_argument("--max-samples", type=int, default=20)
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        "--asr-results-file",
+        default=ASR_RESULTS_FILE,
+        help=(
+            "Filename under --output-dir where raw ASR request results are saved "
+            "immediately after generation finishes."
+        ),
+    )
+    parser.add_argument(
+        "--reuse-asr-results",
+        default=None,
+        help=(
+            "Load a previously saved raw ASR results JSON and only recompute "
+            "post-processing metrics."
+        ),
+    )
     parser.add_argument("--use-existing-server", action="store_true")
     parser.add_argument("--disable-tqdm", action="store_true")
     parser.add_argument(
@@ -287,15 +306,18 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     try:
         args = parse_args()
-        max_samples = args.max_samples if args.max_samples > 0 else sys.maxsize
-        samples = load_movies800_samples(
-            repo_id=args.repo_id,
-            split=args.split,
-            audio_column=args.audio_column,
-            expected_column=args.expected_column,
-            max_samples=max_samples,
-        )
-        payload, output_path = _run_with_or_without_server(args, samples)
+        if args.reuse_asr_results:
+            payload, output_path = _run_from_asr_results(args)
+        else:
+            max_samples = args.max_samples if args.max_samples > 0 else sys.maxsize
+            samples = load_movies800_samples(
+                repo_id=args.repo_id,
+                split=args.split,
+                audio_column=args.audio_column,
+                expected_column=args.expected_column,
+                max_samples=max_samples,
+            )
+            payload, output_path = _run_with_or_without_server(args, samples)
     except (FileNotFoundError, OSError, RuntimeError, TimeoutError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -346,6 +368,7 @@ def _run_with_or_without_server(
                 max_new_tokens=args.max_new_tokens,
             )
         )
+        _save_asr_results(args, samples, outputs, wall_clock_s)
         payload = _build_payload(args, samples, outputs, wall_clock_s)
         output_path = save_json_results(
             json.loads(json.dumps(payload)),
@@ -379,6 +402,7 @@ def _run_with_or_without_server(
                 max_new_tokens=args.max_new_tokens,
             )
         )
+        _save_asr_results(args, samples, outputs, wall_clock_s)
         payload = _build_payload(args, samples, outputs, wall_clock_s)
         output_path = save_json_results(
             json.loads(json.dumps(payload)),
@@ -386,6 +410,25 @@ def _run_with_or_without_server(
             RESULTS_FILE,
         )
         return payload, output_path
+
+
+def _run_from_asr_results(args: argparse.Namespace) -> tuple[EvaluationPayload, str]:
+    samples, outputs, config = _load_asr_results(args.reuse_asr_results)
+    payload = build_evaluation_payload(
+        samples=samples,
+        outputs=outputs,
+        wall_clock_s=float(config.get("wall_clock_s", 0.0) or 0.0),
+        model_path=str(config.get("model_path", args.model_path)),
+        concurrency=int(config.get("concurrency", args.concurrency)),
+        repo_id=str(config.get("repo_id", args.repo_id)),
+        split=str(config.get("split", args.split)),
+    )
+    output_path = save_json_results(
+        json.loads(json.dumps(payload)),
+        args.output_dir,
+        RESULTS_FILE,
+    )
+    return payload, output_path
 
 
 def _base_url(args: argparse.Namespace) -> str:
@@ -443,6 +486,81 @@ def _build_payload(
         repo_id=args.repo_id,
         split=args.split,
     )
+
+
+def _save_asr_results(
+    args: argparse.Namespace,
+    samples: list[Movies800Sample],
+    outputs: list[RequestResult],
+    wall_clock_s: float,
+) -> str:
+    payload = {
+        "schema_version": 1,
+        "config": {
+            "repo_id": args.repo_id,
+            "split": args.split,
+            "audio_column": args.audio_column,
+            "expected_column": args.expected_column,
+            "model_path": args.model_path,
+            "base_url": _base_url(args),
+            "concurrency": args.concurrency,
+            "warmup": args.warmup,
+            "request_rate": _json_safe_float(args.request_rate),
+            "request_timeout_s": args.request_timeout_s,
+            "max_new_tokens": args.max_new_tokens,
+            "max_samples": args.max_samples,
+            "wall_clock_s": wall_clock_s,
+        },
+        "samples": [asdict(sample) for sample in samples],
+        "outputs": [asdict(output) for output in outputs],
+    }
+    path = save_json_results(payload, args.output_dir, args.asr_results_file)
+    print(f"Raw ASR results saved before metric computation: {path}", flush=True)
+    return path
+
+
+def _load_asr_results(
+    path: str,
+) -> tuple[list[Movies800Sample], list[RequestResult], dict[str, object]]:
+    with open(path) as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"ASR results file {path!r} must contain a JSON object")
+    samples_payload = payload.get("samples")
+    outputs_payload = payload.get("outputs")
+    config_payload = payload.get("config", {})
+    if not isinstance(samples_payload, list) or not isinstance(outputs_payload, list):
+        raise ValueError(
+            f"ASR results file {path!r} must contain 'samples' and 'outputs' lists"
+        )
+    if not isinstance(config_payload, dict):
+        raise ValueError(f"ASR results file {path!r} has invalid 'config'")
+    samples = [
+        Movies800Sample(
+            sample_id=str(item["sample_id"]),
+            audio_path=str(item["audio_path"]),
+            expected_text=str(item["expected_text"]),
+        )
+        for item in samples_payload
+        if isinstance(item, Mapping)
+    ]
+    result_fields = {field.name for field in fields(RequestResult)}
+    outputs: list[RequestResult] = []
+    for item in outputs_payload:
+        if not isinstance(item, Mapping):
+            continue
+        result = RequestResult()
+        for key in result_fields:
+            if key in item:
+                setattr(result, key, item[key])
+        outputs.append(result)
+    return samples, outputs, config_payload
+
+
+def _json_safe_float(value: float) -> float | str:
+    if isinstance(value, float) and math.isinf(value):
+        return "inf" if value > 0 else "-inf"
+    return value
 
 
 def _build_metrics_section(
