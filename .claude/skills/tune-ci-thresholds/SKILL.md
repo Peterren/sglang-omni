@@ -1,6 +1,6 @@
 ---
 name: tune-ci-thresholds
-description: Run CI tests N times per stage on the H100 CI-reproduction host, produce a per-metric strict worst-of-N observation report (every stage must have N full-sample repeats), and (on user confirmation) write the worst-of-N values back into the test files as new baselines. Each new user calibration request MUST use a fresh UTC-timestamp --output-dir on current HEAD; --resume only when explicitly continuing the same interrupted session on the same commit. Reports must include the full calibration commit SHA. Host-specific repo/venv/cache paths live in hosts/*.yaml (CI doc paths are reference only). Currently supports omni, asr, and tts; extensible via models/<name>/config.yaml.
+description: Run CI tests N times per stage on the H100 CI-reproduction host, produce a per-metric strict worst-of-N observation report (every stage must have N full-sample repeats), and (on user confirmation) write the worst-of-N values back into the test files as new baselines. Each new user calibration request MUST use a fresh UTC-timestamp --output-dir on current HEAD; --resume only when explicitly continuing the same interrupted session on the same commit. On shared 8× NVLink hosts use one tune.py --resume per repeat, Gate 4b CUDA smoke, and LD_LIBRARY_PATH for cu130 venvs (see Shared multi-GPU / NVLink host safety). Reports must include the full calibration commit SHA. Host-specific repo/venv/cache paths live in hosts/*.yaml (CI doc paths are reference only). Currently supports omni, asr, and tts; extensible via models/<name>/config.yaml.
 ---
 
 # tune-ci-thresholds
@@ -93,6 +93,105 @@ Every `report.md` must show the **full** calibration commit at the top:
 The user must be able to verify which commit was calibrated without guessing
 from the run-dir date. `strict-audit` prints `calibration_git_sha` and
 `GIT PROVENANCE: ok|FAIL`; both gates must pass before report or apply.
+
+## Shared multi-GPU / NVLink host safety (P0 — non-negotiable)
+
+The CI repro image targets **2× H100**. Many calibration hosts expose **more
+GPUs** (e.g. 8× H100 with NVLink). On those hosts, `tune.py` **must not** be
+treated like a fire-and-forget batch job: inter-repeat GPU cleanup can corrupt
+the **container CUDA runtime** (not the Docker image or mounted data).
+
+### What breaks (observed 2026-07)
+
+Between pytest repeats, `tune.py` runs aggressive cleanup:
+
+- `pkill -9 -f` on `sgl-omni serve`, `stage_process`, `pytest tests/test_model`, …
+- `.github/scripts/delete_gpu_process.sh` (and `--kill-orphans` when needed)
+
+On **8× H100 NVLink** systems this can trigger kernel errors such as
+`NV_ERR_FABRIC_STATE_OUT_OF_SYNC`. Symptom chain:
+
+1. Repeat **k=1** succeeds (metrics written).
+2. Repeat **k≥2** fails at server startup (`torch.cuda.set_device`, `libnvrtc.so.13`,
+   or `driver … too old for cu130`).
+3. **`torch.cuda.is_available()` becomes `False` for all venvs** inside the
+   container — `nvidia-smi` may still list GPUs.
+
+This is **recoverable** (container/host driver state), not permanent data loss.
+Recovery is **host-side** — see **CUDA runtime recovery** below.
+
+### Agent rules on shared / multi-GPU hosts
+
+| Rule | Action |
+|------|--------|
+| **CUDA smoke before first `run`** | Must pass **Gate 4b** in `AGENT-PRECHECK.md` |
+| **One repeat per `tune.py` process** | On hosts with **>2 GPUs visible**, do **not** leave a single `tune.py run --repeats N` unattended through all N repeats. Run `--resume`, let it fill **one** missing repeat, **exit**, re-check CUDA, then start the next `--resume`. |
+| **CUDA smoke after every repeat** | Re-run Gate 4b; if `False`, **STOP** — no blind `--resume` loops |
+| **`LD_LIBRARY_PATH` for cu130 venv** | Export before every precheck / run / status (see below) |
+| **Pin visible GPUs** | Prefer 2 idle GPUs; avoid GPUs busy with unrelated jobs. Do not assume GPU 6,7 are free. |
+| **No agent-initiated recovery kills** | If CUDA breaks, **report** recovery steps to the user; do not spam `pkill -9` or repeated `--resume` |
+
+### Required env (cu130 omni venv on non–CI-repro hosts)
+
+When `precheck` shows `torch: …+cu130` but `nvidia-smi` reports CUDA **12.9**
+(not CI's CUDA 13 driver), calibration may still run briefly — but it is
+**fragile**. Always export `LD_LIBRARY_PATH` so `deep_gemm` / `libnvrtc.so.13`
+resolve from the venv (not system CUDA 12.9):
+
+```bash
+VENV="${TUNE_VENV_PYTHON:-/path/to/omni/bin/python}"
+export LD_LIBRARY_PATH="$(
+  dirname "$VENV")/../lib/python3.12/site-packages/nvidia/cu13/lib:${LD_LIBRARY_PATH:-}"
+```
+
+Re-export before **every** `precheck`, `run`, `status`, and `strict-audit`.
+
+**Prefer** the official **CI repro container** (CUDA 13 driver + 2× H100) for
+threshold calibration. Numbers from a mismatched driver stack are not
+comparable to CI.
+
+### Safe repeat loop (shared host — mandatory pattern)
+
+Use the **same** `--output-dir` and `--resume`; start a **new** `tune.py`
+process for each missing repeat:
+
+```bash
+export TUNE_HOST=sglang-h100-ci TUNE_REPO_ROOT=… TUNE_VENV_PYTHON=…
+export LD_LIBRARY_PATH="$(dirname "$TUNE_VENV_PYTHON")/../lib/python3.12/site-packages/nvidia/cu13/lib:${LD_LIBRARY_PATH:-}"
+
+cd "$TUNE_REPO_ROOT"
+"$TUNE_VENV_PYTHON" -c "import torch; assert torch.cuda.is_available(), 'CUDA broken — stop'"
+
+while true; do
+  python .claude/skills/tune-ci-thresholds/tune.py strict-audit --run-dir "$RUN"
+  # stop when STRICT READY shows N/N for all stages
+  python .claude/skills/tune-ci-thresholds/tune.py --model <M> run \
+    --stages <S> --repeats <N> --output-dir "$RUN" --resume
+  "$TUNE_VENV_PYTHON" -c "import torch; assert torch.cuda.is_available(), 'CUDA broken after repeat — stop'"
+  sleep 30   # let GPUs settle before next process
+done
+```
+
+Agent: run **one** `--resume` per agent turn (or per user confirmation), verify
+strict-audit progress and CUDA, then continue — do not chain all N repeats in
+one long background job on 8× GPU hosts.
+
+### CUDA runtime recovery (user / host — agent reports, does not reboot)
+
+If `torch.cuda.is_available()` is `False` but `nvidia-smi` works, **stop
+calibration** and give the user:
+
+```bash
+# On the **host** (not inside the broken container):
+nvidia-smi
+sudo systemctl restart nvidia-fabricmanager   # required on H100 NVLink systems
+docker stop <container>
+docker start <container>
+# If still False: docker stop; re-run original docker run (volumes unchanged)
+# Last resort: host reboot, then start container
+```
+
+Inside the recovered container, Gate 4b must pass before any `--resume`.
 
 ## Zero-tolerance completeness contract (P0 — non-negotiable)
 
@@ -1024,6 +1123,9 @@ gate) blocks the chain.
 | `TORCHINDUCTOR_CACHE_DIR=/.torchinductor` or unset (inherits garbage) | **Every** server start re-captures CUDA graphs (~minutes); log shows long `Capturing batches` | Set via `ci_env.sh` → `${OMNI_CI_HOME}/.torchinductor` |
 | `HOME=/root` or datasets under `/root/.cache/huggingface` | HF cache miss, re-download, wrong normalizer paths | `HOME=/github/home`, `HF_HOME=/github/home/.cache/huggingface` |
 | Killing calibration mid-run without cleaning orphans | `nvidia-smi` shows ~70–85 GiB used but “No running processes” | `pgrep -af multiprocessing.spawn` then `kill -9`; run `delete_gpu_process.sh` |
+| Single long `tune.py run --repeats 5` on **8× NVLink** host | Repeat 1 ✓, repeat 2+ server crash; then **`torch.cuda` False** for all venvs | **One repeat per `tune.py` process** + Gate 4b after each; see **Shared multi-GPU / NVLink host safety** |
+| Missing `LD_LIBRARY_PATH` (cu130 venv) | `libnvrtc.so.13` / `deep_gemm` load failure on repeat 1 | Export venv `nvidia/cu13/lib` before every precheck/run |
+| Blind `--resume` loop after CUDA break | Fabric desync worsens; user must restart container on host | **STOP** when Gate 4b fails; report recovery steps |
 
 **Before any pytest / calibration / WER sweep**, always:
 
@@ -1047,6 +1149,10 @@ Only the Qwen3-ASR router stage needs 2 free GPUs after `delete_gpu_process.sh`.
 
 ### Agent operational rules (mandatory)
 
+- **Shared multi-GPU hosts** — follow **Shared multi-GPU / NVLink host safety**
+  (one `--resume` per process, Gate 4b before/after each repeat, `LD_LIBRARY_PATH`
+  for cu130). Never chain all N repeats in one unattended `tune.py run` when
+  `nvidia-smi -L` shows more than 2 GPUs.
 - **Two-terminal supervision** — follow **Two-terminal supervision (mandatory —
   always)** at the top of this skill. Agent creates Tab A
   (`tail_calibration_pytest.sh <run-dir>`) then Tab B (job). Tab A = pytest log;

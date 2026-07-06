@@ -38,6 +38,10 @@ in `models/tts/config.yaml` (currently Higgs and MOSS). Calibration must produce
 worst-of-5 for each preset independently even though CI samples one preset per
 commit.
 
+**Shared 8× H100 / NVLink hosts:** CI repro is 2× H100. On larger shared boxes,
+also read `SKILL.md` **Shared multi-GPU / NVLink host safety** — run **Gate 4b**
+before calibration and after each repeat; use **one `--resume` per process**.
+
 **Threshold symbols (do not cross-apply):**
 
 | Preset | WER (non-stream / stream) | Similarity | UTMOS | Speed P95 dict |
@@ -195,6 +199,46 @@ calibration runs (`tune.py` re-checks at run time).
 
 **Fail → report** GPU busy; do not start `tune.py run`. Precheck does not kill
 processes.
+
+On hosts with **>2 GPUs** (shared 8× H100 boxes), also note which GPU indices
+are free. Calibration needs **2** GPUs each ≤ 2048 MiB; do not assume indices
+6,7 are available.
+
+---
+
+## Gate 4b — CUDA runtime smoke (mandatory before and after each repeat)
+
+`nvidia-smi` alone is **not** sufficient. PyTorch must initialize CUDA.
+
+Set `VENV` from host profile (`TUNE_VENV_PYTHON` or `venv_python` in YAML).
+When using a **cu130** omni venv on a host whose driver reports CUDA **12.9**,
+also set `LD_LIBRARY_PATH` (see `SKILL.md` **Shared multi-GPU / NVLink host
+safety**):
+
+```bash
+VENV=/path/to/omni/bin/python
+export LD_LIBRARY_PATH="$(dirname "$VENV")/../lib/python3.12/site-packages/nvidia/cu13/lib:${LD_LIBRARY_PATH:-}"
+"$VENV" -c "import torch; assert torch.cuda.is_available(), 'CUDA unavailable'; print('PASS cuda', torch.cuda.device_count())"
+```
+
+**Pass:** prints `PASS cuda` with count ≥ 2 (or ≥ GPUs needed for scope).
+
+**Fail → STOP calibration immediately:**
+
+- Do **not** start `tune.py run` or `--resume`.
+- Do **not** blind-retry with `pkill -9` / repeated `--resume` loops.
+- Report to the user: container CUDA runtime is broken (common after aggressive
+  inter-repeat GPU cleanup on NVLink systems). Recovery is **host-side**:
+
+```bash
+# host
+sudo systemctl restart nvidia-fabricmanager
+docker stop <container> && docker start <container>
+# re-test Gate 4b inside container; if still fail → recreate container or reboot host
+```
+
+Re-run Gate 4b after **every** completed pytest repeat on shared multi-GPU
+hosts before the next `--resume`.
 
 ---
 
@@ -368,6 +412,10 @@ report env issue (`XDG_CACHE_HOME`, `HOME`, HF path split) before calibration.
 **All mandatory gates (0–8 for your scope) pass** → follow `SKILL.md` for
 `tune.py run` (dual-terminal tail, poll ≤120s, strict audit).
 
+On **shared multi-GPU hosts**, Gate **4b** is mandatory before the first `run`
+and after **each** repeat (see `SKILL.md` **Shared multi-GPU / NVLink host
+safety**).
+
 ### Agent poll interval (P0 — every ≤120s while `tune.py run` is active)
 
 Never blind-wait more than **2 minutes**. Each cycle:
@@ -394,3 +442,10 @@ Before `run`:
 - Proceed while strict audit has △/✗ repeats
 - Blind-wait **>120s** without `status` + `strict-audit` during active calibration
 - Fix env without reporting first (unless user explicitly asked)
+- **Single unattended `tune.py run --repeats N` through all N repeats** on shared
+  **8× NVLink** hosts (use one `--resume` per process; see `SKILL.md`)
+- **Continuing `--resume` when Gate 4b fails** (`torch.cuda.is_available()` False)
+- **Agent-initiated host reboot / fabric restart** without user request — report
+  recovery steps instead
+- **Omitting `LD_LIBRARY_PATH`** for cu130 venv when `libnvrtc` / `deep_gemm`
+  errors appear in pytest logs
