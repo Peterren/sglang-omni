@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from argparse import Namespace
 from pathlib import Path
@@ -21,10 +22,6 @@ from benchmarks.metrics.transcribe_diarize_metrics import (
 EVAL_SCRIPT_PATH = (
     Path(__file__).resolve().parents[3] / "benchmarks/eval/eval_transcribe_diarize.py"
 )
-LONG_EVAL_SCRIPT_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "benchmarks/eval/eval_transcribe_diarize_long.py"
-)
 
 
 def _load_eval_module():
@@ -39,16 +36,28 @@ def _load_eval_module():
     return module
 
 
-def _load_long_eval_module():
-    spec = importlib.util.spec_from_file_location(
-        "eval_transcribe_diarize_long_entry",
-        LONG_EVAL_SCRIPT_PATH,
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+def test_parse_args_defaults_to_movies800_preset() -> None:
+    module = _load_eval_module()
+
+    args = module.parse_args([])
+
+    assert args.dataset == "movies800"
+    assert args.repo_id == module.MOVIES800_REPO_ID
+    assert args.max_samples is None
+    assert args.max_new_tokens == module.DEFAULT_MAX_NEW_TOKENS
+    assert args.output_dir == module.MOVIES800_OUTPUT_DIR
+
+
+def test_parse_args_uses_aishell4_long_preset() -> None:
+    module = _load_eval_module()
+
+    args = module.parse_args(["--dataset", "aishell4_long"])
+
+    assert args.dataset == "aishell4_long"
+    assert args.repo_id == module.AISHELL4_REPO_ID
+    assert args.max_samples is None
+    assert args.max_new_tokens == module.DEFAULT_MAX_NEW_TOKENS
+    assert args.output_dir == module.AISHELL4_LONG_OUTPUT_DIR
 
 
 @pytest.mark.parametrize(
@@ -239,10 +248,13 @@ def test_extract_prediction_text_prefers_top_level_text_for_timestamps() -> None
     assert extract_prediction_text(payload) == payload["text"]
 
 
-def test_long_eval_saves_and_loads_raw_asr_results(tmp_path: Path) -> None:
-    module = _load_long_eval_module()
+def test_eval_saves_and_loads_aishell4_long_raw_asr_results(
+    tmp_path: Path,
+) -> None:
+    module = _load_eval_module()
 
     args = Namespace(
+        dataset="aishell4_long",
         repo_id="zhaochenyang20/AISHELL4",
         split="validation",
         audio_column="audio",
@@ -256,9 +268,10 @@ def test_long_eval_saves_and_loads_raw_asr_results(tmp_path: Path) -> None:
         request_rate=float("inf"),
         request_timeout_s=1800,
         max_new_tokens=65536,
-        max_samples=20,
+        max_samples=None,
         output_dir=str(tmp_path),
         asr_results_file="raw.json",
+        speed_results_file="speed.json",
     )
     samples = [
         module.Movies800Sample(
@@ -283,7 +296,58 @@ def test_long_eval_saves_and_loads_raw_asr_results(tmp_path: Path) -> None:
 
     assert loaded_config["request_rate"] == "inf"
     assert loaded_config["max_new_tokens"] == 65536
+    assert loaded_config["timing_scope"] == "asr_requests_only"
     assert loaded_samples == samples
     assert loaded_outputs[0].request_id == "sample-1"
     assert loaded_outputs[0].text == "[0.00][S01]hello[1.00]"
     assert loaded_outputs[0].is_success is True
+
+
+def test_eval_saves_speed_results_before_accuracy_metrics(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = _load_eval_module()
+
+    args = Namespace(
+        dataset="aishell4_long",
+        repo_id="zhaochenyang20/AISHELL4",
+        split="validation",
+        audio_column="audio",
+        expected_column="transcription",
+        model_path="OpenMOSS-Team/MOSS-Transcribe-Diarize",
+        base_url=None,
+        host="127.0.0.1",
+        port=8001,
+        concurrency=16,
+        warmup=0,
+        request_rate=float("inf"),
+        request_timeout_s=1800,
+        max_new_tokens=65536,
+        max_samples=None,
+        output_dir=str(tmp_path),
+        asr_results_file="raw.json",
+        speed_results_file="speed.json",
+    )
+    outputs = [
+        RequestResult(
+            request_id="sample-1",
+            text="[0.00][S01]hello[1.00]",
+            is_success=True,
+            latency_s=1.2,
+            audio_duration_s=4.0,
+            rtf=0.3,
+        )
+    ]
+
+    path = module._save_and_print_speed_results(args, outputs, wall_clock_s=2.0)
+    speed_payload = json.loads(Path(path).read_text())
+    printed = capsys.readouterr().out
+
+    assert speed_payload["config"]["timing_scope"] == "asr_requests_only"
+    assert speed_payload["config"]["wall_clock_s"] == 2.0
+    assert speed_payload["speed"]["completed_requests"] == 1
+    assert speed_payload["speed"]["throughput_qps"] == 0.5
+    assert speed_payload["speed"]["rtf_mean"] == 0.3
+    assert "ASR Speed Result" in printed
+    assert "ASR requests only" in printed
