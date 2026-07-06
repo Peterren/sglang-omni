@@ -4,8 +4,14 @@
 session (including after a fresh container). **Do not** run `tune.py run` until
 every mandatory item passes.
 
-**Assumption:** repro container is already running. Do not document or execute
+**Assumption:** the user is already in a suitable environment on the H100 host
+(any container or shell with GPU access, omni venv, and HF cache — **not**
+necessarily the dedicated CI repro container). Do not document or execute
 `docker run`, volume maps, or host-side setup here.
+
+**Shared 8× H100 hosts:** CI occupies GPU **6,7**. Before any `tune.py run`,
+export `TUNE_GPU_EXCLUDE=6,7` (or rely on host profile `gpu_exclude`). Calibration
+must never kill or schedule work on those GPUs.
 
 **Policy** (`hosts/*/yaml` → `agent_policy`):
 
@@ -96,8 +102,10 @@ See SKILL.md **Fresh calibration session**.
 ```bash
 python .claude/skills/tune-ci-thresholds/tune.py hosts-list
 hostname
-# then cd to repo_root from host profile (sglang-h100-ci: /data/sglang-omni)
-cd /data/sglang-omni
+# cd to repo_root — use $TUNE_REPO_ROOT for git worktrees
+cd "${TUNE_REPO_ROOT:-/data/sglang-omni}"
+export TUNE_HOST=sglang-h100-ci
+export TUNE_GPU_EXCLUDE=6,7   # mandatory on shared 8× hosts
 ```
 
 **Pass:**
@@ -123,7 +131,8 @@ Reference profile `sglang-h100-ci` (`hosts/sglang-h100-ci.yaml`, current/active)
 | `physical.speaker_sim` | `/root/.cache/huggingface/speaker_sim` |
 | `physical.omni_ci_home` | `/github/home/calibration` |
 
-If the user gave different paths in chat, use those and report that host YAML
+If the user gave different paths in chat (worktree, external venv), set
+`TUNE_REPO_ROOT` / `TUNE_VENV_PYTHON` and use those — report that host YAML
 may be stale.
 
 ---
@@ -188,21 +197,20 @@ for calibration.
 
 ---
 
-## Gate 4 — GPUs idle
+## Gate 4 — GPUs idle (calibration pool)
 
 ```bash
+export TUNE_GPU_EXCLUDE=6,7   # if not already set from host profile
 nvidia-smi --query-gpu=index,name,memory.used,memory.total --format=csv
 ```
 
-**Pass:** 2× H100 (or profile-equivalent), each **≤ 2048 MiB** used before
-calibration runs (`tune.py` re-checks at run time).
+**Pass:** at least **2** GPUs in the calibration pool (all indices minus
+`TUNE_GPU_EXCLUDE`) each **≤ 2048 MiB** before calibration runs. CI GPUs 6,7
+may be fully busy — that is expected and must **not** block ASR/TTS/Omni
+calibration on GPUs 0–5.
 
-**Fail → report** GPU busy; do not start `tune.py run`. Precheck does not kill
-processes.
-
-On hosts with **>2 GPUs** (shared 8× H100 boxes), also note which GPU indices
-are free. Calibration needs **2** GPUs each ≤ 2048 MiB; do not assume indices
-6,7 are available.
+**Fail → report** if fewer than 2 calibration-pool GPUs are idle. Precheck does
+not kill processes on excluded GPUs.
 
 ---
 
@@ -339,11 +347,13 @@ stages only if user accepts partial scope.
 Run for **each** model in Gate 0 scope:
 
 ```bash
-cd /data/sglang-omni
-export TUNE_HOST=sglang-h100-ci   # if Gate 1 autodetect failed
+cd "${TUNE_REPO_ROOT:-/data/sglang-omni}"
+export TUNE_HOST=sglang-h100-ci
+export TUNE_GPU_EXCLUDE=6,7
 
 python .claude/skills/tune-ci-thresholds/tune.py --model asr precheck \
   --output-dir /tmp/precheck_asr
+```
 
 python .claude/skills/tune-ci-thresholds/tune.py --model tts precheck \
   --output-dir /tmp/precheck_tts

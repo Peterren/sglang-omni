@@ -513,11 +513,22 @@ def _gpu_memory_used_mib():
     return list(_gpu_memory_by_index().values())
 
 
-def _kill_calibration_gpu_processes():
-    """Match CI omni-post-stage cleanup between calibration runs."""
+def _kill_calibration_gpu_processes(host: dict | None = None):
+    """Match CI omni-post-stage cleanup between calibration runs.
+
+    When ``TUNE_GPU_EXCLUDE`` / host ``gpu_exclude`` is set (shared 8× H100 hosts),
+    cleanup is scoped to the calibration GPU pool only — never kill CI on excluded GPUs.
+    """
+    pool = calibration_gpu_pool(host)
+    if not pool:
+        return
     script = REPO_ROOT / ".github/scripts/delete_gpu_process.sh"
+    env = os.environ.copy()
+    env["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, pool))
     if script.exists():
-        subprocess.run(["bash", str(script)], capture_output=True, check=False)
+        subprocess.run(["bash", str(script)], capture_output=True, check=False, env=env)
+    if excluded_gpu_indices(host):
+        return
     for pattern in (
         "sgl-omni serve",
         "sglang_omni_router.serve",
@@ -544,42 +555,51 @@ def _picked_gpus_under_limit(picked: list[int]) -> bool:
     )
 
 
-def _ready_gpu_indices(gpus_needed: int):
+def _ready_gpu_indices(gpus_needed: int, host: dict | None = None):
     """GPU indices with no compute app and memory <= _GPU_RETRY_MEM_MIB."""
     mem = _gpu_memory_by_index()
     busy = busy_gpu_indices()
+    excluded = excluded_gpu_indices(host)
+    pool = set(calibration_gpu_pool(host))
     ready = [
         idx for idx in sorted(mem)
-        if idx not in busy and mem[idx] <= _GPU_RETRY_MEM_MIB
+        if idx in pool
+        and idx not in excluded
+        and idx not in busy
+        and mem[idx] <= _GPU_RETRY_MEM_MIB
     ]
     return ready, mem, busy
 
 
-def _ensure_gpus_free(gpus_needed: int, timeout: int = _GPU_WAIT_TIMEOUT_S) -> bool:
+def _ensure_gpus_free(gpus_needed: int, timeout: int = _GPU_WAIT_TIMEOUT_S,
+                      host: dict | None = None) -> bool:
     """Kill stale processes and wait until >= gpus_needed GPUs are each < 2 GiB."""
-    _kill_calibration_gpu_processes()
+    _kill_calibration_gpu_processes(host)
     time.sleep(3)
     waited = 0
     last_log = -30
     while waited < timeout:
-        ready, mem, busy = _ready_gpu_indices(gpus_needed)
+        ready, mem, busy = _ready_gpu_indices(gpus_needed, host)
         if len(ready) >= gpus_needed:
             picked_mem = {i: mem[i] for i in ready[:gpus_needed]}
             print(f"  GPU ready for launch {picked_mem} MiB (each <= "
                   f"{_GPU_RETRY_MEM_MIB}) after {waited}s")
             return True
         if waited - last_log >= 30:
+            excluded = sorted(excluded_gpu_indices(host))
             print(f"  waiting: need {gpus_needed} GPU(s) each <= "
                   f"{_GPU_RETRY_MEM_MIB} MiB ({waited}s/{timeout}s): "
-                  f"mem={mem} busy={sorted(busy)} ready={len(ready)}")
+                  f"mem={mem} busy={sorted(busy)} ready={len(ready)} "
+                  f"pool={calibration_gpu_pool(host)} excluded={excluded}")
             last_log = waited
         time.sleep(_GPU_WAIT_POLL_S)
         waited += _GPU_WAIT_POLL_S
         if waited % 60 == 0:
-            _kill_calibration_gpu_processes()
-    subprocess.run(["pkill", "-9", "-f", "sgl-omni"], check=False)
+            _kill_calibration_gpu_processes(host)
+    if not excluded_gpu_indices(host):
+        subprocess.run(["pkill", "-9", "-f", "sgl-omni"], check=False)
     time.sleep(5)
-    ready, mem, busy = _ready_gpu_indices(gpus_needed)
+    ready, mem, busy = _ready_gpu_indices(gpus_needed, host)
     if len(ready) >= gpus_needed:
         print(f"  GPU ready after forced pkill: "
               f"{ {i: mem[i] for i in ready[:gpus_needed]} } MiB")
@@ -590,15 +610,16 @@ def _ensure_gpus_free(gpus_needed: int, timeout: int = _GPU_WAIT_TIMEOUT_S) -> b
     return False
 
 
-def _pick_gpus_for_launch(gpus_needed: int, label: str) -> tuple[list[int] | None, str]:
+def _pick_gpus_for_launch(gpus_needed: int, label: str,
+                          host: dict | None = None) -> tuple[list[int] | None, str]:
     """Select GPUs only after _ensure_gpus_free; abort if any picked GPU >= 2 GiB."""
-    if not _ensure_gpus_free(gpus_needed):
+    if not _ensure_gpus_free(gpus_needed, host=host):
         return None, "GPU memory not released after cleanup"
-    picked, err = pick_free_gpus(gpus_needed)
+    picked, err = pick_free_gpus(gpus_needed, host)
     if picked is None:
-        if not _ensure_gpus_free(gpus_needed):
+        if not _ensure_gpus_free(gpus_needed, host=host):
             return None, err or "GPU memory not released after cleanup"
-        picked, err = pick_free_gpus(gpus_needed)
+        picked, err = pick_free_gpus(gpus_needed, host)
     if picked is None:
         return None, err or "no GPU under 2 GiB memory limit"
     if not _picked_gpus_under_limit(picked):
@@ -607,7 +628,8 @@ def _pick_gpus_for_launch(gpus_needed: int, label: str) -> tuple[list[int] | Non
     return picked, ""
 
 
-def _launch_gpu_gate(picked: list[int], gpus_needed: int, label: str) -> tuple[list[int] | None, str]:
+def _launch_gpu_gate(picked: list[int], gpus_needed: int, label: str,
+                     host: dict | None = None) -> tuple[list[int] | None, str]:
     """Hard gate immediately before pytest Popen — recheck memory after brief pause."""
     time.sleep(_GPU_LAUNCH_RECHECK_S)
     if _picked_gpus_under_limit(picked):
@@ -618,7 +640,7 @@ def _launch_gpu_gate(picked: list[int], gpus_needed: int, label: str) -> tuple[l
     snap = _picked_gpus_mem_snapshot(picked)
     print(f"{label} launch gate BLOCKED: GPU mem={snap} MiB — "
           f"releasing before restart")
-    return _pick_gpus_for_launch(gpus_needed, label)
+    return _pick_gpus_for_launch(gpus_needed, label, host)
 
 
 def _stage_metrics_complete(stage, metrics):
@@ -894,10 +916,38 @@ def all_gpu_indices():
     return out
 
 
-def pick_free_gpus(n):
+def _parse_gpu_index_list(raw: str | list | tuple | None) -> set[int]:
+    if raw is None:
+        return set()
+    if isinstance(raw, (list, tuple)):
+        return {int(x) for x in raw}
+    out: set[int] = set()
+    for part in str(raw).split(","):
+        part = part.strip()
+        if part.isdigit():
+            out.add(int(part))
+    return out
+
+
+def excluded_gpu_indices(host: dict | None = None) -> set[int]:
+    """GPUs calibration must never pick or kill (e.g. CI-reserved 6,7 on 8× hosts)."""
+    raw = os.environ.get("TUNE_GPU_EXCLUDE")
+    if raw:
+        return _parse_gpu_index_list(raw)
+    if host:
+        return _parse_gpu_index_list(host.get("gpu_exclude"))
+    return set()
+
+
+def calibration_gpu_pool(host: dict | None = None) -> list[int]:
+    excluded = excluded_gpu_indices(host)
+    return [i for i in all_gpu_indices() if i not in excluded]
+
+
+def pick_free_gpus(n, host: dict | None = None):
     """Pick n GPUs with no compute app and memory <= _GPU_RETRY_MEM_MIB (2 GiB)."""
-    ready, mem, busy = _ready_gpu_indices(n)
-    all_idx = all_gpu_indices()
+    ready, mem, busy = _ready_gpu_indices(n, host)
+    all_idx = calibration_gpu_pool(host)
     if len(ready) >= n:
         picked = ready[:n]
         if not _picked_gpus_under_limit(picked):
@@ -1059,15 +1109,19 @@ def precheck(py, src, out, skip_ver, cfg, datasets_override=None,
     if not smi:
         errs.append("nvidia-smi -L returned no GPUs")
     else:
-        all_idx = all_gpu_indices()
+        pool = calibration_gpu_pool(cfg.get("_host"))
+        excluded = sorted(excluded_gpu_indices(cfg.get("_host")))
         busy = busy_gpu_indices()
-        free_count = len(all_idx) - len(busy)
+        ready, _, _ = _ready_gpu_indices(1, cfg.get("_host"))
+        free_count = len(ready)
         summary = gpu_summary(smi)
-        if busy:
-            print(f"  GPUs: {summary} — {free_count}/{len(all_idx)} free "
-                  f"(busy: {sorted(busy)})")
+        pool_note = f" pool={pool}" if excluded else ""
+        if busy or excluded:
+            print(f"  GPUs: {summary} — {free_count}/{len(pool)} calibration-ready"
+                  f"{pool_note} (busy: {sorted(busy)}"
+                  f"{f', excluded: {excluded}' if excluded else ''})")
         else:
-            print(f"  GPUs: {summary} — {free_count}/{len(all_idx)} free")
+            print(f"  GPUs: {summary} — {free_count}/{len(pool)} calibration-ready")
         gpu_required = gpu_required_override
         if gpu_required is None:
             gpu_required = max((cfg.get("gpus_per_test") or {}).values(), default=1)
@@ -1996,6 +2050,7 @@ def _run_cmd_inner(args, cfg, py, src, out):
         (_stage_gpus(all_stages[s], gpus_per_test) for s in sel),
         default=2,
     )
+    host = cfg.get("_host")
     for pass_num in range(1, max_passes + 1):
         ran_any = False
         for k in range(1, args.repeats + 1):
@@ -2017,7 +2072,7 @@ def _run_cmd_inner(args, cfg, py, src, out):
                     print(f"=== calibration pass {pass_num}/{max_passes}: "
                           f"retry {Path(test_path).stem} run {k} ===")
                 if _run_shared(test_path, stage_keys, all_stages, out, k, py,
-                               args.repeats, needed, extra_args):
+                               args.repeats, needed, extra_args, host=host):
                     audit = audit_completeness(out, all_stages)
                     print(f"completeness at HALT: "
                           f"{audit['ok']}/{audit['total']} stage-runs complete")
@@ -2032,7 +2087,7 @@ def _run_cmd_inner(args, cfg, py, src, out):
             break
         if pass_num < max_passes:
             print(f"{audit['missing_count']} incomplete — GPU cleanup before next pass")
-            if not _ensure_gpus_free(max_gpus):
+            if not _ensure_gpus_free(max_gpus, host=host):
                 print("error: GPU memory not cleared; stopping calibration passes")
                 break
     audit = audit_completeness(out, all_stages)
@@ -2166,7 +2221,8 @@ def _print_run_banner(label, test_path, stage_keys, all_stages):
         print("  (docs smoke — no benchmark params, pass/fail only)")
 
 
-def _run_shared(test_path, stage_keys, all_stages, out, k, py, total, gpus_needed, extra_args=None):
+def _run_shared(test_path, stage_keys, all_stages, out, k, py, total, gpus_needed,
+                extra_args=None, host=None):
     """Run pytest once on test_path; write per-stage run{k}.json from
     the result JSONs written under the fresh pytest basetemp.
     """
@@ -2228,7 +2284,7 @@ def _run_shared(test_path, stage_keys, all_stages, out, k, py, total, gpus_neede
     attempts, status, reason, dur, text, pytest_rc = 0, "ok", "", 0.0, "", 0
     while attempts < _MAX_RUN_ATTEMPTS:
         attempts += 1
-        picked, pick_err = _pick_gpus_for_launch(gpus_needed, label)
+        picked, pick_err = _pick_gpus_for_launch(gpus_needed, label, host)
         if picked is None:
             status, reason, dur = "failed", pick_err, 0.0
             print(f"{label} {pick_err}")
@@ -2236,7 +2292,7 @@ def _run_shared(test_path, stage_keys, all_stages, out, k, py, total, gpus_neede
         _cleanup_flashinfer_cache(env)
         shutil.rmtree(basetemp, ignore_errors=True)
         basetemp.mkdir(parents=True)
-        picked, gate_err = _launch_gpu_gate(picked, gpus_needed, label)
+        picked, gate_err = _launch_gpu_gate(picked, gpus_needed, label, host)
         if picked is None:
             status, reason, dur = "failed", gate_err or "launch GPU gate failed", 0.0
             print(f"{label} {reason}")
@@ -2263,7 +2319,7 @@ def _run_shared(test_path, stage_keys, all_stages, out, k, py, total, gpus_neede
             )
             pytest_rc = _wait_pytest_with_watchdog(pytest_proc, log, label)
         _cleanup_after_pytest(test_path, pytest_proc.pid, basetemp)
-        if not _ensure_gpus_free(gpus_needed):
+        if not _ensure_gpus_free(gpus_needed, host=host):
             status, reason, dur = "failed", "GPU memory not released after run", 0.0
             break
         dur = time.monotonic() - t0
@@ -2281,7 +2337,7 @@ def _run_shared(test_path, stage_keys, all_stages, out, k, py, total, gpus_neede
         if attempts < _MAX_RUN_ATTEMPTS and retryable:
             print(f"{label} {reason} — must clear GPU to <2 GiB before retry "
                   f"({attempts}/{_MAX_RUN_ATTEMPTS})")
-            if not _ensure_gpus_free(gpus_needed):
+            if not _ensure_gpus_free(gpus_needed, host=host):
                 status, reason = "failed", "GPU memory not released before retry"
                 break
             continue
@@ -2917,6 +2973,11 @@ def _bootstrap_from_host(host: dict | None) -> None:
     venv = host.get("venv_python")
     if venv and not os.environ.get("TUNE_VENV_PYTHON"):
         os.environ.setdefault("TUNE_VENV_PYTHON", str(venv))
+    if host.get("gpu_exclude") and not os.environ.get("TUNE_GPU_EXCLUDE"):
+        os.environ.setdefault(
+            "TUNE_GPU_EXCLUDE",
+            ",".join(str(i) for i in host["gpu_exclude"]),
+        )
 
 
 def main(argv=None):

@@ -6,15 +6,18 @@ description: Run CI tests N times per stage on the H100 CI-reproduction host, pr
 # tune-ci-thresholds
 
 ## Scope
-This skill is for the H100 CI-reproduction host (the same image
-CI uses,
+This skill is for the **H100 CI host** (image
 `crpi-n6adu6llixz83q37.cn-hangzhou.personal.cr.aliyuncs.com/hongccc/sglang-omni:dev`,
-a CUDA-13 image; the container name varies). The host is 2× H100.
-Numbers from environments that differ meaningfully from CI (different
-GPU model, different image, different pinned sglang/torch) are not
-comparable and must not drive threshold changes. If you just want to
-run the tests locally, use pytest directly — this skill is not for
-that.
+CUDA 13; container name varies). CI itself runs on **2× H100** (often GPU 6,7 on
+8-GPU shared boxes). Threshold calibration must use the **same pinned sglang/torch
+and cached assets** as CI, but it **does not** require the dedicated CI repro
+container — any container on the same H100 host with access to the omni venv,
+HF cache, and **non-CI GPUs** is valid.
+
+Numbers from environments that differ meaningfully from CI (different GPU model,
+different image, different pinned sglang/torch) are not comparable and must not
+drive threshold changes. If you just want to run the tests locally, use pytest
+directly — this skill is not for that.
 
 **Host layouts are not fixed to the CI doc paths.** Paths in
 `models/*/config.yaml` describe the **GitHub Actions reference**. Inside a
@@ -128,7 +131,7 @@ Recovery is **host-side** — see **CUDA runtime recovery** below.
 | **One repeat per `tune.py` process** | On hosts with **>2 GPUs visible**, do **not** leave a single `tune.py run --repeats N` unattended through all N repeats. Run `--resume`, let it fill **one** missing repeat, **exit**, re-check CUDA, then start the next `--resume`. |
 | **CUDA smoke after every repeat** | Re-run Gate 4b; if `False`, **STOP** — no blind `--resume` loops |
 | **`LD_LIBRARY_PATH` for cu130 venv** | Export before every precheck / run / status (see below) |
-| **Pin visible GPUs** | Prefer 2 idle GPUs; avoid GPUs busy with unrelated jobs. Do not assume GPU 6,7 are free. |
+| **Pin visible GPUs** | Use `$TUNE_GPU_EXCLUDE` / host `gpu_exclude` so CI GPUs (typically **6,7**) are never picked or killed. Pick 2 idle GPUs from the calibration pool only. |
 | **No agent-initiated recovery kills** | If CUDA breaks, **report** recovery steps to the user; do not spam `pkill -9` or repeated `--resume` |
 
 ### Required env (cu130 omni venv on non–CI-repro hosts)
@@ -146,9 +149,11 @@ export LD_LIBRARY_PATH="$(
 
 Re-export before **every** `precheck`, `run`, `status`, and `strict-audit`.
 
-**Prefer** the official **CI repro container** (CUDA 13 driver + 2× H100) for
-threshold calibration. Numbers from a mismatched driver stack are not
-comparable to CI.
+**Prefer** the official **CI repro container** (CUDA 13 driver + 2× H100) when
+calibrating thresholds in isolation. On **shared 8× H100 hosts**, calibrate from
+**any** container that sees all GPUs, set `TUNE_GPU_EXCLUDE=6,7`, and never run
+global `pkill` cleanup that would disturb CI. Numbers from a mismatched driver
+stack are not comparable to CI.
 
 ### Safe repeat loop (shared host — mandatory pattern)
 
@@ -338,14 +343,14 @@ ignore HALT and start a fresh run directory without user approval.
 
 ## Calibration host profiles (mandatory — before precheck)
 
-**Assumes the repro container is already running.** The user starts Docker;
-this skill only describes **in-container paths** for `tune.py` / precheck /
-calibration. Do not document `docker run`, volume maps, or host-side layout
-in host profiles.
+**Does not require the CI repro container.** Calibration runs in whatever
+container/shell the user already has on the H100 host, as long as paths resolve
+and CI-reserved GPUs are excluded. The user may use a **git worktree** — set
+`$TUNE_REPO_ROOT` to that checkout; do not assume `/data/sglang-omni`.
 
 **Agent runbook:** `.claude/skills/tune-ci-thresholds/AGENT-PRECHECK.md` —
 mandatory environment gate (Gates 0–8) before any `tune.py run`. Agent-facing
-only; no Docker or user setup instructions.
+only; no Docker launch instructions in the skill.
 
 Calibration does **not** require CI doc paths (`/sgl-workspace/...`). On a
 repro machine, **`tune.py` loads `hosts/<name>.yaml`** and applies
@@ -353,6 +358,16 @@ repro machine, **`tune.py` loads `hosts/<name>.yaml`** and applies
 
 **Selection order:** `--host <name>` → `$TUNE_HOST` → autodetect by
 `hostname`. List profiles: `tune.py hosts-list`.
+
+**Runtime overrides (mandatory on shared hosts — do not edit repo files unless
+user asks to commit):**
+
+```bash
+export TUNE_HOST=sglang-h100-ci
+export TUNE_REPO_ROOT=/path/to/checkout-or-worktree
+export TUNE_VENV_PYTHON=/path/to/omni/bin/python
+export TUNE_GPU_EXCLUDE=6,7    # CI-reserved; tune.py never picks or kills these
+```
 
 When a host profile is active, `tune.py` automatically:
 
@@ -363,9 +378,10 @@ When a host profile is active, `tune.py` automatically:
 | `HF_HOME` | `physical.hf_hub` |
 | `SEEDTTS_SIM_CACHE_DIR` | `physical.speaker_sim` |
 | `OMNI_CI_HOME` (optional) | `physical.omni_ci_home` |
+| GPU pool | `gpu_exclude` → `$TUNE_GPU_EXCLUDE` (never pick/kill these indices) |
 
 User-provided paths in chat override the YAML; update the host file when
-the layout stabilizes.
+the layout stabilizes and the user asks to commit.
 
 ### What a host profile defines
 
@@ -405,14 +421,15 @@ HF_ENDPOINT=https://huggingface.co <venv>/bin/python -c \
 
 ### Shipped profile: `sglang-h100-ci` (current / active)
 
-`repo_root` `/data/sglang-omni`, `venv_python`
-`/github/home/calibration/omni/bin/python`, `physical.hf_hub`
-`/root/.cache/huggingface`, `physical.speaker_sim`
-`/root/.cache/huggingface/speaker_sim`, `physical.omni_ci_home`
-`/github/home/calibration`. Container image
-`crpi-n6adu6llixz83q37.cn-hangzhou.personal.cr.aliyuncs.com/hongccc/sglang-omni:dev`,
-GPUs `NVIDIA_VISIBLE_DEVICES=6,7` (2× NVIDIA H100 80GB HBM3). Pins:
-**sglang 0.5.12.post1**, **torch 2.11.0** (cu130).
+Defaults: `repo_root` `/data/sglang-omni` (override with `$TUNE_REPO_ROOT` for
+worktrees), `venv_python` `/github/home/calibration/omni/bin/python` (override
+with `$TUNE_VENV_PYTHON`), `physical.hf_hub` `/root/.cache/huggingface`,
+`physical.speaker_sim` `/root/.cache/huggingface/speaker_sim`,
+`physical.omni_ci_home` `/github/home/calibration`, `gpu_exclude: [6, 7]`.
+
+CI repro container uses `NVIDIA_VISIBLE_DEVICES=6,7` (2× H100). **Calibration
+on shared 8× hosts runs elsewhere** with `TUNE_GPU_EXCLUDE=6,7` so CI is
+untouched. Pins: **sglang 0.5.12.post1**, **torch 2.11.0** (cu130).
 
 ### Adding a new host profile
 
