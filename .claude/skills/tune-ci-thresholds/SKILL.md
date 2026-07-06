@@ -695,7 +695,7 @@ uses `--stages ALL`; targeted reruns use `multi_speaker` or `seedtts`.
 
 | Stage key | Group | What gets written | Test constant(s) |
 |-----------|-------|-------------------|------------------|
-| `multi_speaker_diarization` | diarization | CER / cpCER / DER / valid sample refs | `MOSS_TD_CER_*`, `MOSS_TD_CP_CER_*`, `MOSS_TD_DELTA_CER_*`, `MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF` |
+| `multi_speaker_diarization` | diarization | CER / cpCER / DER / valid sample refs | `MOSS_TD_CER_*`, `MOSS_TD_CP_CER_*`, `MOSS_TD_DELTA_CER_*`, `MOSS_TD_CER_NO_SPK_BELOW_50_PERCENT_REF`, `MOSS_TD_N_ABOVE_50_CER_MAX`, `MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF` |
 | `multi_speaker_speed` | speed | throughput + latency + RTF P95 refs | `MOSS_TD_THROUGHPUT_QPS_MIN`, `MOSS_TD_LATENCY_*`, `MOSS_TD_RTF_*` |
 | `seedtts_wer` | wer | corpus + per-sample WER ref | `SEEDTTS_ASR_CORPUS_WER_MAX`, `SEEDTTS_ASR_SAMPLE_WER_MAX` |
 | `seedtts_speed` | speed | throughput + latency + RTF P95 refs | `QWEN3_ASR_THROUGHPUT_MIN`, `QWEN3_ASR_LATENCY_*`, `QWEN3_ASR_RTF_*` |
@@ -710,6 +710,11 @@ Notes:
   test derives `MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_MAX` via the slack helper.
   Both start at `None`, so the DER gate is skipped (prints `[threshold pending]`)
   until the first DER calibration fills in the reference.
+- **Partitioned CER (WER-style robustness)** reports global `cer_no_spk`, then
+  `cer_no_spk_below_50_corpus` (corpus CER over samples with per-sample CER
+  ≤ 50%) and `n_above_50_pct_cer` (count of catastrophic >50% CER samples).
+  Calibrate `MOSS_TD_CER_NO_SPK_BELOW_50_PERCENT_REF` and cap
+  `MOSS_TD_N_ABOVE_50_CER_MAX`; the test derives the below-50 MAX via slack.
 - Stage 2 uses **`Qwen/Qwen3-ASR-1.7B`** and dataset
   **`zhaochenyang20/seed-tts-eval-arrow`**. Strict audit expects
   **`SEEDTTS_ASR_CORRECTNESS_SAMPLES`** samples.

@@ -6,8 +6,8 @@ multi_speaker_diarization:
   extra_env: {}
   context_vars:
     - MOSS_TD_CI_SAMPLES
-  test_file_sha256: 83b8935eac43c2d0e610e94335fc901ecdc795275c93359fba1f3531f8d6f297
-  last_discovered_at: 2026-07-06T16:47:21Z
+  test_file_sha256: b798ca0ca76052b8cc98fa1205fb3495b49f68065ad5c65f61453c80ea8282bd
+  last_discovered_at: 2026-07-06T17:23:20Z
   expected_samples: 800
   sample_counts:
     total:
@@ -17,6 +17,26 @@ multi_speaker_diarization:
       json_file: "test_moss_transcribe_diarize_m0/moss_transcribe_diarize_results.json"
       json_path: "summary.evaluated"
   metrics:
+    cer_no_spk_below_50_corpus:
+      source: "MOSS_TD_CER_NO_SPK_BELOW_50_PERCENT_MAX"
+      json_file: "test_moss_transcribe_diarize_m0/moss_transcribe_diarize_results.json"
+      json_path: "diarization_metrics_percent.cer_no_spk_below_50_corpus"
+      worst: max
+      display:
+        label: "CER no-spk ≤50% corpus (%)"
+        scale: 1
+        digits: 2
+      status: OK
+    n_above_50_pct_cer:
+      source: "MOSS_TD_N_ABOVE_50_CER_MAX"
+      json_file: "test_moss_transcribe_diarize_m0/moss_transcribe_diarize_results.json"
+      json_path: "diarization_metrics_percent.n_above_50_pct_cer"
+      worst: max
+      display:
+        label: "Samples >50% CER"
+        scale: 1
+        digits: 0
+      status: OK
     speaker_timestamp_der_percent:
       source: "MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF"
       json_file: "test_moss_transcribe_diarize_m0/moss_transcribe_diarize_results.json"
@@ -104,8 +124,8 @@ multi_speaker_speed:
   extra_env: {}
   context_vars:
     - MOSS_TD_CI_SAMPLES
-  test_file_sha256: 83b8935eac43c2d0e610e94335fc901ecdc795275c93359fba1f3531f8d6f297
-  last_discovered_at: 2026-07-06T16:47:21Z
+  test_file_sha256: b798ca0ca76052b8cc98fa1205fb3495b49f68065ad5c65f61453c80ea8282bd
+  last_discovered_at: 2026-07-06T17:23:20Z
   expected_samples: 800
   sample_counts:
     total:
@@ -173,7 +193,7 @@ seedtts_wer:
   context_vars:
     - SEEDTTS_ASR_CORRECTNESS_SAMPLES
   test_file_sha256: d13f9d994a9e349ad2d3e11004d4b4ea37eaeaa2a723213077c7034e749e5237
-  last_discovered_at: 2026-07-06T16:47:21Z
+  last_discovered_at: 2026-07-06T17:23:20Z
   expected_samples: 1088
   sample_counts:
     total:
@@ -211,7 +231,7 @@ seedtts_speed:
   context_vars:
     - SEEDTTS_ASR_CORRECTNESS_SAMPLES
   test_file_sha256: d13f9d994a9e349ad2d3e11004d4b4ea37eaeaa2a723213077c7034e749e5237
-  last_discovered_at: 2026-07-06T16:47:21Z
+  last_discovered_at: 2026-07-06T17:23:20Z
   expected_samples: 1088
   sample_counts:
     total:

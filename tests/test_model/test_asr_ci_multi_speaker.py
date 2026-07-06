@@ -30,7 +30,7 @@ from tests.test_model.omni_router_utils import (
     launch_managed_router,
     router_worker_traffic_guard,
 )
-from tests.utils import MetricCheckCollector
+from tests.utils import MetricCheckCollector, assert_cer_partitioned
 
 MOSS_TD_CI_MODEL_PATH = os.environ.get(
     "MOSS_TRANSCRIBE_DIARIZE_MODEL_PATH",
@@ -45,6 +45,8 @@ MOSS_TD_MEM_FRACTION_STATIC = 0.80
 # Worst-of-N reference values calibrated by tune.py.
 MOSS_TD_CER_PERCENT_REF = 6.612385102255017
 MOSS_TD_CER_NO_SPK_PERCENT_REF = 6.612385102255017
+MOSS_TD_CER_NO_SPK_BELOW_50_PERCENT_REF: float | None = None
+MOSS_TD_N_ABOVE_50_CER_MAX: int | None = None
 MOSS_TD_CP_CER_PERCENT_REF = 13.0
 MOSS_TD_CER_NO_SPK_CP_VALID_PERCENT_REF = 6.51
 MOSS_TD_DELTA_CER_PERCENT_REF = 6.49
@@ -67,6 +69,11 @@ MOSS_TD_CER_PERCENT_MAX: float | None = round(
 )
 MOSS_TD_CER_NO_SPK_PERCENT_MAX: float | None = round(
     MOSS_TD_CER_NO_SPK_PERCENT_REF * THRESHOLD_SLACK_LOWER, 4
+)
+MOSS_TD_CER_NO_SPK_BELOW_50_PERCENT_MAX: float | None = (
+    round(MOSS_TD_CER_NO_SPK_BELOW_50_PERCENT_REF * THRESHOLD_SLACK_LOWER, 4)
+    if MOSS_TD_CER_NO_SPK_BELOW_50_PERCENT_REF is not None
+    else None
 )
 MOSS_TD_CP_CER_PERCENT_MAX: float | None = round(
     MOSS_TD_CP_CER_PERCENT_REF * THRESHOLD_SLACK_LOWER, 4
@@ -239,6 +246,12 @@ def test_moss_transcribe_diarize_movies800_multi_speaker(
         diarization_percent.get("cer_no_spk"),
         MOSS_TD_CER_NO_SPK_PERCENT_MAX,
         unit="%",
+    )
+    assert_cer_partitioned(
+        diarization_percent,
+        max_cer_no_spk_below_50_percent=MOSS_TD_CER_NO_SPK_BELOW_50_PERCENT_MAX,
+        max_n_above_50_cer=MOSS_TD_N_ABOVE_50_CER_MAX,
+        collector=checks,
     )
     _check_optional_max(
         checks,

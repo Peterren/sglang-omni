@@ -19,6 +19,7 @@ SPEAKER_TOKEN_RE = re.compile(r"^S0*(\d+)$", re.IGNORECASE)
 SPEAKER_TAG_RE = re.compile(r"\[S0*(\d+)\]", re.IGNORECASE)
 SPEAKER_TAG_CANON_RE = re.compile(r"\[S\d+\]", re.IGNORECASE)
 BRACKET_EVENT_RE = re.compile(r"\[(?!S\d+\])[^]]+\]", re.IGNORECASE)
+_CER_ABOVE_50_FRACTION = 0.5
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +61,13 @@ class _CharStats:
 class _CpCerStats(_CharStats):
     valid: bool
     invalid_reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class _CerPartitionStats:
+    below_50_corpus_cer: float | None
+    n_above_50: int
+    pct_above_50: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,6 +157,15 @@ def print_diarization_accuracy_summary(
     print(
         f"  {'CER no speaker:':<{label_width}} "
         f"{_format_ratio(_as_optional_number(diarization_metrics, 'cer_no_spk'))}"
+    )
+    print(
+        f"  {'CER no-spk corpus (excl >50%):':<{label_width}} "
+        f"{_format_ratio(_as_optional_number(diarization_metrics, 'cer_no_spk_below_50_corpus'))}"
+    )
+    print(
+        f"  {'>50% CER samples:':<{label_width}} "
+        f"{diarization_metrics.get('n_above_50_pct_cer', 0)} "
+        f"({diarization_metrics.get('pct_above_50_pct_cer', 0):.1f}%)"
     )
     print(
         f"  {'cpCER:':<{label_width}} {_format_ratio(_as_optional_number(diarization_metrics, 'cp_cer'))}"
@@ -253,12 +270,16 @@ def compute_diarization_metrics(
     cer_summary = _sum_char_stats(cer_stats)
     cp_summary = _sum_char_stats(cp_stats)
     cer_on_cp_summary = _sum_char_stats(cer_stats_on_cp_valid)
+    cer_partition = _partition_cer_stats(cer_stats)
     delta_cer = None
     if cp_summary.cer is not None and cer_on_cp_summary.cer is not None:
         delta_cer = cp_summary.cer - cer_on_cp_summary.cer
     metrics = {
         "cer_no_spk": cer_summary.cer,
         "cer": cer_summary.cer,
+        "cer_no_spk_below_50_corpus": cer_partition.below_50_corpus_cer,
+        "n_above_50_pct_cer": cer_partition.n_above_50,
+        "pct_above_50_pct_cer": cer_partition.pct_above_50,
         "cp_cer": cp_summary.cer,
         "cer_no_spk_cp_valid": cer_on_cp_summary.cer,
         "delta_cer": delta_cer,
@@ -285,6 +306,7 @@ def compute_diarization_metrics(
             in {
                 "cer_no_spk",
                 "cer",
+                "cer_no_spk_below_50_corpus",
                 "cp_cer",
                 "cer_no_spk_cp_valid",
                 "delta_cer",
@@ -379,6 +401,32 @@ def split_clean_by_speaker(
         if content:
             speaker_text[speaker] = speaker_text.get(speaker, "") + content
     return speaker_text
+
+
+def _partition_cer_stats(cer_stats: Sequence[_CharStats]) -> _CerPartitionStats:
+    """Partition corpus CER like WER: global stats plus an excl->50% subset."""
+    if not cer_stats:
+        return _CerPartitionStats(
+            below_50_corpus_cer=None,
+            n_above_50=0,
+            pct_above_50=0.0,
+        )
+    n_above_50 = sum(
+        1
+        for stats in cer_stats
+        if stats.cer is not None and stats.cer > _CER_ABOVE_50_FRACTION
+    )
+    below_50_stats = [
+        stats
+        for stats in cer_stats
+        if stats.cer is not None and stats.cer <= _CER_ABOVE_50_FRACTION
+    ]
+    below_50_summary = _sum_char_stats(below_50_stats)
+    return _CerPartitionStats(
+        below_50_corpus_cer=below_50_summary.cer,
+        n_above_50=n_above_50,
+        pct_above_50=(n_above_50 / len(cer_stats) * 100.0 if cer_stats else 0.0),
+    )
 
 
 def _char_stats(reference: str, prediction: str) -> _CharStats:

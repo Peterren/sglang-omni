@@ -95,6 +95,8 @@ METRIC_SPECS = {
     "cp_cer_percent":       dict(worst="max", label="cpCER (%)",             digits=2, scale=1,   group="diarization"),
     "cer_no_spk_cp_valid_percent": dict(worst="max", label="CER no-spk cp-valid (%)", digits=2, scale=1, group="diarization"),
     "delta_cer_percent":    dict(worst="max", label="Delta CER (%)",         digits=2, scale=1,   group="diarization"),
+    "cer_no_spk_below_50_corpus": dict(worst="max", label="CER no-spk ≤50% corpus (%)", digits=2, scale=1, group="diarization"),
+    "n_above_50_pct_cer":   dict(worst="max", label="Samples >50% CER",      digits=0, scale=1,   group="diarization"),
     "speaker_timestamp_der_percent": dict(worst="max", label="Speaker-timestamp DER (%)", digits=2, scale=1, group="diarization"),
     "cer_valid_samples":    dict(worst="min", label="CER valid samples",     digits=0, scale=1,   group="diarization"),
     "cp_cer_valid_samples": dict(worst="min", label="cpCER valid samples",   digits=0, scale=1,   group="diarization"),
@@ -178,6 +180,10 @@ def match_metric(name, nested):
         return "cp_cer_percent"
     if "DELTA_CER_PERCENT_MAX" in name:
         return "delta_cer_percent"
+    if "CER_NO_SPK_BELOW_50_PERCENT" in name:
+        return "cer_no_spk_below_50_corpus"
+    if "N_ABOVE_50_CER_MAX" in name:
+        return "n_above_50_pct_cer"
     # DER calibrates the reference constant (test derives the MAX via slack),
     # so match the *_REF symbol; the computed *_MAX literal is left unmatched.
     if "SPEAKER_TIMESTAMP_DER_PERCENT_REF" in name:

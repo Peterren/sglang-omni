@@ -96,6 +96,9 @@ SPEED_ORDER: Final[tuple[str, ...]] = (
 DIARIZATION_METRICS_PERCENT_ORDER: Final[tuple[str, ...]] = (
     "cer",
     "cer_no_spk",
+    "cer_no_spk_below_50_corpus",
+    "n_above_50_pct_cer",
+    "pct_above_50_pct_cer",
     "cp_cer",
     "cer_no_spk_cp_valid",
     "delta_cer",
@@ -117,6 +120,8 @@ DIARIZATION_METRICS_PERCENT_ORDER: Final[tuple[str, ...]] = (
 )
 KEY_METRICS_ORDER: Final[tuple[str, ...]] = (
     "cer_no_spk",
+    "cer_no_spk_below_50_corpus",
+    "n_above_50_pct_cer",
     "cp_cer",
     "delta_cer",
     "speaker_timestamp_der",

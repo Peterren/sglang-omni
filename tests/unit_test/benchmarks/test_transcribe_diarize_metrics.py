@@ -120,6 +120,50 @@ def test_build_metrics_section_prints_timestamp_metrics() -> None:
     assert "speaker_timestamp_der_valid_samples:" in section
 
 
+def test_compute_diarization_metrics_partitions_cer_above_50_percent() -> None:
+    result = compute_diarization_metrics(
+        [
+            DiarizationRow(
+                sample_id="ok",
+                audio_path="/tmp/ok.wav",
+                reference_text="[S01]hello",
+                prediction_text="[S01]hello",
+            ),
+            DiarizationRow(
+                sample_id="bad",
+                audio_path="/tmp/bad.wav",
+                reference_text="[S01]abc",
+                prediction_text="[S01]" + "d" * 100,
+            ),
+        ]
+    )
+
+    assert result.metrics["cer_no_spk"] is not None
+    assert result.metrics["cer_no_spk_below_50_corpus"] == pytest.approx(0.0)
+    assert result.metrics["n_above_50_pct_cer"] == 1
+    assert result.metrics_percent["cer_no_spk_below_50_corpus"] == pytest.approx(0.0)
+    assert result.metrics_percent["n_above_50_pct_cer"] == 1
+
+
+def test_build_key_metrics_section_prints_partitioned_cer_metrics() -> None:
+    module = _load_eval_module()
+
+    section = module._build_key_metrics_section(
+        {
+            "cer_no_spk": 21.68,
+            "cer_no_spk_below_50_corpus": 5.50,
+            "n_above_50_pct_cer": 1,
+            "cp_cer": 14.42,
+            "delta_cer": 7.85,
+            "speaker_timestamp_der": 23.97,
+        }
+    )
+
+    assert "cer_no_spk_below_50_corpus:" in section
+    assert "5.5" in section
+    assert "n_above_50_pct_cer:" in section
+
+
 def test_build_key_metrics_section_prints_selected_metrics() -> None:
     module = _load_eval_module()
 
