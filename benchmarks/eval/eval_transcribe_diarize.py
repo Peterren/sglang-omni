@@ -1,12 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0
 """MOSS-Transcribe-Diarize eval.
 
+Evaluate the MOSS-Transcribe-Diarize model on the Movies800Time and AISHELL4
+datasets for multi-speaker dialog transcription. These two datasets are private
+datasets and can only be accessed with zhaochenyang20's Hugging Face account.
+
+Author:
+
+    Yiyang Zhang https://github.com/CloudRipple
+    Chenyang Zhao https://github.com/zhaochenyang20
+
 Usage:
 
     python -m benchmarks.eval.eval_transcribe_diarize \
-        --dataset movies800 \
+        --dataset movies800times \
         --max-concurrency 16 \
-        --output-dir results/moss_transcribe_diarize_movies800
+        --output-dir results/moss_transcribe_diarize_movies800times
 
     python -m benchmarks.eval.eval_transcribe_diarize \
         --dataset aishell4_long \
@@ -60,7 +69,9 @@ ASR_RESULTS_FILE: Final[str] = "transcribe_diarize_asr_results.json"
 SPEED_RESULTS_FILE: Final[str] = "transcribe_diarize_speed_results.json"
 DEFAULT_SERVER_MEM_FRACTION_STATIC: Final[float] = 0.80
 DEFAULT_MAX_NEW_TOKENS: Final[int] = 65536
-MOVIES800_OUTPUT_DIR: Final[str] = "results/moss_transcribe_diarize_movies800"
+MOVIES800TIMES_EXPECTED_SAMPLE_COUNT: Final[int] = 800
+AISHELL4_LONG_EXPECTED_SAMPLE_COUNT: Final[int] = 20
+MOVIES800TIMES_OUTPUT_DIR: Final[str] = "results/moss_transcribe_diarize_movies800times"
 AISHELL4_LONG_OUTPUT_DIR: Final[str] = "results/moss_transcribe_diarize_aishell4_long"
 SUMMARY_ORDER: Final[tuple[str, ...]] = (
     "total_samples",
@@ -107,7 +118,7 @@ SPEED_ORDER: Final[tuple[str, ...]] = (
     "first_audio_payload_bytes_mean",
     "first_audio_payload_bytes_p95",
 )
-MOVIES800_DIARIZATION_METRICS_PERCENT_ORDER: Final[tuple[str, ...]] = (
+MOVIES800TIMES_DIARIZATION_METRICS_PERCENT_ORDER: Final[tuple[str, ...]] = (
     "cer",
     "cer_no_spk",
     "cer_no_spk_below_50_corpus",
@@ -154,7 +165,7 @@ AISHELL4_LONG_DIARIZATION_METRICS_PERCENT_ORDER: Final[tuple[str, ...]] = (
     "cp_cer_valid_samples",
     "count",
 )
-MOVIES800_KEY_METRICS_ORDER: Final[tuple[str, ...]] = (
+MOVIES800TIMES_KEY_METRICS_ORDER: Final[tuple[str, ...]] = (
     "cer_no_spk",
     "cer_no_spk_below_50_corpus",
     "n_above_50_pct_cer",
@@ -179,21 +190,25 @@ class DatasetConfig:
     audio_column: str
     expected_column: str
     output_dir: str
+    expected_sample_count: int | None
     key_metrics_order: tuple[str, ...]
     diarization_metrics_percent_order: tuple[str, ...]
 
 
 DATASET_CONFIGS: Final[dict[str, DatasetConfig]] = {
-    "movies800": DatasetConfig(
-        name="movies800",
-        description="movies800",
+    "movies800times": DatasetConfig(
+        name="movies800times",
+        description="Movies800Time",
         repo_id=MOVIES800_REPO_ID,
         split="validation",
         audio_column="audio",
         expected_column="transcription",
-        output_dir=MOVIES800_OUTPUT_DIR,
-        key_metrics_order=MOVIES800_KEY_METRICS_ORDER,
-        diarization_metrics_percent_order=MOVIES800_DIARIZATION_METRICS_PERCENT_ORDER,
+        output_dir=MOVIES800TIMES_OUTPUT_DIR,
+        expected_sample_count=MOVIES800TIMES_EXPECTED_SAMPLE_COUNT,
+        key_metrics_order=MOVIES800TIMES_KEY_METRICS_ORDER,
+        diarization_metrics_percent_order=(
+            MOVIES800TIMES_DIARIZATION_METRICS_PERCENT_ORDER
+        ),
     ),
     "aishell4_long": DatasetConfig(
         name="aishell4_long",
@@ -203,6 +218,7 @@ DATASET_CONFIGS: Final[dict[str, DatasetConfig]] = {
         audio_column="audio",
         expected_column="transcription",
         output_dir=AISHELL4_LONG_OUTPUT_DIR,
+        expected_sample_count=AISHELL4_LONG_EXPECTED_SAMPLE_COUNT,
         key_metrics_order=AISHELL4_LONG_KEY_METRICS_ORDER,
         diarization_metrics_percent_order=(
             AISHELL4_LONG_DIARIZATION_METRICS_PERCENT_ORDER
@@ -299,7 +315,7 @@ async def run_eval(
 def parse_args(
     argv: Sequence[str] | None = None,
     *,
-    default_dataset: str = "movies800",
+    default_dataset: str = "movies800times",
 ) -> argparse.Namespace:
     dataset_config = _dataset_config_from_argv(argv, default_dataset)
     parser = argparse.ArgumentParser(
@@ -317,7 +333,7 @@ def parse_args(
 def main(
     argv: Sequence[str] | None = None,
     *,
-    default_dataset: str = "movies800",
+    default_dataset: str = "movies800times",
 ) -> int:
     try:
         args = parse_args(argv, default_dataset=default_dataset)
@@ -472,12 +488,14 @@ def _add_server_args(parser: argparse.ArgumentParser) -> None:
 
 
 def _load_samples(args: argparse.Namespace) -> list[Movies800Sample]:
+    dataset_config = DATASET_CONFIGS[args.dataset]
     return load_movies800_samples(
         repo_id=args.repo_id,
         split=args.split,
         audio_column=args.audio_column,
         expected_column=args.expected_column,
         max_samples=args.max_samples,
+        expected_sample_count=dataset_config.expected_sample_count,
     )
 
 
@@ -847,7 +865,7 @@ def _build_metrics_section(
 
 def _build_key_metrics_section(
     metrics: Mapping[str, object],
-    key_order: tuple[str, ...] = MOVIES800_KEY_METRICS_ORDER,
+    key_order: tuple[str, ...] = MOVIES800TIMES_KEY_METRICS_ORDER,
 ) -> str:
     lines = ["\nkey_metrics", "-" * SPEED_LINE_WIDTH]
     for key in key_order:

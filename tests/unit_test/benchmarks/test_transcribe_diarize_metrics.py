@@ -36,16 +36,16 @@ def _load_eval_module():
     return module
 
 
-def test_parse_args_defaults_to_movies800_preset() -> None:
+def test_parse_args_defaults_to_movies800times_preset() -> None:
     module = _load_eval_module()
 
     args = module.parse_args([])
 
-    assert args.dataset == "movies800"
+    assert args.dataset == "movies800times"
     assert args.repo_id == module.MOVIES800_REPO_ID
     assert args.max_samples is None
     assert args.max_new_tokens == module.DEFAULT_MAX_NEW_TOKENS
-    assert args.output_dir == module.MOVIES800_OUTPUT_DIR
+    assert args.output_dir == module.MOVIES800TIMES_OUTPUT_DIR
 
 
 def test_parse_args_uses_aishell4_long_preset() -> None:
@@ -58,6 +58,33 @@ def test_parse_args_uses_aishell4_long_preset() -> None:
     assert args.max_samples is None
     assert args.max_new_tokens == module.DEFAULT_MAX_NEW_TOKENS
     assert args.output_dir == module.AISHELL4_LONG_OUTPUT_DIR
+
+
+@pytest.mark.parametrize(
+    ("dataset", "expected_sample_count"),
+    [
+        ("movies800times", 800),
+        ("aishell4_long", 20),
+    ],
+)
+def test_load_samples_uses_dataset_expected_sample_count(
+    monkeypatch: pytest.MonkeyPatch,
+    dataset: str,
+    expected_sample_count: int,
+) -> None:
+    module = _load_eval_module()
+    captured_kwargs: dict[str, object] = {}
+
+    def fake_load_movies800_samples(**kwargs: object) -> list[object]:
+        captured_kwargs.update(kwargs)
+        return []
+
+    monkeypatch.setattr(module, "load_movies800_samples", fake_load_movies800_samples)
+
+    module._load_samples(module.parse_args(["--dataset", dataset]))
+
+    assert captured_kwargs["max_samples"] is None
+    assert captured_kwargs["expected_sample_count"] == expected_sample_count
 
 
 @pytest.mark.parametrize(
