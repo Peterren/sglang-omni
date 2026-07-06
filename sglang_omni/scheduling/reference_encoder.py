@@ -52,6 +52,7 @@ class ReferenceEncodeHook(Generic[InputT, ArtifactT, StoredT]):
         return True
 
     def encode_batch(self, items: list[InputT]) -> list[ArtifactT]:
+        """Reserved; ReferenceEncodeService does not call this until batching."""
         return [self.encode_one(item) for item in items]
 
 
@@ -92,7 +93,8 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
                 self._uncacheable += 1
             try:
                 return self._hook.encode_one(item)
-            except BaseException:
+            except BaseException as exc:
+                self._add_exception_note(exc, desc)
                 with self._lock:
                     self._failed += 1
                 raise
@@ -120,7 +122,11 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
         if follower_fut is not None:
             try:
                 stored = follower_fut.result(timeout=self._timeout_s)
-            except concurrent.futures.TimeoutError:
+            except concurrent.futures.TimeoutError as exc:
+                self._add_exception_note(exc, desc)
+                raise
+            except BaseException as exc:
+                self._add_exception_note(exc, desc)
                 raise
             return self._hook.load_artifact(stored)
 
@@ -140,6 +146,7 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
                     self._cache.put(cache_key, stored)
                 self._inflight.pop(cache_key, None)
         except BaseException as exc:
+            self._add_exception_note(exc, desc)
             with self._lock:
                 self._inflight.pop(cache_key, None)
                 self._failed += 1
@@ -161,6 +168,14 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
                 "failed": self._failed,
                 "uncacheable": self._uncacheable,
             }
+
+    @staticmethod
+    def _add_exception_note(exc: BaseException, desc: str | None) -> None:
+        if not desc:
+            return
+        add_note = getattr(exc, "add_note", None)
+        if callable(add_note):
+            add_note(f"Reference encode context: {desc}")
 
     def _maybe_log(self) -> None:
         if self._log_prefix is None:

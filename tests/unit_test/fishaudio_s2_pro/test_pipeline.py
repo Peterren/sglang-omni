@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib
 import sys
 import threading
-import time
 from types import ModuleType, SimpleNamespace
 
 import numpy as np
@@ -571,12 +570,21 @@ def test_fish_reference_encode_service_same_key_concurrent_merge(
     )
 
     codec = _Codec()
+    worker_count = 4
+    gate = threading.Barrier(worker_count)
+
+    class _GatedFishReferenceEncodeHook(_FishReferenceEncodeHook):
+        def normalize_input(self, raw_input):
+            item = super().normalize_input(raw_input)
+            gate.wait(timeout=5)
+            return item
+
     service = ReferenceEncodeService(
-        _FishReferenceEncodeHook(codec=codec, checkpoint_id="ckpt"),
+        _GatedFishReferenceEncodeHook(codec=codec, checkpoint_id="ckpt"),
         max_items=16,
         max_bytes=1024,
     )
-    results: list[torch.Tensor | None] = [None] * 4
+    results: list[torch.Tensor | None] = [None] * worker_count
     errors: list[Exception] = []
 
     def worker(index: int) -> None:
@@ -589,7 +597,6 @@ def test_fish_reference_encode_service_same_key_concurrent_merge(
     for thread in threads:
         thread.start()
     assert entered.wait(timeout=5)
-    time.sleep(0.05)
     release.set()
     for thread in threads:
         thread.join(timeout=5)

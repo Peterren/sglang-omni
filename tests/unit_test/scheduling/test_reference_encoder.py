@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import concurrent.futures
 import threading
-import time
 from collections import Counter
 from typing import Any
 
@@ -26,6 +25,18 @@ def _key(name: str) -> ReferenceEncodeKey:
         artifact_kind="codes",
         input_key=name,
     )
+
+
+class _FirstWaveGate:
+    def __init__(self, count: int) -> None:
+        self._barrier = threading.Barrier(count)
+        self._done = threading.Event()
+
+    def wait(self) -> None:
+        if self._done.is_set():
+            return
+        self._barrier.wait(timeout=5)
+        self._done.set()
 
 
 class _TensorHook(ReferenceEncodeHook[str, torch.Tensor, torch.Tensor]):
@@ -57,8 +68,15 @@ class _TensorHook(ReferenceEncodeHook[str, torch.Tensor, torch.Tensor]):
 def test_same_key_concurrent_single_flight() -> None:
     release = threading.Event()
     entered = threading.Event()
+    worker_count = 8
+    gate = _FirstWaveGate(worker_count)
 
     class _GatedHook(_TensorHook):
+        def normalize_input(self, raw_input: Any) -> str:
+            item = super().normalize_input(raw_input)
+            gate.wait()
+            return item
+
         def encode_one(self, item: str) -> torch.Tensor:
             entered.set()
             assert release.wait(timeout=5)
@@ -66,7 +84,7 @@ def test_same_key_concurrent_single_flight() -> None:
 
     hook = _GatedHook()
     service = ReferenceEncodeService(hook, max_items=16, max_bytes=1024)
-    results: list[torch.Tensor | None] = [None] * 8
+    results: list[torch.Tensor | None] = [None] * worker_count
     errors: list[Exception] = []
 
     def worker(index: int) -> None:
@@ -79,7 +97,6 @@ def test_same_key_concurrent_single_flight() -> None:
     for thread in threads:
         thread.start()
     assert entered.wait(timeout=5)
-    time.sleep(0.05)
     release.set()
     for thread in threads:
         thread.join(timeout=5)
@@ -129,8 +146,14 @@ def test_key_none_bypasses_cache() -> None:
 def test_exception_propagates_to_all_waiters_and_does_not_poison() -> None:
     release = threading.Event()
     entered = threading.Event()
+    gate = _FirstWaveGate(4)
 
     class _FlakyHook(_TensorHook):
+        def normalize_input(self, raw_input: Any) -> str:
+            item = super().normalize_input(raw_input)
+            gate.wait()
+            return item
+
         def encode_one(self, item: str) -> torch.Tensor:
             with self.lock:
                 self.calls[item] += 1
@@ -155,7 +178,6 @@ def test_exception_propagates_to_all_waiters_and_does_not_poison() -> None:
     for thread in threads:
         thread.start()
     assert entered.wait(timeout=5)
-    time.sleep(0.05)
     release.set()
     for thread in threads:
         thread.join(timeout=5)
@@ -163,6 +185,8 @@ def test_exception_propagates_to_all_waiters_and_does_not_poison() -> None:
     assert len(errors) == 4
     assert all(isinstance(error, ValueError) for error in errors)
     assert all(str(error) == "boom" for error in errors)
+    if hasattr(errors[0], "__notes__"):
+        assert "Reference encode context: flaky" in errors[0].__notes__
     assert service.stats()["entries"] == 0
     result = service.get_or_encode("flaky")
     assert torch.equal(result, torch.tensor([9], dtype=torch.long))
@@ -283,8 +307,14 @@ def test_revalidate_exception_propagates_to_followers_without_timeout() -> None:
     # not sit on follower_fut.result() until timeout_s.
     release = threading.Event()
     entered = threading.Event()
+    gate = _FirstWaveGate(4)
 
     class _GatedRaisingHook(_TensorHook):
+        def normalize_input(self, raw_input: Any) -> str:
+            item = super().normalize_input(raw_input)
+            gate.wait()
+            return item
+
         def encode_one(self, item: str) -> torch.Tensor:
             entered.set()
             assert release.wait(timeout=5)
@@ -309,7 +339,6 @@ def test_revalidate_exception_propagates_to_followers_without_timeout() -> None:
     for thread in threads:
         thread.start()
     assert entered.wait(timeout=5)
-    time.sleep(0.05)
     release.set()
     for thread in threads:
         thread.join(timeout=5)
