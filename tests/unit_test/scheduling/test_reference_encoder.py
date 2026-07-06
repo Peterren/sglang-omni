@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import threading
+import time
 from collections import Counter
 from typing import Any
 
@@ -37,6 +38,19 @@ class _FirstWaveGate:
             return
         self._barrier.wait(timeout=5)
         self._done.set()
+
+
+def _wait_for_merged(
+    service: ReferenceEncodeService[Any, Any, Any],
+    expected: int,
+    timeout_s: float = 5.0,
+) -> None:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if service.stats()["merged"] >= expected:
+            return
+        time.sleep(0.001)
+    assert service.stats()["merged"] >= expected
 
 
 class _TensorHook(ReferenceEncodeHook[str, torch.Tensor, torch.Tensor]):
@@ -97,6 +111,7 @@ def test_same_key_concurrent_single_flight() -> None:
     for thread in threads:
         thread.start()
     assert entered.wait(timeout=5)
+    _wait_for_merged(service, worker_count - 1)
     release.set()
     for thread in threads:
         thread.join(timeout=5)
@@ -146,7 +161,8 @@ def test_key_none_bypasses_cache() -> None:
 def test_exception_propagates_to_all_waiters_and_does_not_poison() -> None:
     release = threading.Event()
     entered = threading.Event()
-    gate = _FirstWaveGate(4)
+    worker_count = 4
+    gate = _FirstWaveGate(worker_count)
 
     class _FlakyHook(_TensorHook):
         def normalize_input(self, raw_input: Any) -> str:
@@ -174,10 +190,11 @@ def test_exception_propagates_to_all_waiters_and_does_not_poison() -> None:
         except Exception as exc:
             errors.append(exc)
 
-    threads = [threading.Thread(target=worker) for _ in range(4)]
+    threads = [threading.Thread(target=worker) for _ in range(worker_count)]
     for thread in threads:
         thread.start()
     assert entered.wait(timeout=5)
+    _wait_for_merged(service, worker_count - 1)
     release.set()
     for thread in threads:
         thread.join(timeout=5)
@@ -307,7 +324,8 @@ def test_revalidate_exception_propagates_to_followers_without_timeout() -> None:
     # not sit on follower_fut.result() until timeout_s.
     release = threading.Event()
     entered = threading.Event()
-    gate = _FirstWaveGate(4)
+    worker_count = 4
+    gate = _FirstWaveGate(worker_count)
 
     class _GatedRaisingHook(_TensorHook):
         def normalize_input(self, raw_input: Any) -> str:
@@ -335,10 +353,11 @@ def test_revalidate_exception_propagates_to_followers_without_timeout() -> None:
         except Exception as exc:
             errors.append(exc)
 
-    threads = [threading.Thread(target=worker) for _ in range(4)]
+    threads = [threading.Thread(target=worker) for _ in range(worker_count)]
     for thread in threads:
         thread.start()
     assert entered.wait(timeout=5)
+    _wait_for_merged(service, worker_count - 1)
     release.set()
     for thread in threads:
         thread.join(timeout=5)
