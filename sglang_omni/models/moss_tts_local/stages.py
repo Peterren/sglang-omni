@@ -7,6 +7,7 @@ import base64
 import concurrent.futures
 import io
 import logging
+import os
 import queue
 import threading
 from dataclasses import dataclass
@@ -506,6 +507,17 @@ def create_preprocessing_executor(
     ref_audio_cache_max_items: int = 8192,
     ref_audio_cache_max_bytes: int = 64 * 1024 * 1024,
 ) -> SimpleScheduler:
+    # MOSS_REF_AUDIO_CACHE=0 disables the cache at startup (ops kill switch / A-B
+    # toggle) without a config edit; unset => kwarg/config default.
+    env_toggle = os.environ.get("MOSS_REF_AUDIO_CACHE")
+    if env_toggle is not None:
+        ref_audio_cache = env_toggle.strip().lower() not in (
+            "0",
+            "false",
+            "no",
+            "off",
+            "",
+        )
     device = _resolve_codec_device(device, gpu_id)
     processor = _load_moss_tts_local_processor(model_path)
     audio_tokenizer = load_moss_tts_local_audio_tokenizer(
