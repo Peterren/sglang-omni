@@ -666,7 +666,7 @@ Common ASR preset:
 python .claude/skills/tune-ci-thresholds/tune.py --model asr run \
   --stages ALL --repeats 5 --output-dir .tune-runs/<timestamp>_asr_all_r5
 
-# ASR stage 1 only (MOSS-Transcribe-Diarize on movies800):
+# ASR stage 1 only (MOSS-Transcribe-Diarize on movies800time):
 python .claude/skills/tune-ci-thresholds/tune.py --model asr run \
   --stages multi_speaker --repeats 5 --output-dir .tune-runs/<timestamp>_asr_multi_speaker_r5
 
@@ -695,16 +695,21 @@ uses `--stages ALL`; targeted reruns use `multi_speaker` or `seedtts`.
 
 | Stage key | Group | What gets written | Test constant(s) |
 |-----------|-------|-------------------|------------------|
-| `multi_speaker_diarization` | diarization | CER / cpCER / valid sample refs | `MOSS_TD_CER_*`, `MOSS_TD_CP_CER_*`, `MOSS_TD_DELTA_CER_*` |
+| `multi_speaker_diarization` | diarization | CER / cpCER / DER / valid sample refs | `MOSS_TD_CER_*`, `MOSS_TD_CP_CER_*`, `MOSS_TD_DELTA_CER_*`, `MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF` |
 | `multi_speaker_speed` | speed | throughput + latency + RTF P95 refs | `MOSS_TD_THROUGHPUT_QPS_MIN`, `MOSS_TD_LATENCY_*`, `MOSS_TD_RTF_*` |
 | `seedtts_wer` | wer | corpus + per-sample WER ref | `SEEDTTS_ASR_CORPUS_WER_MAX`, `SEEDTTS_ASR_SAMPLE_WER_MAX` |
 | `seedtts_speed` | speed | throughput + latency + RTF P95 refs | `QWEN3_ASR_THROUGHPUT_MIN`, `QWEN3_ASR_LATENCY_*`, `QWEN3_ASR_RTF_*` |
 
 Notes:
 - Stage 1 uses **`OpenMOSS-Team/MOSS-Transcribe-Diarize`** and dataset
-  **`zhaochenyang20/movies800`**. Strict audit expects
-  **`MOSS_TD_CI_SAMPLES`** samples; CER/cpCER metrics are already percentages
+  **`zhaochenyang20/movies800time`**. Strict audit expects
+  **`MOSS_TD_CI_SAMPLES`** samples; CER/cpCER/DER metrics are already percentages
   in the JSON, so display scale is **1**, not 100.
+- **DER (speaker-timestamp diarization error rate)** calibrates the reference
+  constant `MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF` (worst-of-N `max`); the
+  test derives `MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_MAX` via the slack helper.
+  Both start at `None`, so the DER gate is skipped (prints `[threshold pending]`)
+  until the first DER calibration fills in the reference.
 - Stage 2 uses **`Qwen/Qwen3-ASR-1.7B`** and dataset
   **`zhaochenyang20/seed-tts-eval-arrow`**. Strict audit expects
   **`SEEDTTS_ASR_CORRECTNESS_SAMPLES`** samples.

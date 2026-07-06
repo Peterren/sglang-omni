@@ -48,6 +48,9 @@ MOSS_TD_CER_NO_SPK_PERCENT_REF = 6.612385102255017
 MOSS_TD_CP_CER_PERCENT_REF = 13.0
 MOSS_TD_CER_NO_SPK_CP_VALID_PERCENT_REF = 6.51
 MOSS_TD_DELTA_CER_PERCENT_REF = 6.49
+# Speaker-timestamp DER (diarization error rate, already a percentage in the
+# result JSON). None until the first DER calibration fills in the reference.
+MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF: float | None = None
 MOSS_TD_CER_VALID_SAMPLES_MIN: int | None = 784
 MOSS_TD_CP_CER_VALID_SAMPLES_MIN: int | None = 773
 MOSS_TD_THROUGHPUT_QPS_REF = 33.761
@@ -73,6 +76,11 @@ MOSS_TD_CER_NO_SPK_CP_VALID_PERCENT_MAX: float | None = round(
 )
 MOSS_TD_DELTA_CER_PERCENT_MAX: float | None = round(
     MOSS_TD_DELTA_CER_PERCENT_REF * THRESHOLD_SLACK_LOWER, 4
+)
+MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_MAX: float | None = (
+    round(MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF * THRESHOLD_SLACK_LOWER, 4)
+    if MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF is not None
+    else None
 )
 MOSS_TD_THROUGHPUT_QPS_MIN: float | None = round(
     MOSS_TD_THROUGHPUT_QPS_REF * THRESHOLD_SLACK_HIGHER, 3
@@ -251,6 +259,13 @@ def test_moss_transcribe_diarize_movies800_multi_speaker(
         "delta_cer",
         diarization_percent.get("delta_cer"),
         MOSS_TD_DELTA_CER_PERCENT_MAX,
+        unit="%",
+    )
+    _check_optional_max(
+        checks,
+        "speaker_timestamp_der",
+        diarization_percent.get("speaker_timestamp_der"),
+        MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_MAX,
         unit="%",
     )
     _check_optional_min(

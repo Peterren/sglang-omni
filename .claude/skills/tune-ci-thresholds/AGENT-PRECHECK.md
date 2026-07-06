@@ -210,7 +210,7 @@ ls "$HF/hub" 2>/dev/null | rg -i 'qwen3|higgs|moss|movies800|seed-tts|video|mmmu
 Expected repos by model (precheck validates each):
 
 **`asr`:** models `OpenMOSS-Team/MOSS-Transcribe-Diarize`,
-`Qwen/Qwen3-ASR-1.7B`; datasets `zhaochenyang20/movies800`,
+`Qwen/Qwen3-ASR-1.7B`; datasets `zhaochenyang20/movies800time`,
 `zhaochenyang20/seed-tts-eval-arrow`.
 
 **`tts`:** models `bosonai/higgs-tts-3-4b`,
