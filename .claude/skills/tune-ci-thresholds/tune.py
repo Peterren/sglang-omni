@@ -172,25 +172,25 @@ def match_metric(name, nested):
     if "N_ABOVE_50_MAX" in name: return "n_above_50"
     if name == "TTS_MAX_FAILED_REQUESTS" or "MAX_FAILED_REQUESTS" in name:
         return "failed_requests"
-    if "CER_NO_SPK_CP_VALID_PERCENT_MAX" in name:
+    if "CER_NO_SPK_CP_VALID_PERCENT" in name:
         return "cer_no_spk_cp_valid_percent"
-    if "CER_NO_SPK_PERCENT_MAX" in name:
-        return "cer_no_spk_percent"
-    if "CP_CER_PERCENT_MAX" in name:
-        return "cp_cer_percent"
-    if "DELTA_CER_PERCENT_MAX" in name:
-        return "delta_cer_percent"
     if "CER_NO_SPK_BELOW_50_PERCENT" in name:
         return "cer_no_spk_below_50_corpus"
+    if "CER_NO_SPK_PERCENT" in name:
+        return "cer_no_spk_percent"
+    if "CP_CER_PERCENT" in name:
+        return "cp_cer_percent"
+    if "DELTA_CER_PERCENT" in name:
+        return "delta_cer_percent"
     if "N_ABOVE_50_CER_MAX" in name:
         return "n_above_50_pct_cer"
-    if "SPEAKER_TIMESTAMP_DER_PERCENT_REF" in name:
+    if "SPEAKER_TIMESTAMP_DER_PERCENT" in name:
         return "speaker_timestamp_der_percent"
     if "CP_CER_VALID_SAMPLES_MIN" in name:
         return "cp_cer_valid_samples"
     if "CER_VALID_SAMPLES_MIN" in name:
         return "cer_valid_samples"
-    if "CER_PERCENT_MAX" in name:
+    if "CER_PERCENT" in name:
         return "cer_percent"
     if "SIMILARITY" in name and name.endswith("_MIN"):
         return "similarity_mean"
@@ -200,14 +200,16 @@ def match_metric(name, nested):
     if "WER_MAX_PER_SAMPLE" in name: return "per_sample_wer_max"
     if "CORPUS_WER_MAX" in name: return "corpus_wer"
     if "SAMPLE_WER_MAX" in name: return "per_sample_wer_max"
-    if "THROUGHPUT_QPS_MIN" in name or "THROUGHPUT_MIN" in name:
+    if "THROUGHPUT_QPS" in name or "THROUGHPUT_MIN" in name:
         return "throughput_qps"
-    if "LATENCY_MEAN_S_MAX" in name or "LATENCY_MEAN_MAX" in name:
+    if "LATENCY_MEAN" in name:
         return "latency_mean_s"
-    if "LATENCY_P95_S_MAX" in name or "LATENCY_P95_MAX" in name:
+    if "LATENCY_P95" in name:
         return "latency_p95_s"
-    if "RTF_MEAN_MAX" in name: return "rtf_mean"
-    if "RTF_P95_MAX" in name: return "rtf_p95"
+    if "RTF_MEAN" in name:
+        return "rtf_mean"
+    if "RTF_P95" in name:
+        return "rtf_p95"
     return None
 
 
@@ -1169,6 +1171,51 @@ def _constants(tree):
                                 yield (t.id, kk.value)
 
 
+_SLACK_HELPER_CALLS = frozenset({"apply_wer_slack", "apply_mos_slack"})
+_SLACK_ENV_NAMES = frozenset({"THRESHOLD_SLACK_LOWER", "THRESHOLD_SLACK_HIGHER"})
+
+
+def _expr_uses_slack(node: ast.AST) -> bool:
+    for child in ast.walk(node):
+        if isinstance(child, ast.Name) and child.id in _SLACK_ENV_NAMES:
+            return True
+        if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+            if child.func.id in _SLACK_HELPER_CALLS:
+                return True
+    return False
+
+
+def _slack_derived_threshold_names(tree: ast.AST) -> set[str]:
+    """Names assigned from a reference via THRESHOLD_SLACK_* or apply_*_slack().
+
+    Calibration must write the reference literal only; CI derives assertion
+    thresholds (MAX/MIN/THRESHOLD) from slack — never apply worst-of-N to these.
+    """
+    derived: set[str] = set()
+    for n in tree.body:
+        if isinstance(n, ast.Assign):
+            targets, value = n.targets, n.value
+        elif isinstance(n, ast.AnnAssign) and n.value is not None:
+            targets, value = [n.target], n.value
+        else:
+            continue
+        if not _expr_uses_slack(value):
+            continue
+        for t in targets:
+            if isinstance(t, ast.Name):
+                derived.add(t.id)
+    return derived
+
+
+def _pick_calibration_constant(candidates: list[tuple[str, str | None]]) -> tuple[str, str | None]:
+    """Prefer *_REF / *_REFERENCE over bare *_MAX / *_MIN calibration targets."""
+    for suffix in ("_REF", "_REFERENCE"):
+        for name, nested in candidates:
+            if name.endswith(suffix):
+                return name, nested
+    return candidates[0]
+
+
 def _ctx_vars(tree):
     want = {"max_samples", "max_tokens", "max_new_tokens", "max_concurrency"}
     seen = []
@@ -1349,23 +1396,41 @@ def _stage_entry(
     return entry
 
 
-def _emit_groups(constants, cfg_paths, default_file, counters):
+def _emit_groups(constants, cfg_paths, default_file, counters,
+                 slack_derived: set[str] | None = None):
     """Build {group: {metric_kind: metric_dict}} from a constant list."""
-    groups = {}
+    slack_derived = slack_derived or set()
+    by_metric: dict[str, list[tuple[str, str | None]]] = {}
     for name, nested in constants:
+        if name in slack_derived or name.endswith("_THRESHOLD"):
+            continue
         mk = match_metric(name, nested)
         if mk is None:
             continue
+        by_metric.setdefault(mk, []).append((name, nested))
+    groups: dict[str, dict] = {}
+    for mk, candidates in by_metric.items():
+        name, nested = _pick_calibration_constant(candidates)
         spec = METRIC_SPECS[mk]
         jf, jp = _split_source(cfg_paths.get(mk), default_file)
         status = "OK" if (jf and jp) else "NEEDS_CONFIG"
-        if status == "OK": counters[0] += 1
-        else: counters[1] += 1
+        if status == "OK":
+            counters[0] += 1
+        else:
+            counters[1] += 1
         src = f"{name}[{nested!r}]" if nested else name
-        groups.setdefault(spec["group"], {})[mk] = dict(source=src,
-            json_file=jf, json_path=jp, worst=spec["worst"],
-            display=dict(label=spec["label"], scale=spec["scale"],
-                         digits=spec["digits"]), status=status)
+        groups.setdefault(spec["group"], {})[mk] = dict(
+            source=src,
+            json_file=jf,
+            json_path=jp,
+            worst=spec["worst"],
+            display=dict(
+                label=spec["label"],
+                scale=spec["scale"],
+                digits=spec["digits"],
+            ),
+            status=status,
+        )
     return groups
 
 
@@ -1505,6 +1570,7 @@ def discover(out, only, cfg):
         threshold_sha = sha256(threshold_tp)
         threshold_file_sha = threshold_sha if threshold_rel else None
         ignored_constants = set(ms.get("ignored_constants") or [])
+        slack_derived = _slack_derived_threshold_names(threshold_tree)
         all_constants = [
             (n, k) for (n, k) in _constants(threshold_tree)
             if n not in ignored_constants
@@ -1543,7 +1609,8 @@ def discover(out, only, cfg):
                     else:
                         preset_claimed = claimed
                     v_groups = _emit_groups(
-                        preset_claimed, v_paths, v_default, counters
+                        preset_claimed, v_paths, v_default, counters,
+                        slack_derived=slack_derived,
                     )
                     for g, metrics in v_groups.items():
                         if g in sc_by_group:
@@ -1588,7 +1655,10 @@ def discover(out, only, cfg):
             default_sample_counts = _build_sample_counts(
                 ms.get("sample_counts") or {}, default_file)
             sc_by_group = ms.get("sample_counts_by_group") or {}
-            groups = _emit_groups(all_constants, cfg_paths, default_file, counters)
+            groups = _emit_groups(
+                all_constants, cfg_paths, default_file, counters,
+                slack_derived=slack_derived,
+            )
             for g, metrics in groups.items():
                 if g in sc_by_group:
                     sample_counts = _build_sample_counts(sc_by_group[g], default_file)
@@ -2864,7 +2934,7 @@ def _apply_write_value(worst_op: str, worst_raw: float | None,
         return _ceil_wer_reference(worst_raw)
     if stage_group == "reliability":
         return math.ceil(worst_raw)
-    if stage_group in ("accuracy", "similarity", "utmos"):
+    if stage_group in ("accuracy", "diarization", "similarity", "utmos"):
         return worst_raw
     if worst_rounded is None:
         return worst_raw

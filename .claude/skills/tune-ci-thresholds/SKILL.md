@@ -820,7 +820,9 @@ Notes:
 - Stage 1 uses **`OpenMOSS-Team/MOSS-Transcribe-Diarize`** and dataset
   **`zhaochenyang20/movies800time`**. Strict audit expects
   **`MOSS_TD_CI_SAMPLES`** samples; CER/cpCER/DER metrics are already percentages
-  in the JSON, so display scale is **1**, not 100.
+  in the JSON, so display scale is **1**, not 100. Calibration writes the
+  pre-slack reference constants (`*_REF`) and raw count caps only; never write
+  derived `*_MAX` literals whose RHS is `*_REF * THRESHOLD_SLACK_*`.
 - **DER (speaker-timestamp diarization error rate)** calibrates the reference
   constant `MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF` (worst-of-N `max`); the
   test derives `MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_MAX` via the slack helper.
@@ -835,9 +837,11 @@ Notes:
   **`zhaochenyang20/seed-tts-eval-arrow`**. Strict audit expects
   **`SEEDTTS_ASR_CORRECTNESS_SAMPLES`** samples.
 - Both stages use the **`omni`** venv and 2-GPU router DP=2.
-- **CI slack:** tune.py writes P95 reference constants only; assertions use
-  derived threshold values where the tests define slack helpers. Do **not**
-  bake slack into calibrated literals.
+- **CI slack:** tune.py writes P95/reference constants only; assertions use
+  derived threshold values where the tests define slack helpers. Slack is a
+  CI assertion margin, **not** part of threshold selection. Do **not** bake slack
+  into calibrated literals, and do not edit constants whose value is derived by
+  `THRESHOLD_SLACK_*` or `apply_*_slack()`.
 - Shortcuts: `multi_speaker`, `seedtts`, `@diarization`, `@wer`, `@speed`.
 
 ### TTS random-pick CI vs calibration coverage
@@ -1472,7 +1476,22 @@ weights checklist for agents).
    (display-only), `write_value` (the literal to write), `current_raw`,
    and `direction` (`tightens` / `loosens` / `equal` / `unknown`).
 
-   **Which value to write:**
+  **Slack boundary (non-negotiable):**
+    - Calibration decides and writes **pre-slack** references only. Slack belongs
+      exclusively to CI assertions.
+    - Never write a literal whose RHS is derived from `THRESHOLD_SLACK_HIGHER`,
+      `THRESHOLD_SLACK_LOWER`, `apply_wer_slack()`, `apply_mos_slack()`, or any
+      other slack helper. Examples: MOSS-TD `*_PERCENT_MAX` / speed `*_MIN`
+      constants are derived from `*_REF`; write the `*_REF` constants instead.
+    - Naming exception: some reference constants are historically named
+      `*_MAX` / `*_MIN` (for example SeedTTS `*_WER_MAX`,
+      `QWEN3_ASR_THROUGHPUT_MIN`). These are valid apply targets **only when**
+      the CI assertion uses a separate derived `*_THRESHOLD` constant.
+    - `discover` / `stages.yaml` / `apply-plan` must identify the pre-slack
+      source symbol. If a metric source points at a slack-derived symbol, stop
+      and fix `discover` / `stages.yaml` before applying.
+
+  **Which value to write:**
      - **`wer`:** `write_value` = `ceil(worst_raw, 4 dp)` — never round
        down or to `display.digits` (e.g. 0.02387640 → 0.0239, not
        0.023876404494382022 or 0.0238). Write into `*_MAX` /
@@ -1482,12 +1501,14 @@ weights checklist for agents).
        exactly into `*_MIN_ACCURACY`, `*_SIMILARITY_*_MIN`, or
        `*_UTMOS_*_REFERENCE`. Report percentages use 2 decimal places for
        readability only; similarity and UTMOS use raw scores (not %).
-     - **`diarization`:** use `write_value` from apply-plan. MOSS-TD CER/cpCER
-       values are already JSON percentages, so never multiply by `scale`; valid
-       sample metrics are raw counts.
-     - **`speed`:** use `write_value` from apply-plan (rounded unless that
-       would tighten beyond `worst_raw`). Never re-round or multiply by
-       `scale`.
+    - **`diarization`:** `write_value` = `worst_raw` from apply-plan, but only
+      when the source is a pre-slack reference (`*_REF`) or a raw count cap (for
+      example `MOSS_TD_N_ABOVE_50_CER_MAX`, `*_VALID_SAMPLES_MIN`). MOSS-TD
+      CER/cpCER values are already JSON percentages, so never round to display
+      digits and never multiply by `scale`.
+    - **`speed`:** use `write_value` from apply-plan (rounded unless that
+      would tighten beyond `worst_raw`). Never re-round or multiply by
+      `scale`; for MOSS-TD speed, write `*_REF`, not derived `*_MIN` / `*_MAX`.
 
    Bounded write rules (enforced in `write_value`):
      - `worst_op == "min"`: written value must be `<= worst_raw`
@@ -1525,6 +1546,10 @@ weights checklist for agents).
    path, and after the user accepts in interactive prompts):
      - Write **`write_value`** from `apply-plan` — never `worst_rounded`
        directly, and never re-format with `display.digits`.
+     - Before editing, inspect the target assignment. If its RHS references
+       `THRESHOLD_SLACK_*` or calls `apply_*_slack()`, it is a CI assertion
+       threshold, not a calibration source; abort that metric and repair the
+       metric source to the underlying reference constant.
      - **TTS preset isolation:** each stage's `calibration_preset` and
        `metrics.*.source` / `symbol` from apply-plan identify the exact
        literal to edit (`HIGGS_VC_*` for higgs, `MOSS_VC_*` for moss). Never
