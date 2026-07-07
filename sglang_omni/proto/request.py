@@ -28,6 +28,14 @@ class RequestInfo:
     error: str | None = None
 
 
+# Metadata key holding the list of sampling fields the caller set explicitly.
+# The API layer stamps this so downstream model request builders can tell a
+# user-provided value apart from a client-filled default (SamplingParams always
+# materializes every field). Absent/empty means "nothing explicit" -> the model
+# applies its own sampling defaults.
+EXPLICIT_GENERATION_PARAMS_KEY = "explicit_generation_params"
+
+
 @dataclass
 class OmniRequest:
     """User-facing request with inputs and parameters."""

@@ -19,7 +19,7 @@ from sglang.srt.managers.schedule_batch import (
 )
 from sglang.srt.sampling.sampling_params import SamplingParams
 
-from sglang_omni.proto import StagePayload
+from sglang_omni.proto import EXPLICIT_GENERATION_PARAMS_KEY, StagePayload
 from sglang_omni.scheduling.sglang_backend import SGLangARRequestData
 from sglang_omni.utils.audio import audio_fingerprint, audio_fingerprint_int, load_audio
 
@@ -33,11 +33,6 @@ _SPECIAL_TOKEN_RE = re.compile(r"<\|(?:im_start|im_end|endoftext)\|>")
 DEFAULT_TEMPERATURE = 0.8
 DEFAULT_TOP_P = 0.95
 DEFAULT_TOP_K = 50
-_IMPLICIT_SAMPLING_DEFAULTS = {
-    "temperature": {1.0},
-    "top_p": {1.0},
-    "top_k": {-1},
-}
 # Note (yichi): MOSS-Transcribe-Diarize is an audio LLM: a Qwen3 text decoder
 # over Whisper audio embeddings, trained on a fixed transcribe+diarize
 # instruction with the timestamped/speaker-labelled transcript as the target
@@ -117,32 +112,30 @@ def _load_audio(source: Any) -> np.ndarray:
     )
 
 
-def _explicit_generation_fields(metadata: dict[str, Any]) -> set[str] | None:
-    asr_params = metadata.get("asr_params")
-    if not isinstance(asr_params, dict):
-        return None
-    explicit_generation_params = asr_params.get("explicit_generation_params")
-    if isinstance(explicit_generation_params, (list, tuple, set)):
-        return {str(field) for field in explicit_generation_params}
+def _explicit_generation_fields(metadata: dict[str, Any]) -> set[str]:
+    """Sampling fields the caller set explicitly (see EXPLICIT_GENERATION_PARAMS_KEY).
+
+    Anything not listed here resolves to the model's own default, so a client
+    layer that fills every SamplingParams field with a placeholder no longer
+    shadows the MOSS defaults.
+    """
+    fields = metadata.get(EXPLICIT_GENERATION_PARAMS_KEY)
+    if isinstance(fields, (list, tuple)):
+        return {str(field) for field in fields}
     return set()
 
 
 def _sampling_param(
     params: dict[str, Any],
-    explicit_fields: set[str] | None,
+    explicit_fields: set[str],
     field: str,
     default: Any,
     cast: Callable[[Any], Any],
 ) -> Any:
+    if field not in explicit_fields:
+        return default
     value = params.get(field)
-    if value is None:
-        return default
-    normalized = cast(value)
-    if explicit_fields is not None:
-        return normalized if field in explicit_fields else default
-    if normalized in _IMPLICIT_SAMPLING_DEFAULTS.get(field, set()):
-        return default
-    return normalized
+    return default if value is None else cast(value)
 
 
 def _decode_token_ids(

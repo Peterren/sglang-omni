@@ -17,7 +17,7 @@ from sglang_omni.models.moss_transcribe_diarize.request_builders import (
     DEFAULT_TRANSCRIBE_DIARIZE_PROMPT,
     make_moss_transcribe_diarize_scheduler_adapters,
 )
-from sglang_omni.proto import OmniRequest, StagePayload
+from sglang_omni.proto import EXPLICIT_GENERATION_PARAMS_KEY, OmniRequest, StagePayload
 
 
 def _wav_bytes(num_samples: int = 1600, sample_rate: int = 16000) -> bytes:
@@ -158,7 +158,11 @@ def test_request_builder_preserves_sampling_overrides() -> None:
                 "temperature": 0.0,
                 "top_p": 0.9,
                 "top_k": 25,
-            }
+            },
+            metadata={
+                "model": "moss-transcribe-diarize",
+                EXPLICIT_GENERATION_PARAMS_KEY: ["temperature", "top_p", "top_k"],
+            },
         )
     )
 
@@ -197,13 +201,7 @@ def test_request_builder_preserves_explicit_default_valued_overrides() -> None:
             },
             metadata={
                 "model": "moss-transcribe-diarize",
-                "asr_params": {
-                    "explicit_generation_params": [
-                        "temperature",
-                        "top_p",
-                        "top_k",
-                    ]
-                },
+                EXPLICIT_GENERATION_PARAMS_KEY: ["temperature", "top_p", "top_k"],
             },
         )
     )
@@ -219,7 +217,7 @@ def test_request_builder_ignores_openai_transcription_temperature_default() -> N
     data = request_builder(
         _payload(
             params={"temperature": 0.0},
-            metadata={"model": "moss-transcribe-diarize", "asr_params": {}},
+            metadata={"model": "moss-transcribe-diarize"},
         )
     )
 

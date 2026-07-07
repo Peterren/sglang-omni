@@ -66,6 +66,7 @@ from sglang_omni.http.admin_auth import (
     resolve_admin_api_key,
 )
 from sglang_omni.http.favicon import register_favicon
+from sglang_omni.proto import EXPLICIT_GENERATION_PARAMS_KEY
 from sglang_omni.serve.protocol import (
     DEFAULT_TTS_BATCH_MAX_ITEMS,
     AdminRequestBase,
@@ -858,14 +859,12 @@ def _explicit_generation_params(request: Any) -> list[str]:
     )
 
 
-def _add_explicit_generation_params(
+def _record_explicit_generation_params(
     metadata: dict[str, Any],
     explicit_fields: list[str],
 ) -> None:
-    asr_params: dict[str, Any] = {}
     if explicit_fields:
-        asr_params["explicit_generation_params"] = explicit_fields
-    metadata["asr_params"] = asr_params
+        metadata[EXPLICIT_GENERATION_PARAMS_KEY] = explicit_fields
 
 
 def _build_chat_generate_request(req: ChatCompletionRequest) -> GenerateRequest:
@@ -937,7 +936,7 @@ def _build_chat_generate_request(req: ChatCompletionRequest) -> GenerateRequest:
         metadata["video_max_pixels"] = req.video_max_pixels
     if req.video_total_pixels is not None:
         metadata["video_total_pixels"] = req.video_total_pixels
-    _add_explicit_generation_params(
+    _record_explicit_generation_params(
         metadata,
         _explicit_generation_params(req),
     )
@@ -1057,7 +1056,7 @@ def _build_rollout_generate_request(req: RolloutGenerateRequest) -> GenerateRequ
         "return_indexer_topk": req.return_indexer_topk,
     }
     metadata = dict(req.metadata) if req.metadata else {}
-    _add_explicit_generation_params(
+    _record_explicit_generation_params(
         metadata,
         _explicit_generation_params(req.sampling_params),
     )
@@ -1650,7 +1649,7 @@ def build_transcription_generate_request(
         explicit_fields.append("temperature")
     if max_new_tokens is not None:
         explicit_fields.append("max_new_tokens")
-    _add_explicit_generation_params(metadata, explicit_fields)
+    _record_explicit_generation_params(metadata, sorted(explicit_fields))
     sampling = SamplingParams(
         temperature=temperature if temperature is not None else 0.0,
         max_new_tokens=max_new_tokens,

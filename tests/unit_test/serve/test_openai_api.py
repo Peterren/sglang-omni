@@ -12,7 +12,12 @@ from sglang_omni.client import Client, GenerateChunk
 from sglang_omni.client.audio import encode_pcm
 from sglang_omni.client.types import GenerateRequest
 from sglang_omni.pipeline.coordinator import Coordinator
-from sglang_omni.proto import CompleteMessage, OmniRequest, StreamMessage
+from sglang_omni.proto import (
+    EXPLICIT_GENERATION_PARAMS_KEY,
+    CompleteMessage,
+    OmniRequest,
+    StreamMessage,
+)
 from sglang_omni.serve import create_app
 from sglang_omni.serve.openai_api import (
     _await_speech_response,
@@ -586,7 +591,7 @@ def test_chat_stream_failure_closes_without_done_sentinel() -> None:
     assert all(chunk != "data: [DONE]\n\n" for chunk in chunks)
 
 
-def test_chat_request_records_empty_asr_params_when_sampling_omitted() -> None:
+def test_chat_request_omits_explicit_params_when_sampling_omitted() -> None:
     req = ChatCompletionRequest(
         model="OpenMOSS-Team/MOSS-Transcribe-Diarize",
         messages=[{"role": "user", "content": "hello"}],
@@ -597,7 +602,7 @@ def test_chat_request_records_empty_asr_params_when_sampling_omitted() -> None:
     assert gen_req.sampling.temperature == 1.0
     assert gen_req.sampling.top_p == 1.0
     assert gen_req.sampling.top_k == -1
-    assert gen_req.metadata["asr_params"] == {}
+    assert EXPLICIT_GENERATION_PARAMS_KEY not in gen_req.metadata
 
 
 def test_chat_request_preserves_explicit_default_sampling_values() -> None:
@@ -614,7 +619,7 @@ def test_chat_request_preserves_explicit_default_sampling_values() -> None:
     assert gen_req.sampling.temperature == 1.0
     assert gen_req.sampling.top_p == 1.0
     assert gen_req.sampling.top_k == -1
-    assert gen_req.metadata["asr_params"]["explicit_generation_params"] == [
+    assert gen_req.metadata[EXPLICIT_GENERATION_PARAMS_KEY] == [
         "temperature",
         "top_k",
         "top_p",
@@ -635,7 +640,7 @@ def test_chat_request_does_not_mark_null_sampling_params_explicit() -> None:
     assert gen_req.sampling.temperature == 1.0
     assert gen_req.sampling.top_p == 1.0
     assert gen_req.sampling.top_k == -1
-    assert gen_req.metadata["asr_params"] == {}
+    assert EXPLICIT_GENERATION_PARAMS_KEY not in gen_req.metadata
 
 
 def test_speech_stream_defaults_to_raw_pcm() -> None:
@@ -891,7 +896,7 @@ def test_transcription_request_builds_asr_generate_request() -> None:
     assert gen_req.sampling.temperature == 0.0
     omni_req = Client._build_omni_request(gen_req)
     assert omni_req.params["temperature"] == 0.0
-    assert gen_req.metadata == {"task": "asr", "asr_params": {}}
+    assert gen_req.metadata == {"task": "asr"}
     assert gen_req.output_modalities == ["text"]
     assert gen_req.stream is False
 
@@ -908,9 +913,7 @@ def test_transcription_request_passes_explicit_temperature() -> None:
     )
 
     assert gen_req.sampling.temperature == 0.7
-    assert gen_req.metadata["asr_params"]["explicit_generation_params"] == [
-        "temperature"
-    ]
+    assert gen_req.metadata[EXPLICIT_GENERATION_PARAMS_KEY] == ["temperature"]
     omni_req = Client._build_omni_request(gen_req)
     assert omni_req.params["temperature"] == 0.7
 
@@ -929,9 +932,7 @@ def test_transcription_request_passes_explicit_max_new_tokens() -> None:
 
     assert gen_req.model == "OpenMOSS-Team/MOSS-Transcribe-Diarize"
     assert gen_req.sampling.max_new_tokens == 4096
-    assert gen_req.metadata["asr_params"]["explicit_generation_params"] == [
-        "max_new_tokens"
-    ]
+    assert gen_req.metadata[EXPLICIT_GENERATION_PARAMS_KEY] == ["max_new_tokens"]
     omni_req = Client._build_omni_request(gen_req)
     assert omni_req.params["max_new_tokens"] == 4096
 
@@ -980,9 +981,7 @@ def test_transcription_endpoint_passes_explicit_max_new_tokens() -> None:
     request = transcription_client.requests[0]
     assert request.model == "OpenMOSS-Team/MOSS-Transcribe-Diarize"
     assert request.sampling.max_new_tokens == 4096
-    assert request.metadata["asr_params"]["explicit_generation_params"] == [
-        "max_new_tokens"
-    ]
+    assert request.metadata[EXPLICIT_GENERATION_PARAMS_KEY] == ["max_new_tokens"]
 
 
 def test_transcription_endpoint_uses_openai_temperature_default() -> None:
@@ -1001,7 +1000,7 @@ def test_transcription_endpoint_uses_openai_temperature_default() -> None:
     assert transcription_client.requests
     request = transcription_client.requests[0]
     assert request.sampling.temperature == 0.0
-    assert request.metadata["asr_params"] == {}
+    assert EXPLICIT_GENERATION_PARAMS_KEY not in request.metadata
 
 
 def test_transcription_endpoint_marks_mtd_request_for_model_sampling_defaults() -> None:
@@ -1024,7 +1023,7 @@ def test_transcription_endpoint_marks_mtd_request_for_model_sampling_defaults() 
     assert transcription_client.requests
     request = transcription_client.requests[0]
     assert request.sampling.temperature == 0.0
-    assert request.metadata["asr_params"] == {}
+    assert EXPLICIT_GENERATION_PARAMS_KEY not in request.metadata
 
 
 class DiarizationTranscriptionClient:
