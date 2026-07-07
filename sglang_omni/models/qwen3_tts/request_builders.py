@@ -137,8 +137,9 @@ class Qwen3TTSPreprocessingContext:
 
 _PREPROCESSING_CONTEXT: Qwen3TTSPreprocessingContext | None = None
 _PREPARED_REQUESTS: dict[str, Qwen3TTSPreparedRequest] = {}
-_ADHOC_REFERENCE_SERVICE: ReferenceEncodeService | None = None
-_ADHOC_REFERENCE_SERVICE_OWNER: tuple[int, int] | None = None
+_ADHOC_REFERENCE_SERVICE_ENTRY: tuple[
+    tuple[int, int], ReferenceEncodeService
+] | None = None
 _PREPARED_REQUESTS_LOCK = threading.Lock()
 
 
@@ -158,12 +159,11 @@ def set_qwen3_tts_preprocessing_context(*, model: Any, wrapper: Any) -> None:
 def clear_qwen3_tts_preprocessing_context() -> None:
     """Clear Qwen3-TTS preprocessing globals, mainly for tests and reloads."""
 
-    global _ADHOC_REFERENCE_SERVICE, _ADHOC_REFERENCE_SERVICE_OWNER
+    global _ADHOC_REFERENCE_SERVICE_ENTRY
     global _PREPROCESSING_CONTEXT
     with _PREPARED_REQUESTS_LOCK:
         _PREPROCESSING_CONTEXT = None
-        _ADHOC_REFERENCE_SERVICE = None
-        _ADHOC_REFERENCE_SERVICE_OWNER = None
+        _ADHOC_REFERENCE_SERVICE_ENTRY = None
         _PREPARED_REQUESTS.clear()
 
 
@@ -702,18 +702,20 @@ def _get_qwen3_tts_adhoc_reference_service_locked(
     model: Any,
     wrapper: Any,
 ) -> ReferenceEncodeService:
-    global _ADHOC_REFERENCE_SERVICE, _ADHOC_REFERENCE_SERVICE_OWNER
+    global _ADHOC_REFERENCE_SERVICE_ENTRY
     owner = (id(model), id(wrapper))
-    if _ADHOC_REFERENCE_SERVICE is None or _ADHOC_REFERENCE_SERVICE_OWNER != owner:
-        _ADHOC_REFERENCE_SERVICE = ReferenceEncodeService(
+    entry = _ADHOC_REFERENCE_SERVICE_ENTRY
+    if entry is None or entry[0] != owner:
+        service = ReferenceEncodeService(
             _Qwen3TTSAdhocReferenceHook(model=model, wrapper=wrapper),
             max_items=256,
             max_bytes=64 * 1024 * 1024,
             timeout_s=130.0,
             log_prefix="Qwen3-TTS ad-hoc reference",
         )
-        _ADHOC_REFERENCE_SERVICE_OWNER = owner
-    return _ADHOC_REFERENCE_SERVICE
+        entry = (owner, service)
+        _ADHOC_REFERENCE_SERVICE_ENTRY = entry
+    return entry[1]
 
 
 def _get_qwen3_tts_adhoc_reference_service(
