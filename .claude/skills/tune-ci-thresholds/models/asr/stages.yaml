@@ -6,8 +6,9 @@ multi_speaker_diarization:
   extra_env: {}
   context_vars:
     - MOSS_TD_CI_SAMPLES
-  test_file_sha256: 2b0b21f9a1c4acff78db74358ff1bdafa064a3d8c43eb273cce7de05baebc1b0
-  last_discovered_at: 2026-07-06T19:02:16Z
+    - MOSS_TD_LONG_MAX_NEW_TOKENS
+  test_file_sha256: 8b4274912b5085ecd2afdff5e4e463a1b057acc2e037bb6e5632caf51adfd9c7
+  last_discovered_at: 2026-07-07T00:23:58Z
   expected_samples: 800
   sample_counts:
     total:
@@ -124,8 +125,9 @@ multi_speaker_speed:
   extra_env: {}
   context_vars:
     - MOSS_TD_CI_SAMPLES
-  test_file_sha256: 2b0b21f9a1c4acff78db74358ff1bdafa064a3d8c43eb273cce7de05baebc1b0
-  last_discovered_at: 2026-07-06T19:02:16Z
+    - MOSS_TD_LONG_MAX_NEW_TOKENS
+  test_file_sha256: 8b4274912b5085ecd2afdff5e4e463a1b057acc2e037bb6e5632caf51adfd9c7
+  last_discovered_at: 2026-07-07T00:23:58Z
   expected_samples: 800
   sample_counts:
     total:
@@ -192,8 +194,8 @@ aishell4_long_diarization:
   extra_env: {}
   context_vars:
     - MOSS_TD_AISHELL4_LONG_CI_SAMPLES
-  test_file_sha256: 61de321e3dab04a3f4daedc2b28fc11aaa64470827e28fdec81cddb93e4d1ad0
-  last_discovered_at: 2026-07-06T23:32:08Z
+  test_file_sha256: 8b4274912b5085ecd2afdff5e4e463a1b057acc2e037bb6e5632caf51adfd9c7
+  last_discovered_at: 2026-07-07T00:23:58Z
   expected_samples: 20
   sample_counts:
     total:
@@ -260,8 +262,8 @@ aishell4_long_speed:
   extra_env: {}
   context_vars:
     - MOSS_TD_AISHELL4_LONG_CI_SAMPLES
-  test_file_sha256: 61de321e3dab04a3f4daedc2b28fc11aaa64470827e28fdec81cddb93e4d1ad0
-  last_discovered_at: 2026-07-06T23:32:08Z
+  test_file_sha256: 8b4274912b5085ecd2afdff5e4e463a1b057acc2e037bb6e5632caf51adfd9c7
+  last_discovered_at: 2026-07-07T00:23:58Z
   expected_samples: 20
   sample_counts:
     total:
@@ -329,7 +331,7 @@ seedtts_wer:
   context_vars:
     - SEEDTTS_ASR_CORRECTNESS_SAMPLES
   test_file_sha256: d13f9d994a9e349ad2d3e11004d4b4ea37eaeaa2a723213077c7034e749e5237
-  last_discovered_at: 2026-07-06T19:02:16Z
+  last_discovered_at: 2026-07-07T00:23:58Z
   expected_samples: 1088
   sample_counts:
     total:
@@ -367,7 +369,7 @@ seedtts_speed:
   context_vars:
     - SEEDTTS_ASR_CORRECTNESS_SAMPLES
   test_file_sha256: d13f9d994a9e349ad2d3e11004d4b4ea37eaeaa2a723213077c7034e749e5237
-  last_discovered_at: 2026-07-06T19:02:16Z
+  last_discovered_at: 2026-07-07T00:23:58Z
   expected_samples: 1088
   sample_counts:
     total:
