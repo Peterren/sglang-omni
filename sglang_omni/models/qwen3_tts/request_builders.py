@@ -137,9 +137,9 @@ class Qwen3TTSPreprocessingContext:
 
 _PREPROCESSING_CONTEXT: Qwen3TTSPreprocessingContext | None = None
 _PREPARED_REQUESTS: dict[str, Qwen3TTSPreparedRequest] = {}
-_ADHOC_REFERENCE_SERVICE_ENTRY: tuple[
-    tuple[int, int], ReferenceEncodeService
-] | None = None
+_ADHOC_REFERENCE_SERVICE_ENTRY: (
+    tuple[tuple[int, int], ReferenceEncodeService] | None
+) = None
 _PREPARED_REQUESTS_LOCK = threading.Lock()
 
 
