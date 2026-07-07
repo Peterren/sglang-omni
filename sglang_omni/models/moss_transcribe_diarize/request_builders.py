@@ -30,9 +30,11 @@ _AUDIO_PAD = "<|audio_pad|>"
 _AUDIO_START = "<|audio_start|>"
 _AUDIO_END = "<|audio_end|>"
 _SPECIAL_TOKEN_RE = re.compile(r"<\|(?:im_start|im_end|endoftext)\|>")
-DEFAULT_TEMPERATURE = 0.8
-DEFAULT_TOP_P = 0.95
-DEFAULT_TOP_K = 50
+DEFAULT_TEMPERATURE = 0.0
+DEFAULT_TOP_P = 1.0
+DEFAULT_TOP_K = -1
+DEFAULT_REPETITION_PENALTY = 1.05
+REPETITION_PENALTY_MAX_AUDIO_S = 120.0
 # Note (yichi): MOSS-Transcribe-Diarize is an audio LLM: a Qwen3 text decoder
 # over Whisper audio embeddings, trained on a fixed transcribe+diarize
 # instruction with the timestamped/speaker-labelled transcript as the target
@@ -284,12 +286,24 @@ def make_moss_transcribe_diarize_scheduler_adapters(
         )
         top_p = _sampling_param(params, explicit_fields, "top_p", DEFAULT_TOP_P, float)
         top_k = _sampling_param(params, explicit_fields, "top_k", DEFAULT_TOP_K, int)
+        repetition_penalty = _sampling_param(
+            params,
+            explicit_fields,
+            "repetition_penalty",
+            (
+                DEFAULT_REPETITION_PENALTY
+                if audio_duration_s <= REPETITION_PENALTY_MAX_AUDIO_S
+                else 1.0
+            ),
+            float,
+        )
         request_max_new_tokens = int(params.get("max_new_tokens") or max_new_tokens)
         sampling_params = SamplingParams(
             max_new_tokens=request_max_new_tokens,
             temperature=temperature,
             top_p=top_p,
             top_k=top_k,
+            repetition_penalty=repetition_penalty,
             stop_token_ids=[eos_token_id],
         )
         sampling_params.normalize(tokenizer=None)

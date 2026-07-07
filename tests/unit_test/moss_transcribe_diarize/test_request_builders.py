@@ -11,6 +11,7 @@ import torch
 
 import sglang_omni.models.moss_transcribe_diarize.request_builders as request_builders
 from sglang_omni.models.moss_transcribe_diarize.request_builders import (
+    DEFAULT_REPETITION_PENALTY,
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_K,
     DEFAULT_TOP_P,
@@ -141,12 +142,48 @@ def test_request_builder_uses_moss_sampling_defaults() -> None:
     data = request_builder(_payload())
     sampling_params = data.req.sampling_params
 
-    assert sampling_params.temperature == DEFAULT_TEMPERATURE
+    # normalize() encodes T=0 greedy as temperature=1.0 + top_k=1.
+    assert sampling_params.temperature == 1.0
     assert sampling_params.top_p == DEFAULT_TOP_P
-    assert sampling_params.top_k == DEFAULT_TOP_K
+    assert sampling_params.top_k == 1
+    assert sampling_params.repetition_penalty == DEFAULT_REPETITION_PENALTY
     assert data.temperature == DEFAULT_TEMPERATURE
     assert data.top_p == DEFAULT_TOP_P
     assert data.top_k == DEFAULT_TOP_K
+
+
+def test_request_builder_disables_repetition_penalty_for_long_audio() -> None:
+    request_builder = _request_builder()
+
+    data = request_builder(
+        _payload_with_inputs({"audio_bytes": _wav_bytes(num_samples=16000 * 121)})
+    )
+
+    assert data.req.sampling_params.repetition_penalty == 1.0
+
+
+def test_request_builder_preserves_explicit_repetition_penalty() -> None:
+    request_builder = _request_builder()
+
+    data = request_builder(
+        _payload(
+            params={"repetition_penalty": 1.2},
+            metadata={
+                "model": "moss-transcribe-diarize",
+                EXPLICIT_GENERATION_PARAMS_KEY: ["repetition_penalty"],
+            },
+        )
+    )
+
+    assert data.req.sampling_params.repetition_penalty == 1.2
+
+
+def test_request_builder_ignores_implicit_client_repetition_penalty() -> None:
+    request_builder = _request_builder()
+
+    data = request_builder(_payload(params={"repetition_penalty": 1.0}))
+
+    assert data.req.sampling_params.repetition_penalty == DEFAULT_REPETITION_PENALTY
 
 
 def test_request_builder_preserves_sampling_overrides() -> None:
