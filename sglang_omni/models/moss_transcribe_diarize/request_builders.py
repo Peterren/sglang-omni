@@ -30,6 +30,14 @@ _AUDIO_PAD = "<|audio_pad|>"
 _AUDIO_START = "<|audio_start|>"
 _AUDIO_END = "<|audio_end|>"
 _SPECIAL_TOKEN_RE = re.compile(r"<\|(?:im_start|im_end|endoftext)\|>")
+DEFAULT_TEMPERATURE = 0.8
+DEFAULT_TOP_P = 0.95
+DEFAULT_TOP_K = 50
+_IMPLICIT_SAMPLING_DEFAULTS = {
+    "temperature": {1.0},
+    "top_p": {1.0},
+    "top_k": {-1},
+}
 # Note (yichi): MOSS-Transcribe-Diarize is an audio LLM: a Qwen3 text decoder
 # over Whisper audio embeddings, trained on a fixed transcribe+diarize
 # instruction with the timestamped/speaker-labelled transcript as the target
@@ -107,6 +115,34 @@ def _load_audio(source: Any) -> np.ndarray:
         source_name="MOSS-Transcribe-Diarize",
         target_sample_rate=_SAMPLE_RATE,
     )
+
+
+def _explicit_generation_fields(metadata: dict[str, Any]) -> set[str] | None:
+    asr_params = metadata.get("asr_params")
+    if not isinstance(asr_params, dict):
+        return None
+    explicit_generation_params = asr_params.get("explicit_generation_params")
+    if isinstance(explicit_generation_params, (list, tuple, set)):
+        return {str(field) for field in explicit_generation_params}
+    return set()
+
+
+def _sampling_param(
+    params: dict[str, Any],
+    explicit_fields: set[str] | None,
+    field: str,
+    default: Any,
+    cast: Callable[[Any], Any],
+) -> Any:
+    value = params.get(field)
+    if value is None:
+        return default
+    normalized = cast(value)
+    if explicit_fields is not None:
+        return normalized if field in explicit_fields else default
+    if normalized in _IMPLICIT_SAMPLING_DEFAULTS.get(field, set()):
+        return default
+    return normalized
 
 
 def _decode_token_ids(
@@ -203,6 +239,8 @@ def make_moss_transcribe_diarize_scheduler_adapters(
 
     def request_builder(payload: StagePayload) -> MossTranscribeDiarizeRequestData:
         params = payload.request.params or {}
+        metadata = payload.request.metadata or {}
+        explicit_fields = _explicit_generation_fields(metadata)
         audio = _load_audio(_audio_source_from_payload(payload))
         audio_duration_s = float(len(audio) / _SAMPLE_RATE)
         fingerprint = audio_fingerprint(audio)
@@ -248,12 +286,17 @@ def make_moss_transcribe_diarize_scheduler_adapters(
             audio_end_id=audio_end_id,
         )
 
-        temperature = float(params.get("temperature") or 0.0)
+        temperature = _sampling_param(
+            params, explicit_fields, "temperature", DEFAULT_TEMPERATURE, float
+        )
+        top_p = _sampling_param(params, explicit_fields, "top_p", DEFAULT_TOP_P, float)
+        top_k = _sampling_param(params, explicit_fields, "top_k", DEFAULT_TOP_K, int)
         request_max_new_tokens = int(params.get("max_new_tokens") or max_new_tokens)
         sampling_params = SamplingParams(
             max_new_tokens=request_max_new_tokens,
             temperature=temperature,
-            top_p=float(params.get("top_p") or 1.0),
+            top_p=top_p,
+            top_k=top_k,
             stop_token_ids=[eos_token_id],
         )
         sampling_params.normalize(tokenizer=None)
@@ -283,6 +326,8 @@ def make_moss_transcribe_diarize_scheduler_adapters(
             prompt_token_ids=padded_input_ids,
             max_new_tokens=request_max_new_tokens,
             temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
             audio_duration_s=audio_duration_s,
             language=str(params.get("language") or "auto"),
             engine_start_s=time.perf_counter(),
