@@ -1696,10 +1696,6 @@ class OmniScheduler:
             return
         keep = [i for i, was_finished in enumerate(pre_finished) if not was_finished]
         if len(keep) < len(batch.reqs):
-            self._free_overrun_step_slots(
-                pending_step.forward_batch.out_cache_loc,
-                [i for i, was in enumerate(pre_finished) if was],
-            )
             if result.next_token_ids is not None and keep:
                 idx = torch.tensor(keep, device=result.next_token_ids.device)
                 result.next_token_ids = result.next_token_ids[idx]
