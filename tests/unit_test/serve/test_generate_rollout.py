@@ -79,6 +79,25 @@ def test_generate_returns_miles_meta_info() -> None:
     assert meta["request_metadata"] == {"rollout_id": 42, "group_id": 1}
 
 
+def test_generate_returns_codebook_tokens_when_present() -> None:
+    result = _text_result()
+    result.output_codebook_tokens = [[11, 1], [22, 2]]
+    client = _RolloutClient(result)
+    tc = TestClient(create_app(client, model_name="higgs-audio"))
+
+    resp = tc.post(
+        "/generate",
+        json={
+            "input_ids": [1, 2, 3],
+            "sampling_params": {"max_new_tokens": 2},
+            "output_modalities": ["audio"],
+        },
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["meta_info"]["output_codebook_tokens"] == [[11, 1], [22, 2]]
+
+
 def test_generate_returns_omni_rollout_when_present() -> None:
     result = _text_result()
     result.output_token_logprobs = None

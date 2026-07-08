@@ -94,6 +94,8 @@ class Client:
         finish_reason: str | None = None
         logprobs_parts: list[Any] = []
         saw_output_token_logprobs = False
+        codebook_parts: list[Any] = []
+        saw_output_codebook_tokens = False
         omni_rollout: dict[str, Any] | None = None
         weight_version: str | None = None
 
@@ -110,6 +112,9 @@ class Client:
             if chunk.output_token_logprobs is not None:
                 saw_output_token_logprobs = True
                 logprobs_parts.extend(chunk.output_token_logprobs)
+            if chunk.output_codebook_tokens is not None:
+                saw_output_codebook_tokens = True
+                codebook_parts.extend(chunk.output_codebook_tokens)
             if chunk.omni_rollout is not None:
                 omni_rollout = chunk.omni_rollout
             if chunk.weight_version is not None:
@@ -147,6 +152,9 @@ class Client:
             usage=last_chunk.usage,
             output_token_logprobs=(
                 logprobs_parts if saw_output_token_logprobs else None
+            ),
+            output_codebook_tokens=(
+                codebook_parts if saw_output_codebook_tokens else None
             ),
             omni_rollout=omni_rollout,
             weight_version=weight_version,
@@ -475,6 +483,9 @@ class Client:
                 output_token_logprobs = decode_result.get("output_token_logprobs")
                 if output_token_logprobs is not None:
                     chunk.output_token_logprobs = output_token_logprobs
+                output_codebook_tokens = decode_result.get("output_codebook_tokens")
+                if output_codebook_tokens is not None:
+                    chunk.output_codebook_tokens = output_codebook_tokens
                 omni_rollout = decode_result.get("omni_rollout")
                 if omni_rollout is not None:
                     chunk.omni_rollout = omni_rollout
@@ -500,6 +511,9 @@ class Client:
             output_token_logprobs = result.get("output_token_logprobs")
             if output_token_logprobs is not None:
                 chunk.output_token_logprobs = output_token_logprobs
+            output_codebook_tokens = result.get("output_codebook_tokens")
+            if output_codebook_tokens is not None:
+                chunk.output_codebook_tokens = output_codebook_tokens
             omni_rollout = result.get("omni_rollout")
             if omni_rollout is not None:
                 chunk.omni_rollout = omni_rollout
@@ -556,6 +570,9 @@ class Client:
             output_token_logprobs = data.get("output_token_logprobs")
             if output_token_logprobs is not None:
                 chunk.output_token_logprobs = output_token_logprobs
+            output_codebook_tokens = data.get("output_codebook_tokens")
+            if output_codebook_tokens is not None:
+                chunk.output_codebook_tokens = output_codebook_tokens
             omni_rollout = data.get("omni_rollout")
             if omni_rollout is not None:
                 chunk.omni_rollout = omni_rollout

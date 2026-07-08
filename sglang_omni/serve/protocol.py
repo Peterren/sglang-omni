@@ -224,6 +224,7 @@ class GenerateMetaInfo(BaseModel):
     weight_version: str | None = None
     request_metadata: dict[str, Any] | None = None
     output_token_logprobs: list[Any] | None = None
+    output_codebook_tokens: list[Any] | None = None
     omni_rollout: dict[str, Any] | None = None
 
 

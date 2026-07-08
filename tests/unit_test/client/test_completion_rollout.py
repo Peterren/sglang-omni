@@ -38,6 +38,7 @@ def test_completion_surfaces_logprobs_and_weight_version() -> None:
         "text": "hello",
         "finish_reason": "stop",
         "output_token_logprobs": [[-0.1, 11], [-0.2, 22], [-0.3, 33]],
+        "output_codebook_tokens": [[11, 1], [22, 2], [33, 3]],
         "weight_version": "v7",
         "completion_tokens": 3,
     }
@@ -48,6 +49,7 @@ def test_completion_surfaces_logprobs_and_weight_version() -> None:
     )
 
     assert out.output_token_logprobs == [[-0.1, 11], [-0.2, 22], [-0.3, 33]]
+    assert out.output_codebook_tokens == [[11, 1], [22, 2], [33, 3]]
     assert out.weight_version == "v7"
 
 
@@ -82,6 +84,7 @@ def test_completion_without_logprobs_leaves_fields_none() -> None:
     )
 
     assert out.output_token_logprobs is None
+    assert out.output_codebook_tokens is None
     assert out.weight_version is None
     assert out.omni_rollout is None
 
@@ -107,6 +110,7 @@ def test_completion_surfaces_rollout_from_multiterminal_decode() -> None:
             "text": "hi",
             "finish_reason": "stop",
             "output_token_logprobs": [[-0.5, 9]],
+            "output_codebook_tokens": [[9, 1]],
             "weight_version": "v9",
             "omni_rollout": {"version": 1, "action_streams": []},
         },
@@ -121,6 +125,7 @@ def test_completion_surfaces_rollout_from_multiterminal_decode() -> None:
     assert out.text == "hi"
     assert out.audio is not None
     assert out.output_token_logprobs == [[-0.5, 9]]
+    assert out.output_codebook_tokens == [[9, 1]]
     assert out.weight_version == "v9"
     assert out.omni_rollout == {"version": 1, "action_streams": []}
 
@@ -135,6 +140,7 @@ def test_completion_concatenates_streamed_logprobs() -> None:
             chunk={
                 "text": "he",
                 "output_token_logprobs": [[-0.1, 11], [-0.2, 22]],
+                "output_codebook_tokens": [[11, 1], [22, 2]],
                 "weight_version": "v7",
             },
             stage_name="decode",
@@ -146,6 +152,7 @@ def test_completion_concatenates_streamed_logprobs() -> None:
             chunk={
                 "text": "llo",
                 "output_token_logprobs": [[-0.3, 33]],
+                "output_codebook_tokens": [[33, 3]],
                 "finish_reason": "stop",
                 "weight_version": "v7",
                 "omni_rollout": {"version": 1, "action_streams": []},
@@ -162,5 +169,6 @@ def test_completion_concatenates_streamed_logprobs() -> None:
 
     assert out.text == "hello"
     assert out.output_token_logprobs == [[-0.1, 11], [-0.2, 22], [-0.3, 33]]
+    assert out.output_codebook_tokens == [[11, 1], [22, 2], [33, 3]]
     assert out.weight_version == "v7"
     assert out.omni_rollout == {"version": 1, "action_streams": []}

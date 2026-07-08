@@ -29,6 +29,7 @@ class HiggsSGLangRequestData(SGLangARRequestData):
     codebook_size: int = 1026
     output_codes: list[torch.Tensor] = field(default_factory=list)
     output_logprobs: list[torch.Tensor] = field(default_factory=list)
+    output_token_logprobs: list[list[float | int]] = field(default_factory=list)
     return_omni_rollout: bool = False
     generation_done: bool = False
     engine_start_s: float = 0.0
@@ -160,17 +161,52 @@ def apply_higgs_result(state: HiggsTtsState, data: HiggsSGLangRequestData) -> No
         codes = torch.empty((0, num_codebooks), dtype=torch.long)
         state.output_codes_delayed = None
 
+    delayed_logprobs = None
+    if data.return_logprob and data.output_logprobs:
+        delayed_logprobs = torch.stack(data.output_logprobs, dim=0).to(torch.float32)
+        if delayed_logprobs.shape[:2] != codes.shape[:2]:
+            raise ValueError(
+                f"Higgs rollout logprob shape {tuple(delayed_logprobs.shape)} "
+                f"does not match codes shape {tuple(codes.shape)}"
+            )
+
+    raw_token_logprobs = getattr(data, "output_token_logprobs", None)
+    if data.return_logprob and raw_token_logprobs is not None:
+        if len(raw_token_logprobs) != int(codes.shape[0]):
+            raise ValueError(
+                f"Higgs output_token_logprobs length {len(raw_token_logprobs)} "
+                f"does not match codes length {int(codes.shape[0])}"
+            )
+        token_logprobs: list[list[float | int]] = []
+        for i, item in enumerate(raw_token_logprobs):
+            if len(item) != 2:
+                raise ValueError(
+                    "Higgs output_token_logprobs entries must be [logprob, token]"
+                )
+            logprob = float(item[0])
+            token_id = int(item[1])
+            codebook0 = int(codes[i, 0].item())
+            if token_id != codebook0:
+                raise ValueError(
+                    f"Higgs output_token_logprobs token {token_id} "
+                    f"does not match codebook-0 token {codebook0} at position {i}"
+                )
+            token_logprobs.append([logprob, token_id])
+        state.output_token_logprobs = token_logprobs
+    elif data.return_logprob and delayed_logprobs is not None:
+        state.output_token_logprobs = [
+            [float(delayed_logprobs[i, 0].item()), int(codes[i, 0].item())]
+            for i in range(int(codes.shape[0]))
+        ]
+    else:
+        state.output_token_logprobs = None
+
     if data.return_omni_rollout:
-        logprobs = (
-            torch.stack(data.output_logprobs, dim=0).to(torch.float32)
-            if (data.return_logprob and data.output_logprobs)
-            else None
-        )
         state.omni_rollout = build_omni_rollout_trace(
             codes,
             num_codebooks=num_codebooks,
             codebook_vocab_size=int(data.codebook_size),
-            delayed_logprobs=logprobs,
+            delayed_logprobs=delayed_logprobs,
         )
     state.prompt_tokens = len(data.input_ids)
 

@@ -38,7 +38,11 @@ class HiggsTTSModelRunner(ModelRunner):
         self._logprob_slot = 0
 
     def _next_logprob_host_staging(self, device_buf: torch.Tensor) -> torch.Tensor:
-        if self._logprob_host_buffers is None:
+        if (
+            self._logprob_host_buffers is None
+            or self._logprob_host_buffers[0].shape != device_buf.shape
+            or self._logprob_host_buffers[0].dtype != device_buf.dtype
+        ):
             self._logprob_host_buffers = [
                 torch.empty(
                     device_buf.shape,
@@ -106,9 +110,9 @@ class HiggsTTSModelRunner(ModelRunner):
         host_buf[:n_real].copy_(staging[:n_real], non_blocking=True)
         logprob_host = None
         if self._should_capture_rollout_logprobs(requests):
-            logprobs_BN = self._decode_step_logprobs(result, n_real)
-            logprob_host = self._next_logprob_host_staging(logprobs_BN)
-            logprob_host[:n_real].copy_(logprobs_BN[:n_real], non_blocking=True)
+            logprob_bundle = self._decode_step_logprob_bundle(result, n_real)
+            logprob_host = self._next_logprob_host_staging(logprob_bundle)
+            logprob_host[:n_real].copy_(logprob_bundle[:n_real], non_blocking=True)
         # Set next_token_ids (cb0) from GPU state now, with NO host sync, so the
         # AR input chain (next step's input_ids = this step's output_ids) is
         # available at launch — the host collect (post_decode_resolve) lags by
@@ -262,7 +266,9 @@ class HiggsTTSModelRunner(ModelRunner):
         combined_cpu = staging[:n_real].cpu()  # one blocking D2H (sync path)
         logprobs_cpu = None
         if self._should_capture_rollout_logprobs(requests):
-            logprobs_cpu = self._decode_step_logprobs(result, n_real)[:n_real].cpu()
+            logprobs_cpu = self._decode_step_logprob_bundle(result, n_real)[
+                :n_real
+            ].cpu()
         self._decode_collect_host(
             combined_cpu,
             logprobs_cpu,
@@ -341,7 +347,15 @@ class HiggsTTSModelRunner(ModelRunner):
             if logprobs_cpu is not None and self._request_captures_rollout_logprobs(
                 sched_req
             ):
-                data.output_logprobs.append(logprobs_cpu[b].to(torch.float32).clone())
+                data.output_logprobs.append(
+                    logprobs_cpu[b, :num_codebooks].to(torch.float32).clone()
+                )
+                data.output_token_logprobs.append(
+                    [
+                        float(logprobs_cpu[b, num_codebooks].item()),
+                        int(codes_N[0].item()),
+                    ]
+                )
             data.generation_done = bool(gen_done_after_cpu[b])
             self._emit_code_chunk(sched_req, codes_N)
             self._mark_sampler_finished(req, data.generation_done)
@@ -408,9 +422,11 @@ class HiggsTTSModelRunner(ModelRunner):
             return
 
         model = self.model
-        logprobs_BN = None
+        logprob_bundle = None
         if self._should_capture_rollout_logprobs(requests):
-            logprobs_BN = self._prefill_step_logprobs(result, requests, forward_batch)
+            logprob_bundle = self._prefill_step_logprob_bundle(
+                result, requests, forward_batch
+            )
         cb0_per_row: list[int] = []
         for b, sched_req in enumerate(requests):
             data = sched_req.data
@@ -423,10 +439,18 @@ class HiggsTTSModelRunner(ModelRunner):
                 continue
             codes_N = codes_log[-1]
             data.output_codes.append(codes_N.detach().cpu().clone())
-            if logprobs_BN is not None and self._request_captures_rollout_logprobs(
+            if logprob_bundle is not None and self._request_captures_rollout_logprobs(
                 sched_req
             ):
-                data.output_logprobs.append(logprobs_BN[b].detach().cpu().clone())
+                data.output_logprobs.append(
+                    logprob_bundle[b, : model._num_codebooks].detach().cpu().clone()
+                )
+                data.output_token_logprobs.append(
+                    [
+                        float(logprob_bundle[b, model._num_codebooks].item()),
+                        int(codes_N[0].item()),
+                    ]
+                )
             data.generation_done = bool(model._sampler_pool.generation_done[row].item())
             self._emit_code_chunk(sched_req, data.output_codes[-1])
             self._mark_sampler_finished(req, data.generation_done)
@@ -441,12 +465,12 @@ class HiggsTTSModelRunner(ModelRunner):
     @staticmethod
     def _request_captures_rollout_logprobs(sched_req: Any) -> bool:
         data = sched_req.data
-        return bool(data.return_omni_rollout and data.return_logprob)
+        return bool(data.return_logprob)
 
     def _should_capture_rollout_logprobs(self, requests: list) -> bool:
         return any(self._request_captures_rollout_logprobs(req) for req in requests)
 
-    def _decode_step_logprobs(self, result: Any, n_real: int) -> torch.Tensor:
+    def _decode_step_logprob_bundle(self, result: Any, n_real: int) -> torch.Tensor:
         model = self.model
         hidden_states = result.logits_output.hidden_states
         if hidden_states.ndim == 3:
@@ -455,14 +479,15 @@ class HiggsTTSModelRunner(ModelRunner):
             torch.float32
         )
         codes_BN = model._cg_codes_BN[:n_real].clamp_min(0)
-        return selected_token_logprobs(
+        scaled_logprobs = selected_token_logprobs(
             logits_BNV,
             codes_BN,
             temperature=model._cg_temperature[:n_real],
             top_k_buf=model._cg_top_k_buf[:n_real],
         )
+        return self._pack_logprob_bundle(logits_BNV, codes_BN, scaled_logprobs)
 
-    def _prefill_step_logprobs(
+    def _prefill_step_logprob_bundle(
         self, result: Any, requests: list, forward_batch: Any | None
     ) -> torch.Tensor:
         del forward_batch
@@ -500,12 +525,24 @@ class HiggsTTSModelRunner(ModelRunner):
         )
         temperature = torch.tensor(temps, dtype=torch.float32, device=logits_BNV.device)
         top_k_buf = torch.tensor(top_ks, dtype=torch.long, device=logits_BNV.device)
-        return selected_token_logprobs(
+        scaled_logprobs = selected_token_logprobs(
             logits_BNV,
             codes_BN.clamp_min(0),
             temperature=temperature,
             top_k_buf=top_k_buf,
         )
+        return self._pack_logprob_bundle(
+            logits_BNV, codes_BN.clamp_min(0), scaled_logprobs
+        )
+
+    @staticmethod
+    def _pack_logprob_bundle(
+        logits_BNV: torch.Tensor, codes_BN: torch.Tensor, scaled_logprobs: torch.Tensor
+    ) -> torch.Tensor:
+        cb0_logits = logits_BNV[:, 0, :]
+        cb0_idx = codes_BN[:, 0:1].clamp(0, cb0_logits.shape[-1] - 1)
+        cb0_raw_logprobs = torch.log_softmax(cb0_logits, dim=-1).gather(1, cb0_idx)
+        return torch.cat([scaled_logprobs, cb0_raw_logprobs], dim=1)
 
     @staticmethod
     def _mark_sampler_finished(req: Any, generation_done: bool) -> None:

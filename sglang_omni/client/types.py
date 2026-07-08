@@ -131,6 +131,7 @@ class GenerateChunk:
     text: str = ""
     logprobs: list[float] | None = None
     output_token_logprobs: list[Any] | None = None
+    output_codebook_tokens: list[Any] | None = None
     omni_rollout: dict[str, Any] | None = None
     finish_reason: str | None = None
     usage: UsageInfo | None = None
@@ -149,6 +150,7 @@ class GenerateChunk:
             "text": self.text,
             "logprobs": self.logprobs,
             "output_token_logprobs": self.output_token_logprobs,
+            "output_codebook_tokens": self.output_codebook_tokens,
             "omni_rollout": self.omni_rollout,
             "finish_reason": self.finish_reason,
             "usage": self.usage.to_dict() if self.usage else None,
@@ -201,6 +203,7 @@ class CompletionResult:
     finish_reason: str = "stop"
     usage: UsageInfo | None = None
     output_token_logprobs: list[Any] | None = None
+    output_codebook_tokens: list[Any] | None = None
     omni_rollout: dict[str, Any] | None = None
     weight_version: str | None = None
 

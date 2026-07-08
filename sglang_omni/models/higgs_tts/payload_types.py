@@ -46,6 +46,7 @@ class HiggsTtsState(PipelineStateBase):
 
     # tts_engine
     output_codes_delayed: list[list[int]] | None = None
+    output_token_logprobs: list[Any] | None = None
     omni_rollout: dict[str, Any] | None = None
 
     # vocoder
@@ -82,6 +83,8 @@ class HiggsTtsState(PipelineStateBase):
                 data[key] = True
         if self.output_codes_delayed is not None:
             data["output_codes_delayed"] = self.output_codes_delayed
+        if self.output_token_logprobs is not None:
+            data["output_token_logprobs"] = self.output_token_logprobs
         if self.omni_rollout is not None:
             data["omni_rollout"] = self.omni_rollout
         self.append_usage_fields(data)
@@ -111,6 +114,7 @@ class HiggsTtsState(PipelineStateBase):
             return_logprob=data.get("return_logprob", False),
             return_omni_rollout=data.get("return_omni_rollout", False),
             output_codes_delayed=data.get("output_codes_delayed"),
+            output_token_logprobs=data.get("output_token_logprobs"),
             omni_rollout=data.get("omni_rollout"),
             prompt_tokens=data.get("prompt_tokens", 0),
             completion_tokens=data.get("completion_tokens", 0),

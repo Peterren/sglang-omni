@@ -1141,6 +1141,7 @@ def _build_generate_response(
         output_token_logprobs=(
             result.output_token_logprobs if req.return_logprob else None
         ),
+        output_codebook_tokens=result.output_codebook_tokens,
         omni_rollout=result.omni_rollout if req.return_omni_rollout else None,
     )
     return GenerateResponse(text=result.text, audio=audio, meta_info=meta_info)
