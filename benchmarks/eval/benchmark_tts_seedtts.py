@@ -322,9 +322,8 @@ async def _post_json(
     payload: dict,
 ) -> dict:
     async with session.post(url, json=payload) as response:
-        body = await response.json()
         response.raise_for_status()
-        return body
+        return await response.json()
 
 
 async def _start_request_profile(
@@ -358,8 +357,16 @@ def _write_request_profile_report(
     *,
     event_dir: str,
     report_path: str,
+    expect_events: bool = False,
 ) -> dict:
     report = build_report(event_dir)
+    if expect_events and int(report.get("request_count") or 0) == 0:
+        raise RuntimeError(
+            "No request profile events were found in "
+            f"{event_dir!r}. The benchmark host must be able to read the "
+            "server-side event_dir; run the benchmark next to the server or "
+            "pass a shared --profile-event-dir."
+        )
     path = Path(report_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
@@ -438,6 +445,7 @@ async def run_tts_seedtts_benchmark(
         _write_request_profile_report(
             event_dir=profile_event_dir,
             report_path=profile_report_path,
+            expect_events=bool(samples),
         )
     else:
         outputs = await runner.run(samples, send_fn)

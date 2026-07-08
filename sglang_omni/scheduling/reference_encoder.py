@@ -9,7 +9,10 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Generic, TypeVar
 
-from sglang_omni.profiler.event_recorder import emit as _emit_profiler_event
+from sglang_omni.profiler.event_recorder import (
+    emit as _emit_profiler_event,
+    get_recorder as _get_event_recorder,
+)
 from sglang_omni.scheduling.stage_cache import StageOutputCache
 
 logger = logging.getLogger(__name__)
@@ -122,7 +125,7 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
         key: ReferenceEncodeKey | None = None,
         **metadata: Any,
     ) -> None:
-        if request_id is None:
+        if request_id is None or not _get_event_recorder().is_active():
             return
         _emit_profiler_event(
             request_id=str(request_id),

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import inspect
 import logging
 import queue as _queue_mod
@@ -53,7 +54,8 @@ class ThreadedSimpleScheduler:
                 with self._lock:
                     if msg.request_id in self._aborted:
                         continue
-                    future = self._executor.submit(self._run_one, msg.data)
+                    context = contextvars.copy_context()
+                    future = self._executor.submit(context.run, self._run_one, msg.data)
                     self._pending[msg.request_id] = future
                 future.add_done_callback(
                     lambda fut, request_id=msg.request_id: self._finish(request_id, fut)

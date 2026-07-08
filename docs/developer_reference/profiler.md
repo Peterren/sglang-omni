@@ -184,6 +184,9 @@ chunk_id?)`, so a single request's path through subprocesses can be
 reconstructed even when each stage runs in its own process.
 
 For TTS reference-encode profiling, use the SeedTTS benchmark profile hook:
+run the benchmark where it can read the server-side event directory, or pass a
+shared `--profile-event-dir`. The benchmark fails if a non-empty run produces
+no readable request events.
 
 ```bash
 python -m benchmarks.eval.benchmark_tts_seedtts \

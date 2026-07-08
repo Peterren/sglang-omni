@@ -16,16 +16,23 @@ from typing import Any
 
 import pytest
 
+from sglang_omni.profiler.event_recorder import (
+    get_active_stage,
+    reset_active_stage,
+    set_active_stage,
+)
 from sglang_omni.scheduling.messages import IncomingMessage
 from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
+from sglang_omni.scheduling.threaded_simple_scheduler import ThreadedSimpleScheduler
 
 
 def run_scheduler(
-    scheduler: SimpleScheduler,
+    scheduler: Any,
     messages: list[IncomingMessage],
     *,
     output_count: int,
     before_collect: Callable[[], None] | None = None,
+    active_stage: str | None = None,
 ) -> list[Any]:
     """Inlined copy of tests.unit_test.pipeline.helpers.run_scheduler to avoid
     the torch transitive import in helpers.py.
@@ -34,7 +41,14 @@ def run_scheduler(
     This is a copy of tests.unit_test.pipeline.helpers.run_scheduler to avoid
     the torch transitive import in helpers.py.
     """
-    thread = threading.Thread(target=scheduler.start, daemon=True)
+    def start() -> None:
+        token = set_active_stage(active_stage) if active_stage is not None else None
+        try:
+            scheduler.start()
+        finally:
+            reset_active_stage(token)
+
+    thread = threading.Thread(target=start, daemon=True)
     thread.start()
     try:
         for message in messages:
@@ -247,3 +261,25 @@ def test_default_max_concurrency_is_one_for_backcompat() -> None:
     )
 
     assert [out.request_id for out in outputs] == ["req-1", "req-2"]
+
+
+def test_threaded_simple_scheduler_propagates_active_stage_context() -> None:
+    seen_stages: list[str | None] = []
+    lock = threading.Lock()
+
+    def compute(payload: str) -> str:
+        with lock:
+            seen_stages.append(get_active_stage())
+        return payload.upper()
+
+    outputs = run_scheduler(
+        ThreadedSimpleScheduler(compute, max_concurrency=1),
+        [IncomingMessage("req-stage", "new_request", "payload")],
+        output_count=1,
+        active_stage="preprocessing",
+    )
+
+    assert outputs[0].request_id == "req-stage"
+    assert outputs[0].type == "result"
+    assert outputs[0].data == "PAYLOAD"
+    assert seen_stages == ["preprocessing"]

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from benchmarks.eval.benchmark_tts_seedtts import (
     TtsSeedttsBenchmarkConfig,
     _build_arg_parser,
     _build_results_config,
     _config_from_args,
+    _write_request_profile_report,
 )
 
 
@@ -70,3 +73,16 @@ def test_seedtts_benchmark_profile_args_are_recorded() -> None:
     assert results_config["profile_run_id"] == "m4b-gate"
     assert results_config["profile_event_dir"] == "/tmp/events"
     assert results_config["profile_report_path"] == "/tmp/report.json"
+
+
+def test_seedtts_profile_report_fails_when_events_are_missing(tmp_path) -> None:
+    report_path = tmp_path / "report.json"
+
+    with pytest.raises(RuntimeError, match="No request profile events"):
+        _write_request_profile_report(
+            event_dir=str(tmp_path / "missing-events"),
+            report_path=str(report_path),
+            expect_events=True,
+        )
+
+    assert not report_path.exists()
