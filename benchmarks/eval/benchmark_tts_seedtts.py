@@ -472,12 +472,6 @@ async def run_tts_seedtts_benchmark(
                     )
                 except Exception:
                     logger.warning("failed to stop request profile", exc_info=True)
-        _write_request_profile_report(
-            event_dir=profile_event_dir,
-            report_path=profile_report_path,
-            expect_events=bool(samples),
-            expect_reference_encode=config.require_reference_encode_profile,
-        )
     else:
         outputs = await runner.run(samples, send_fn)
 
@@ -491,6 +485,13 @@ async def run_tts_seedtts_benchmark(
     benchmark_results = build_speed_results(outputs, metrics, results_config)
     save_speed_results(outputs, metrics, results_config, config.output_dir)
     save_generated_audio_metadata(outputs, samples, config.output_dir)
+    if config.profile_request_events:
+        _write_request_profile_report(
+            event_dir=profile_event_dir,
+            report_path=profile_report_path,
+            expect_events=bool(samples),
+            expect_reference_encode=config.require_reference_encode_profile,
+        )
     return benchmark_results
 
 

@@ -176,7 +176,9 @@ stream:
    successful encode attempts only. Use this first when deciding whether
    different-key reference encode batching is worth implementing.
    Uncacheable inputs have no cache key metadata, so they appear under the
-   unknown model and encoder bucket.
+   unknown model and encoder bucket. The `failed` column counts per-request
+   reference encode failures, including same-key followers; it is not the same
+   as the service's leader-only `stats()["failed"]` counter.
 4. **Hop breakdown** — `stage_hop_sent` / `stage_input_received` and
    `stage_stream_chunk_sent` / `stage_stream_chunk_received` durations per
    (source, destination, kind). Terminal stage stream chunks are paired the
@@ -198,15 +200,13 @@ python -m benchmarks.eval.benchmark_tts_seedtts \
   --generate-only \
   --use-existing-server \
   --base-url http://localhost:8000 \
-  --model OpenMOSS-Team/MOSS-TTS-Local-Transformer-v1.5 \
-  --ref-format references \
-  --token-count auto \
+  --model fishaudio/s2-pro \
   --warmup 0 \
   --concurrency 8 \
   --max-samples 64 \
-  --output-dir results/m4b-gate-moss-local-c8 \
+  --output-dir results/m4b-gate-fish-c8 \
   --profile-request-events \
-  --profile-run-id m4b-gate-moss-local-c8 \
+  --profile-run-id m4b-gate-fish-c8 \
   --require-reference-encode-profile
 ```
 

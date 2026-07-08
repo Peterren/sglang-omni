@@ -170,3 +170,8 @@ shows real benefit; its batched path would decode/resample each reference, pad
 waveforms, call the codec once, and split outputs while preserving parity with
 `encode_one`. Qwen3-TTS should remain M4a-only unless the upstream wrapper
 exposes a safe batch primitive for `create_voice_clone_prompt`.
+
+When profiling MOSS-TTS Local anyway, keep the reference-audio cache enabled.
+The reported miss encode time includes its existing `_BatchedReferenceEncoder`
+queue and batch behavior, so compare it as evidence for whether any additional
+generic M4b surface is still needed, not as a clean no-batch baseline.
