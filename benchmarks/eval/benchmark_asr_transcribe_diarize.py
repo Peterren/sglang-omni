@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""MOSS-Transcribe-Diarize eval.
+"""MOSS-Transcribe-Diarize benchmark.
 
 Evaluate the MOSS-Transcribe-Diarize model on the Movies800Time and AISHELL4
 datasets for multi-speaker dialog transcription. These two datasets are private
@@ -12,12 +12,12 @@ Author:
 
 Usage:
 
-    python -m benchmarks.eval.eval_transcribe_diarize \
+    python -m benchmarks.eval.benchmark_asr_transcribe_diarize \
         --dataset movies800times \
         --max-concurrency 16 \
         --output-dir results/moss_transcribe_diarize_movies800times
 
-    python -m benchmarks.eval.eval_transcribe_diarize \
+    python -m benchmarks.eval.benchmark_asr_transcribe_diarize \
         --dataset aishell4_long \
         --max-concurrency 16 \
         --output-dir results/moss_transcribe_diarize_aishell4_long

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from benchmarks.eval.eval_transcribe_diarize import (
+from benchmarks.eval.benchmark_asr_transcribe_diarize import (
     AISHELL4_REPO_ID,
     MODEL_PATH,
     run_eval,
@@ -50,19 +50,14 @@ MOSS_TD_STARTUP_TIMEOUT = 600
 MOSS_TD_MEM_FRACTION_STATIC = 0.80
 MOSS_TD_LONG_MAX_NEW_TOKENS = 65536
 
-# Worst-of-N reference values calibrated by tune.py (greedy, temperature=0).
+
 MOSS_TD_CER_PERCENT_REF = 5.801131307995424
 MOSS_TD_CER_NO_SPK_PERCENT_REF = 5.801131307995424
 MOSS_TD_CER_NO_SPK_BELOW_50_PERCENT_REF: float | None = 4.963353478204963
-# Catastrophic-outlier count (samples with per-sample CER > 50%). Calibration
-# observed 29 but CI consistently lands at 30, so the reference tracks the CI
-# worst and the derived threshold adds head-room via THRESHOLD_SLACK_LOWER.
 MOSS_TD_N_ABOVE_50_CER_REF: int | None = 30
 MOSS_TD_CP_CER_PERCENT_REF = 13.02275327316639
 MOSS_TD_CER_NO_SPK_CP_VALID_PERCENT_REF = 5.801131307995424
 MOSS_TD_DELTA_CER_PERCENT_REF = 7.251811363925256
-# Speaker-timestamp DER (diarization error rate, already a percentage in the
-# result JSON). None until the first DER calibration fills in the reference.
 MOSS_TD_SPEAKER_TIMESTAMP_DER_PERCENT_REF: float | None = 20.975903756491164
 MOSS_TD_CER_VALID_SAMPLES_MIN: int | None = 784
 MOSS_TD_CP_CER_VALID_SAMPLES_MIN: int | None = 784
@@ -86,9 +81,9 @@ AISHELL4_LONG_RTF_P95_REF = 0.092
 THRESHOLD_SLACK_HIGHER = 0.9
 THRESHOLD_SLACK_LOWER = 1.1
 
-# AISHELL4-long runs only 20 samples, so a single straggler or a flipped
-# borderline sample moves the aggregate metrics far more than the 800-sample
-# movies800 corpus. Widen its slack accordingly.
+# Note (chenyang): AISHELL4-long runs only 20 samples, so a single straggler
+#  or a flipped orderline sample moves the aggregate metrics far more than
+# the 800-sample movies800 corpus. Widen its slack accordingly.
 AISHELL4_LONG_THRESHOLD_SLACK_HIGHER = 0.8
 AISHELL4_LONG_THRESHOLD_SLACK_LOWER = 1.2
 
@@ -541,8 +536,8 @@ def _assert_aishell4_long_results(checks: MetricCheckCollector, results) -> None
         unit="%",
     )
     if AISHELL4_LONG_DELTA_CER_PERCENT_MAX is None:
-        # Report-only: delta_cer on 20 samples is noise-dominated, so we log the
-        # value for observability but do not assert on it.
+        # Note (chenyang): Report-only: delta_cer on 20 samples is noisy,
+        #  so we log the value for observability but do not assert on it.
         print(
             "[report-only] aishell4_long delta_cer="
             f"{diarization_percent.get('delta_cer')}%"
