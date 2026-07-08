@@ -138,7 +138,9 @@ MOSS-TTS Local. Track preprocessing/reference-encode p50/p95, end-to-end TTFA
 and latency, throughput, cache hit/miss/merge counts, and GPU/CPU utilization.
 Use the SeedTTS benchmark with `--profile-request-events` so the profiler report
 includes `reference_encode_breakdown`. Run the benchmark where it can read the
-server-side event directory, or pass a shared `--profile-event-dir`.
+server-side event directory, or pass a shared `--profile-event-dir`. For M4b
+gate runs, also pass `--require-reference-encode-profile` so a run without
+reference encode events fails loudly.
 Build M4b for a model only if different-key reference encode remains a top
 bottleneck and batching gives at least 15% p95 latency reduction or 20%
 throughput improvement versus M4a.

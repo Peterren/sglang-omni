@@ -172,7 +172,8 @@ stream:
    not consume the opener of pair B.
 3. **Reference encode breakdown** — `ReferenceEncodeService` cache result
    counts (`hit`, `miss`, `merged`, `uncacheable`) plus leader encode and
-   same-key follower wait durations. Use this first when deciding whether
+   same-key follower wait durations. Encode latency percentiles include
+   successful encode attempts only. Use this first when deciding whether
    different-key reference encode batching is worth implementing.
 4. **Hop breakdown** — `stage_hop_sent` / `stage_input_received` and
    `stage_stream_chunk_sent` / `stage_stream_chunk_received` durations per
@@ -201,7 +202,8 @@ python -m benchmarks.eval.benchmark_tts_seedtts \
   --max-samples 64 \
   --output-dir results/m4b-gate-moss-local-c8 \
   --profile-request-events \
-  --profile-run-id m4b-gate-moss-local-c8
+  --profile-run-id m4b-gate-moss-local-c8 \
+  --require-reference-encode-profile
 ```
 
 ## Torch profiler

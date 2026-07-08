@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import os
+
 import pytest
 
 from benchmarks.eval.benchmark_tts_seedtts import (
@@ -58,12 +61,14 @@ def test_seedtts_benchmark_profile_args_are_recorded() -> None:
         "/tmp/events",
         "--profile-report-path",
         "/tmp/report.json",
+        "--require-reference-encode-profile",
     )
 
     assert config.profile_request_events is True
     assert config.profile_run_id == "m4b-gate"
     assert config.profile_event_dir == "/tmp/events"
     assert config.profile_report_path == "/tmp/report.json"
+    assert config.require_reference_encode_profile is True
 
     results_config = _build_results_config(
         config,
@@ -73,6 +78,7 @@ def test_seedtts_benchmark_profile_args_are_recorded() -> None:
     assert results_config["profile_run_id"] == "m4b-gate"
     assert results_config["profile_event_dir"] == "/tmp/events"
     assert results_config["profile_report_path"] == "/tmp/report.json"
+    assert results_config["require_reference_encode_profile"] is True
 
 
 def test_seedtts_profile_report_fails_when_events_are_missing(tmp_path) -> None:
@@ -86,3 +92,29 @@ def test_seedtts_profile_report_fails_when_events_are_missing(tmp_path) -> None:
         )
 
     assert not report_path.exists()
+
+
+def test_seedtts_profile_report_can_require_reference_encode_events(tmp_path) -> None:
+    event_dir = tmp_path / "events"
+    event_dir.mkdir()
+    event = {
+        "request_id": "r1",
+        "stage": "coordinator",
+        "event_name": "request_admission",
+        "timestamp_ns": 0,
+        "run_id": "run",
+        "pid": os.getpid(),
+        "metadata": {},
+    }
+    (event_dir / "events_coordinator_1.jsonl").write_text(
+        json.dumps(event) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="No reference encode profile events"):
+        _write_request_profile_report(
+            event_dir=str(event_dir),
+            report_path=str(tmp_path / "report.json"),
+            expect_events=True,
+            expect_reference_encode=True,
+        )

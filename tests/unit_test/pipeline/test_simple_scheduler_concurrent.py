@@ -263,6 +263,28 @@ def test_default_max_concurrency_is_one_for_backcompat() -> None:
     assert [out.request_id for out in outputs] == ["req-1", "req-2"]
 
 
+def test_simple_scheduler_concurrent_propagates_active_stage_context() -> None:
+    seen_stages: list[str | None] = []
+    lock = threading.Lock()
+
+    def compute(payload: str) -> str:
+        with lock:
+            seen_stages.append(get_active_stage())
+        return payload.upper()
+
+    outputs = run_scheduler(
+        SimpleScheduler(compute, max_concurrency=2),
+        [IncomingMessage("req-stage", "new_request", "payload")],
+        output_count=1,
+        active_stage="preprocessing",
+    )
+
+    assert outputs[0].request_id == "req-stage"
+    assert outputs[0].type == "result"
+    assert outputs[0].data == "PAYLOAD"
+    assert seen_stages == ["preprocessing"]
+
+
 def test_threaded_simple_scheduler_propagates_active_stage_context() -> None:
     seen_stages: list[str | None] = []
     lock = threading.Lock()

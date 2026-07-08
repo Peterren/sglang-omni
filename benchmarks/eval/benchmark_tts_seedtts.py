@@ -256,6 +256,7 @@ class TtsSeedttsBenchmarkConfig:
     profile_run_id: str | None = None
     profile_event_dir: str | None = None
     profile_report_path: str | None = None
+    require_reference_encode_profile: bool = False
     # Transcribe phase
     lang: str = "en"
     device: str = "cuda:0"
@@ -313,6 +314,7 @@ def _build_results_config(
         "profile_run_id": config.profile_run_id,
         "profile_event_dir": config.profile_event_dir,
         "profile_report_path": config.profile_report_path,
+        "require_reference_encode_profile": config.require_reference_encode_profile,
     }
 
 
@@ -358,6 +360,7 @@ def _write_request_profile_report(
     event_dir: str,
     report_path: str,
     expect_events: bool = False,
+    expect_reference_encode: bool = False,
 ) -> dict:
     report = build_report(event_dir)
     if expect_events and int(report.get("request_count") or 0) == 0:
@@ -366,6 +369,13 @@ def _write_request_profile_report(
             f"{event_dir!r}. The benchmark host must be able to read the "
             "server-side event_dir; run the benchmark next to the server or "
             "pass a shared --profile-event-dir."
+        )
+    if expect_reference_encode and not report.get("reference_encode_breakdown"):
+        raise RuntimeError(
+            "No reference encode profile events were found in "
+            f"{event_dir!r}. For M4B gate runs, verify this model uses "
+            "ReferenceEncodeService and that the benchmark can read the "
+            "server-side event_dir."
         )
     path = Path(report_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -446,6 +456,7 @@ async def run_tts_seedtts_benchmark(
             event_dir=profile_event_dir,
             report_path=profile_report_path,
             expect_events=bool(samples),
+            expect_reference_encode=config.require_reference_encode_profile,
         )
     else:
         outputs = await runner.run(samples, send_fn)
@@ -541,6 +552,7 @@ def _config_from_args(args: argparse.Namespace) -> TtsSeedttsBenchmarkConfig:
         profile_run_id=args.profile_run_id,
         profile_event_dir=args.profile_event_dir,
         profile_report_path=args.profile_report_path,
+        require_reference_encode_profile=args.require_reference_encode_profile,
         lang=args.lang,
         device=args.device,
         similarity_checkpoint=args.similarity_checkpoint,
@@ -808,6 +820,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--require-reference-encode-profile",
+        action="store_true",
+        help=(
+            "Fail if --profile-request-events produces no reference encode "
+            "breakdown. Use this for M4B gate runs."
+        ),
+    )
+    parser.add_argument(
         "--use-existing-server",
         action="store_true",
         help=(
@@ -855,6 +875,10 @@ def main() -> None:
         parser.error(
             "--use-existing-server currently requires --generate-only or "
             "--transcribe-only"
+        )
+    if args.require_reference_encode_profile and not args.profile_request_events:
+        parser.error(
+            "--require-reference-encode-profile requires --profile-request-events"
         )
     config = _config_from_args(args)
     wait_for_gpu_release = not args.skip_gpu_cleanup

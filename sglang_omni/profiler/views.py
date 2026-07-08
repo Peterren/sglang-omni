@@ -397,7 +397,8 @@ def reference_encode_breakdown(
                 stack = pending.get(("encode", key))
                 if stack:
                     open_ns, _ = stack.pop(0)
-                    encode_durations[key].append((ts - open_ns) / 1e6)
+                    if md.get("result") != "error":
+                        encode_durations[key].append((ts - open_ns) / 1e6)
             elif name == "reference_encode_failure":
                 failures[key] += 1
             elif name == "reference_encode_wait_start":
