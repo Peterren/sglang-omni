@@ -979,6 +979,11 @@ def _register_generate(app: FastAPI) -> None:
                 status_code=400,
                 detail="exactly one of input_ids, prompt, or messages is required",
             )
+        if req.input_ids is not None and len(req.input_ids) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="input_ids must not be empty",
+            )
         if req.stream:
             raise HTTPException(
                 status_code=400,

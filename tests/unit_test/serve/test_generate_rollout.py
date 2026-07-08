@@ -98,6 +98,23 @@ def test_generate_returns_codebook_tokens_when_present() -> None:
     assert resp.json()["meta_info"]["output_codebook_tokens"] == [[11, 1], [22, 2]]
 
 
+def test_generate_rejects_empty_input_ids() -> None:
+    client = _RolloutClient(_text_result())
+    tc = TestClient(create_app(client, model_name="higgs-audio"))
+
+    resp = tc.post(
+        "/generate",
+        json={
+            "input_ids": [],
+            "sampling_params": {"max_new_tokens": 2},
+        },
+    )
+
+    assert resp.status_code == 400
+    assert "input_ids must not be empty" in resp.text
+    assert client.requests == []
+
+
 def test_generate_returns_omni_rollout_when_present() -> None:
     result = _text_result()
     result.output_token_logprobs = None

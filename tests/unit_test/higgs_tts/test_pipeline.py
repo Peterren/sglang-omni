@@ -777,6 +777,7 @@ def test_higgs_model_runner_collects_rollout_logprobs_only_when_requested() -> N
         req=req,
         output_codes=[],
         output_logprobs=[],
+        output_token_logprobs=[],
         return_omni_rollout=True,
         return_logprob=True,
         generation_done=False,
@@ -799,6 +800,10 @@ def test_higgs_model_runner_collects_rollout_logprobs_only_when_requested() -> N
     )
     assert len(data.output_logprobs) == 1
     assert torch.allclose(data.output_logprobs[0], expected.squeeze(-1)[0])
+    assert len(data.output_token_logprobs) == 1
+    raw_cb0_logprob, cb0_token = data.output_token_logprobs[0]
+    assert raw_cb0_logprob == pytest.approx(float(expected[0, 0, 0].item()))
+    assert cb0_token == 2
 
 
 def test_higgs_model_runner_skips_already_finished_eager_request() -> None:
@@ -1066,9 +1071,12 @@ def test_higgs_streaming_vocoder_emits_compact_chunks_and_slim_final() -> None:
 
     assert len(result_messages) == 1
     final_data = result_messages[0].data.data
+    assert "audio_data" not in final_data
+    assert "audio_waveform" not in final_data
     assert final_data == {
         "modality": "audio",
         "sample_rate": 24000,
+        "output_codebook_tokens": delayed.tolist(),
         "usage": {
             "prompt_tokens": 2,
             "completion_tokens": len(delayed),
