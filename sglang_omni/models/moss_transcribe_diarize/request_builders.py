@@ -367,7 +367,7 @@ def make_moss_transcribe_diarize_stream_output_builder(
     min_emit_interval_s: float = 0.0,
 ) -> Callable[[str, Any, Any], list[OutgoingMessage]]:
     resolved_eos = (
-        int(eos_token_id)
+        eos_token_id
         if eos_token_id is not None
         else (
             int(tokenizer.eos_token_id)
@@ -413,7 +413,7 @@ def make_moss_transcribe_diarize_stream_output_builder(
         # last_emit == 0.0 means nothing emitted yet (first delta goes out immediately),
         # and EOS always flushes the remaining buffer.
         now = time.perf_counter()
-        last_emit = float(getattr(req, "_moss_stream_last_emit_t", 0.0))
+        last_emit = getattr(req, "_moss_stream_last_emit_t", 0.0)
         if (
             not is_eos
             and min_emit_interval_s > 0.0
