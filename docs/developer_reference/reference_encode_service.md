@@ -142,7 +142,8 @@ server-side event directory, or pass a shared `--profile-event-dir`. For M4b
 gate runs, also pass `--require-reference-encode-profile` so a run without
 successful reference encode miss events fails loudly. Profile gate runs must
 use `--warmup 0` so warmup requests do not populate the reference cache inside
-the profiling window.
+the profiling window. Uncacheable inputs still report encode time, but they do
+not count as M4b gate cache misses and appear in the unknown profiler bucket.
 Build M4b for a model only if different-key reference encode remains a top
 bottleneck and batching gives at least 15% p95 latency reduction or 20%
 throughput improvement versus M4a.

@@ -175,6 +175,8 @@ stream:
    same-key follower wait durations. Encode latency percentiles include
    successful encode attempts only. Use this first when deciding whether
    different-key reference encode batching is worth implementing.
+   Uncacheable inputs have no cache key metadata, so they appear under the
+   unknown model and encoder bucket.
 4. **Hop breakdown** — `stage_hop_sent` / `stage_input_received` and
    `stage_stream_chunk_sent` / `stage_stream_chunk_received` durations per
    (source, destination, kind). Terminal stage stream chunks are paired the

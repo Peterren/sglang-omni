@@ -379,8 +379,14 @@ def _write_request_profile_report(
             "server-side event_dir."
         )
     if expect_reference_encode:
-        encode_count = sum(int(row.get("encode_count") or 0) for row in reference_rows)
-        if encode_count == 0:
+        successful_miss_count = sum(
+            min(
+                int(row.get("misses") or 0),
+                int(row.get("encode_count") or 0),
+            )
+            for row in reference_rows
+        )
+        if successful_miss_count == 0:
             raise RuntimeError(
                 "No successful reference encode misses were found in "
                 f"{event_dir!r}. For M4B gate runs, use a cold-cache workload "

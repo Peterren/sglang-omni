@@ -168,3 +168,51 @@ def test_seedtts_profile_report_can_require_successful_reference_encode(
             expect_events=True,
             expect_reference_encode=True,
         )
+
+
+def test_seedtts_profile_report_rejects_uncacheable_only_reference_encode(
+    tmp_path,
+) -> None:
+    event_dir = tmp_path / "events"
+    event_dir.mkdir()
+    events = [
+        {
+            "request_id": "r1",
+            "stage": "preprocessing",
+            "event_name": "reference_encode_lookup",
+            "timestamp_ns": 0,
+            "run_id": "run",
+            "pid": os.getpid(),
+            "metadata": {"result": "uncacheable"},
+        },
+        {
+            "request_id": "r1",
+            "stage": "preprocessing",
+            "event_name": "reference_encode_start",
+            "timestamp_ns": 1_000,
+            "run_id": "run",
+            "pid": os.getpid(),
+            "metadata": {"result": "uncacheable"},
+        },
+        {
+            "request_id": "r1",
+            "stage": "preprocessing",
+            "event_name": "reference_encode_end",
+            "timestamp_ns": 2_000,
+            "run_id": "run",
+            "pid": os.getpid(),
+            "metadata": {"result": "success"},
+        },
+    ]
+    (event_dir / "events_preprocessing_1.jsonl").write_text(
+        "".join(json.dumps(event) + "\n" for event in events),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="No successful reference encode misses"):
+        _write_request_profile_report(
+            event_dir=str(event_dir),
+            report_path=str(tmp_path / "report.json"),
+            expect_events=True,
+            expect_reference_encode=True,
+        )
