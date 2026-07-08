@@ -142,7 +142,6 @@ def test_request_builder_uses_moss_sampling_defaults() -> None:
     data = request_builder(_payload())
     sampling_params = data.req.sampling_params
 
-    # normalize() encodes T=0 greedy as temperature=1.0 + top_k=1.
     assert sampling_params.temperature == 1.0
     assert sampling_params.top_p == DEFAULT_TOP_P
     assert sampling_params.top_k == 1
