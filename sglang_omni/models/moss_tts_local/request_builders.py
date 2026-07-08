@@ -250,15 +250,19 @@ def _build_processor_message(
     processor: Any,
     state: MossTTSLocalState,
     reference_encoder: Any = None,
+    *,
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     ref_audio = state.ref_audio
     if reference_encoder is not None and isinstance(ref_audio, str):
         if _DATA_URI_RE.match(ref_audio) is None:
             # File-path refs share one batched codec forward via the coalescer.
-            reference = [reference_encoder.encode(ref_audio)]
+            reference = [reference_encoder.encode(ref_audio, request_id=request_id)]
         else:
             # Data-URI refs through the same LRU (bytes: keyspace).
-            reference = [reference_encoder.encode_data_uri(ref_audio)]
+            reference = [
+                reference_encoder.encode_data_uri(ref_audio, request_id=request_id)
+            ]
     else:
         reference = _reference_for_processor(processor, ref_audio)
     return processor.build_user_message(
@@ -277,7 +281,12 @@ def _prepare_moss_tts_local_request(
     reference_encoder: Any = None,
 ) -> MossTTSLocalPreparedRequest:
     state = build_moss_tts_local_state(payload)
-    message = _build_processor_message(processor, state, reference_encoder)
+    message = _build_processor_message(
+        processor,
+        state,
+        reference_encoder,
+        request_id=payload.request_id,
+    )
     batch = processor([[message]], mode="generation")
     input_rows = batch["input_ids"]
     if input_rows.ndim != 3 or int(input_rows.shape[0]) != 1:

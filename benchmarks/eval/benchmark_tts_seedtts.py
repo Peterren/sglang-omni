@@ -173,8 +173,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import logging
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -200,6 +202,7 @@ from benchmarks.tasks.tts import (
     save_generated_audio_metadata,
     save_speed_results,
 )
+from sglang_omni.profiler.views import build_report
 
 logging.basicConfig(
     level=logging.INFO,
@@ -249,6 +252,10 @@ class TtsSeedttsBenchmarkConfig:
     disable_tqdm: bool = False
     max_running_requests: int = 64
     cuda_graph_max_bs: int = 64
+    profile_request_events: bool = False
+    profile_run_id: str | None = None
+    profile_event_dir: str | None = None
+    profile_report_path: str | None = None
     # Transcribe phase
     lang: str = "en"
     device: str = "cuda:0"
@@ -302,7 +309,61 @@ def _build_results_config(
         "initial_codec_chunk_frames": config.initial_codec_chunk_frames,
         "max_running_requests": config.max_running_requests,
         "cuda_graph_max_bs": config.cuda_graph_max_bs,
+        "profile_request_events": config.profile_request_events,
+        "profile_run_id": config.profile_run_id,
+        "profile_event_dir": config.profile_event_dir,
+        "profile_report_path": config.profile_report_path,
     }
+
+
+async def _post_json(
+    session,
+    url: str,
+    payload: dict,
+) -> dict:
+    async with session.post(url, json=payload) as response:
+        body = await response.json()
+        response.raise_for_status()
+        return body
+
+
+async def _start_request_profile(
+    session,
+    base_url: str,
+    *,
+    run_id: str,
+    event_dir: str,
+) -> dict:
+    return await _post_json(
+        session,
+        f"{base_url}/start_request_profile",
+        {"run_id": run_id, "event_dir": event_dir},
+    )
+
+
+async def _stop_request_profile(
+    session,
+    base_url: str,
+    *,
+    run_id: str,
+) -> dict:
+    return await _post_json(
+        session,
+        f"{base_url}/stop_request_profile",
+        {"run_id": run_id},
+    )
+
+
+def _write_request_profile_report(
+    *,
+    event_dir: str,
+    report_path: str,
+) -> dict:
+    report = build_report(event_dir)
+    path = Path(report_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
+    return report
 
 
 async def run_tts_seedtts_benchmark(
@@ -345,10 +406,49 @@ async def run_tts_seedtts_benchmark(
             disable_tqdm=config.disable_tqdm,
         )
     )
-    outputs = await runner.run(samples, send_fn)
+    profile_run_id = config.profile_run_id or f"tts-seedtts-{int(time.time())}"
+    profile_event_dir = config.profile_event_dir or str(
+        Path(config.output_dir, "request_profile_events").resolve()
+    )
+    profile_report_path = config.profile_report_path or str(
+        Path(config.output_dir, "request_profile_report.json").resolve()
+    )
+    profile_info = None
+    if config.profile_request_events:
+        import aiohttp
+
+        async with aiohttp.ClientSession() as session:
+            profile_info = await _start_request_profile(
+                session,
+                base_url,
+                run_id=profile_run_id,
+                event_dir=profile_event_dir,
+            )
+            try:
+                outputs = await runner.run(samples, send_fn)
+            finally:
+                try:
+                    await _stop_request_profile(
+                        session,
+                        base_url,
+                        run_id=profile_run_id,
+                    )
+                except Exception:
+                    logger.warning("failed to stop request profile", exc_info=True)
+        _write_request_profile_report(
+            event_dir=profile_event_dir,
+            report_path=profile_report_path,
+        )
+    else:
+        outputs = await runner.run(samples, send_fn)
 
     metrics = compute_speed_metrics(outputs, wall_clock_s=runner.wall_clock_s)
     results_config = _build_results_config(config, base_url=base_url)
+    if profile_info is not None:
+        results_config["profile_info"] = profile_info
+        results_config["profile_run_id"] = profile_run_id
+        results_config["profile_event_dir"] = profile_event_dir
+        results_config["profile_report_path"] = profile_report_path
     benchmark_results = build_speed_results(outputs, metrics, results_config)
     save_speed_results(outputs, metrics, results_config, config.output_dir)
     save_generated_audio_metadata(outputs, samples, config.output_dir)
@@ -429,6 +529,10 @@ def _config_from_args(args: argparse.Namespace) -> TtsSeedttsBenchmarkConfig:
         disable_tqdm=args.disable_tqdm,
         max_running_requests=args.max_running_requests,
         cuda_graph_max_bs=args.cuda_graph_max_bs,
+        profile_request_events=args.profile_request_events,
+        profile_run_id=args.profile_run_id,
+        profile_event_dir=args.profile_event_dir,
+        profile_report_path=args.profile_report_path,
         lang=args.lang,
         device=args.device,
         similarity_checkpoint=args.similarity_checkpoint,
@@ -661,6 +765,38 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "running multiple benchmark processes in parallel on different "
             "GPUs; combine with CUDA_VISIBLE_DEVICES per worker and clean up "
             "each GPU once after the worker finishes."
+        ),
+    )
+    parser.add_argument(
+        "--profile-request-events",
+        action="store_true",
+        help=(
+            "Start /start_request_profile before generation and write a "
+            "request_profile_report.json with stage and reference-encode breakdowns."
+        ),
+    )
+    parser.add_argument(
+        "--profile-run-id",
+        type=str,
+        default=None,
+        help="Optional run_id for --profile-request-events.",
+    )
+    parser.add_argument(
+        "--profile-event-dir",
+        type=str,
+        default=None,
+        help=(
+            "Directory where server-side request profiler JSONL events are written. "
+            "Defaults to output-dir/request_profile_events."
+        ),
+    )
+    parser.add_argument(
+        "--profile-report-path",
+        type=str,
+        default=None,
+        help=(
+            "Output path for the generated request profile report. Defaults to "
+            "output-dir/request_profile_report.json."
         ),
     )
     parser.add_argument(

@@ -277,8 +277,9 @@ class _BatchedReferenceEncoder:
             )
         return torch.from_numpy(audio.T), int(sample_rate)
 
-    def encode(self, path: str) -> torch.Tensor:
+    def encode(self, path: str, *, request_id: str | None = None) -> torch.Tensor:
         """Encode one reference file; blocks until its batch completes."""
+        _ = request_id
         path = str(path)
         self._check_reference_duration(path)
         future: concurrent.futures.Future = concurrent.futures.Future()
@@ -290,7 +291,10 @@ class _BatchedReferenceEncoder:
         self._queue.put((_WaveformReferenceJob(wav, int(sample_rate)), future))
         return future.result(timeout=self.ENCODE_TIMEOUT_S)
 
-    def encode_data_uri(self, ref_audio: str) -> torch.Tensor:
+    def encode_data_uri(
+        self, ref_audio: str, *, request_id: str | None = None
+    ) -> torch.Tensor:
+        _ = request_id
         raw = self._data_uri_audio_bytes(ref_audio)
         wav, sample_rate = self._decode_data_uri_audio(raw)
         return self.encode_wav(wav, sample_rate)
@@ -477,17 +481,21 @@ class _MossLocalReferenceEncoder:
             log_prefix="MOSS-TTS Local ref cache",
         )
 
-    def encode(self, path: str) -> torch.Tensor:
+    def encode(self, path: str, *, request_id: str | None = None) -> torch.Tensor:
         return self._service.get_or_encode(
             _MossLocalReferenceInput("path", str(path)),
             desc=repr(str(path)),
+            request_id=request_id,
         )
 
-    def encode_data_uri(self, ref_audio: str) -> torch.Tensor:
+    def encode_data_uri(
+        self, ref_audio: str, *, request_id: str | None = None
+    ) -> torch.Tensor:
         raw = _BatchedReferenceEncoder._data_uri_audio_bytes(ref_audio)
         return self._service.get_or_encode(
             _MossLocalReferenceInput("data_uri", str(ref_audio), raw),
             desc="data-URI",
+            request_id=request_id,
         )
 
     def stats(self) -> dict[str, int]:

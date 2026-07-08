@@ -263,6 +263,7 @@ def create_preprocessing_executor(
                     vq_codes = reference_encode_service.get_or_encode(
                         ref_data,
                         desc="FishAudio S2-Pro reference",
+                        request_id=payload.request_id,
                     )
                 references.append(
                     Reference(

@@ -49,6 +49,21 @@ def _main(argv: list[str] | None = None) -> int:
                 report["stage_breakdown"],
                 ["stage", "interval", "count", "total_ms", "avg_ms", "p95_ms"],
             )
+            + "\n## Reference encode breakdown\n"
+            + format_table(
+                report["reference_encode_breakdown"],
+                [
+                    "stage",
+                    "model_id",
+                    "lookups",
+                    "hits",
+                    "misses",
+                    "merged",
+                    "uncacheable",
+                    "encode_p95_ms",
+                    "wait_p95_ms",
+                ],
+            )
             + "\n## Hop breakdown\n"
             + format_table(
                 report["hop_breakdown"],

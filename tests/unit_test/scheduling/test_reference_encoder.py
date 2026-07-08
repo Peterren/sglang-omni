@@ -2,14 +2,22 @@
 from __future__ import annotations
 
 import concurrent.futures
+import json
 import threading
 import time
 from collections import Counter
+from pathlib import Path
 from typing import Any
 
 import pytest
 import torch
 
+from sglang_omni.profiler.event_recorder import (
+    get_recorder,
+    reset_active_stage,
+    set_active_stage,
+)
+from sglang_omni.profiler.views import reference_encode_breakdown
 from sglang_omni.scheduling.reference_encoder import (
     ReferenceEncodeHook,
     ReferenceEncodeKey,
@@ -51,6 +59,11 @@ def _wait_for_merged(
             return
         time.sleep(0.001)
     assert service.stats()["merged"] >= expected
+
+
+def _read_events(path: str) -> list[dict[str, Any]]:
+    with Path(path).open("r", encoding="utf-8") as fp:
+        return [json.loads(line) for line in fp if line.strip()]
 
 
 class _TensorHook(ReferenceEncodeHook[str, torch.Tensor, torch.Tensor]):
@@ -368,3 +381,40 @@ def test_revalidate_exception_propagates_to_followers_without_timeout() -> None:
     assert all(isinstance(error, RuntimeError) for error in errors)
     assert all(str(error) == "revalidate boom" for error in errors)
     assert len(service._inflight) == 0
+
+
+def test_reference_encode_profile_events_and_breakdown(tmp_path: Path) -> None:
+    rec = get_recorder()
+    if rec.is_active():
+        rec.stop()
+    token = set_active_stage("preprocessing")
+    path = rec.start(run_id="ref-test", event_dir=str(tmp_path), stage="preprocessing")
+    try:
+        hook = _TensorHook()
+        service = ReferenceEncodeService(hook, max_items=16, max_bytes=1024)
+
+        service.get_or_encode("profiled", request_id="r1")
+        service.get_or_encode("profiled", request_id="r2")
+        service.get_or_encode("uncacheable-profiled", request_id="r3")
+    finally:
+        rec.stop(run_id="ref-test")
+        reset_active_stage(token)
+
+    events = _read_events(path)
+    lookup_results = [
+        event["metadata"].get("result")
+        for event in events
+        if event["event_name"] == "reference_encode_lookup"
+    ]
+    assert lookup_results == ["miss", "hit", "uncacheable"]
+    assert all(event["stage"] == "preprocessing" for event in events)
+
+    rows = reference_encode_breakdown(source=tmp_path)
+    by_encoder = {row.encoder_id: row for row in rows}
+    row = by_encoder["encoder"]
+    assert row.lookups == 2
+    assert row.misses == 1
+    assert row.hits == 1
+    assert row.encode_count == 1
+    assert row.encode_total_ms >= 0.0
+    assert by_encoder["unknown"].uncacheable == 1

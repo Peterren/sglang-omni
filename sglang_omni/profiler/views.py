@@ -278,7 +278,189 @@ def stage_breakdown(
 
 
 # ---------------------------------------------------------------------------
-# View 3: hop breakdown (stage_a -> stage_b)
+# View 3: reference encode breakdown
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ReferenceEncodeBreakdownRow:
+    stage: str
+    model_id: str
+    encoder_id: str
+    artifact_kind: str
+    lookups: int
+    hits: int
+    misses: int
+    merged: int
+    uncacheable: int
+    failed: int
+    encode_count: int
+    encode_total_ms: float
+    encode_avg_ms: float
+    encode_p50_ms: float
+    encode_p95_ms: float
+    encode_max_ms: float
+    wait_count: int
+    wait_total_ms: float
+    wait_avg_ms: float
+    wait_p50_ms: float
+    wait_p95_ms: float
+    wait_max_ms: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "stage": self.stage,
+            "model_id": self.model_id,
+            "encoder_id": self.encoder_id,
+            "artifact_kind": self.artifact_kind,
+            "lookups": self.lookups,
+            "hits": self.hits,
+            "misses": self.misses,
+            "merged": self.merged,
+            "uncacheable": self.uncacheable,
+            "failed": self.failed,
+            "encode_count": self.encode_count,
+            "encode_total_ms": round(self.encode_total_ms, 3),
+            "encode_avg_ms": round(self.encode_avg_ms, 3),
+            "encode_p50_ms": round(self.encode_p50_ms, 3),
+            "encode_p95_ms": round(self.encode_p95_ms, 3),
+            "encode_max_ms": round(self.encode_max_ms, 3),
+            "wait_count": self.wait_count,
+            "wait_total_ms": round(self.wait_total_ms, 3),
+            "wait_avg_ms": round(self.wait_avg_ms, 3),
+            "wait_p50_ms": round(self.wait_p50_ms, 3),
+            "wait_p95_ms": round(self.wait_p95_ms, 3),
+            "wait_max_ms": round(self.wait_max_ms, 3),
+        }
+
+
+def _reference_bucket_key(ev: dict[str, Any]) -> tuple[str, str, str, str]:
+    md = ev.get("metadata") or {}
+    return (
+        str(ev.get("stage") or "unknown"),
+        str(md.get("model_id") or "unknown"),
+        str(md.get("encoder_id") or "unknown"),
+        str(md.get("artifact_kind") or "unknown"),
+    )
+
+
+def _duration_stats(
+    values: list[float],
+) -> tuple[int, float, float, float, float, float]:
+    if not values:
+        return 0, 0.0, 0.0, 0.0, 0.0, 0.0
+    values.sort()
+    total = sum(values)
+    return (
+        len(values),
+        total,
+        total / len(values),
+        _percentile(values, 0.50),
+        _percentile(values, 0.95),
+        values[-1],
+    )
+
+
+def reference_encode_breakdown(
+    timelines: dict[str, RequestTimeline] | None = None,
+    *,
+    source: str | Path | Iterable[str | Path] | None = None,
+) -> list[ReferenceEncodeBreakdownRow]:
+    """Aggregate ReferenceEncodeService cache and timing events."""
+    if timelines is None:
+        if source is None:
+            raise ValueError("reference_encode_breakdown requires timelines or source")
+        timelines = reconstruct_timelines(source)
+
+    lookups: dict[tuple[str, str, str, str], dict[str, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
+    encode_durations: dict[tuple[str, str, str, str], list[float]] = defaultdict(list)
+    wait_durations: dict[tuple[str, str, str, str], list[float]] = defaultdict(list)
+    failures: dict[tuple[str, str, str, str], int] = defaultdict(int)
+
+    for tl in timelines.values():
+        pending: dict[
+            tuple[str, tuple[str, str, str, str]], list[tuple[int, dict[str, Any]]]
+        ] = defaultdict(list)
+        for ev in tl.events:
+            name = ev.get("event_name")
+            key = _reference_bucket_key(ev)
+            ts = int(ev.get("timestamp_ns", 0))
+            md = ev.get("metadata") or {}
+            if name == "reference_encode_lookup":
+                result = str(md.get("result") or "unknown")
+                lookups[key][result] += 1
+            elif name == "reference_encode_start":
+                pending[("encode", key)].append((ts, md))
+            elif name == "reference_encode_end":
+                stack = pending.get(("encode", key))
+                if stack:
+                    open_ns, _ = stack.pop(0)
+                    encode_durations[key].append((ts - open_ns) / 1e6)
+            elif name == "reference_encode_failure":
+                failures[key] += 1
+            elif name == "reference_encode_wait_start":
+                pending[("wait", key)].append((ts, md))
+            elif name == "reference_encode_wait_end":
+                stack = pending.get(("wait", key))
+                if stack:
+                    open_ns, _ = stack.pop(0)
+                    wait_durations[key].append((ts - open_ns) / 1e6)
+
+    keys = set(lookups) | set(encode_durations) | set(wait_durations) | set(failures)
+    rows: list[ReferenceEncodeBreakdownRow] = []
+    for key in keys:
+        stage, model_id, encoder_id, artifact_kind = key
+        lookup = lookups.get(key, {})
+        (
+            encode_count,
+            encode_total,
+            encode_avg,
+            encode_p50,
+            encode_p95,
+            encode_max,
+        ) = _duration_stats(encode_durations.get(key, []))
+        (
+            wait_count,
+            wait_total,
+            wait_avg,
+            wait_p50,
+            wait_p95,
+            wait_max,
+        ) = _duration_stats(wait_durations.get(key, []))
+        rows.append(
+            ReferenceEncodeBreakdownRow(
+                stage=stage,
+                model_id=model_id,
+                encoder_id=encoder_id,
+                artifact_kind=artifact_kind,
+                lookups=sum(lookup.values()),
+                hits=lookup.get("hit", 0),
+                misses=lookup.get("miss", 0),
+                merged=lookup.get("merged", 0),
+                uncacheable=lookup.get("uncacheable", 0),
+                failed=failures.get(key, 0),
+                encode_count=encode_count,
+                encode_total_ms=encode_total,
+                encode_avg_ms=encode_avg,
+                encode_p50_ms=encode_p50,
+                encode_p95_ms=encode_p95,
+                encode_max_ms=encode_max,
+                wait_count=wait_count,
+                wait_total_ms=wait_total,
+                wait_avg_ms=wait_avg,
+                wait_p50_ms=wait_p50,
+                wait_p95_ms=wait_p95,
+                wait_max_ms=wait_max,
+            )
+        )
+    rows.sort(key=lambda r: (-r.encode_total_ms, -r.wait_total_ms, r.stage))
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# View 4: hop breakdown (stage_a -> stage_b)
 # ---------------------------------------------------------------------------
 
 
@@ -386,11 +568,14 @@ def hop_breakdown(
 
 
 def build_report(source: str | Path | Iterable[str | Path]) -> dict[str, Any]:
-    """Return all three views as a single dict for JSON serialization."""
+    """Return all profiler views as a single dict for JSON serialization."""
     timelines = reconstruct_timelines(source)
     return {
         "timelines": {rid: tl.to_relative() for rid, tl in timelines.items()},
         "stage_breakdown": [row.to_dict() for row in stage_breakdown(timelines)],
+        "reference_encode_breakdown": [
+            row.to_dict() for row in reference_encode_breakdown(timelines)
+        ],
         "hop_breakdown": [row.to_dict() for row in hop_breakdown(timelines)],
         "request_count": len(timelines),
     }

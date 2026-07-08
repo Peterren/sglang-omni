@@ -73,6 +73,10 @@ Supporting events used for finer-grained breakdown:
 | Stage | `stage_hop_sent` | Payload `DataReadyMessage` sent to next stage |
 | Stage | `stage_stream_chunk_sent` | Each stream chunk (metadata `to_stage`, `chunk_id`, `modality`) |
 | Stage | `stage_stream_chunk_received` | Each stream chunk materialized and ready for the receiver scheduler, including coordinator terminal chunks |
+| Reference encode | `reference_encode_lookup` | Cache lookup result for `ReferenceEncodeService` (`hit`, `miss`, `merged`, or `uncacheable`) |
+| Reference encode | `reference_encode_start` / `reference_encode_end` | Leader encode interval for a cache miss or uncacheable item |
+| Reference encode | `reference_encode_wait_start` / `reference_encode_wait_end` | Same-key follower wait interval when a request merges onto an in-flight leader |
+| Reference encode | `reference_encode_failure` | Reference encode attempt failed, including encode, wait, store, or revalidate failures |
 | AR scheduler | `scheduler_queue_enter` | Built request entered the scheduler queue |
 | AR scheduler | `scheduler_first_emit` | First `stream_output_builder` emission per request |
 
@@ -155,7 +159,7 @@ python -m sglang_omni.profiler /tmp/profiles/demo-run/events --format table
 python -m sglang_omni.profiler /tmp/profiles/demo-run/events --format json --out report.json
 ```
 
-The CLI / `build_report` returns three views derived from the same event
+The CLI / `build_report` returns these views derived from the same event
 stream:
 
 1. **Timeline** — per-request event list with `t_rel_ms` anchored at
@@ -166,7 +170,11 @@ stream:
    against both `scheduler_first_emit` AND `stage_first_stream_chunk_sent`);
    every pair gets its own pending stack so a close event for pair A does
    not consume the opener of pair B.
-3. **Hop breakdown** — `stage_hop_sent` / `stage_input_received` and
+3. **Reference encode breakdown** — `ReferenceEncodeService` cache result
+   counts (`hit`, `miss`, `merged`, `uncacheable`) plus leader encode and
+   same-key follower wait durations. Use this first when deciding whether
+   different-key reference encode batching is worth implementing.
+4. **Hop breakdown** — `stage_hop_sent` / `stage_input_received` and
    `stage_stream_chunk_sent` / `stage_stream_chunk_received` durations per
    (source, destination, kind). Terminal stage stream chunks are paired the
    same way with destination `coordinator`.
@@ -174,6 +182,24 @@ stream:
 Hop pairs match across processes by `(request_id, source_stage, dest_stage,
 chunk_id?)`, so a single request's path through subprocesses can be
 reconstructed even when each stage runs in its own process.
+
+For TTS reference-encode profiling, use the SeedTTS benchmark profile hook:
+
+```bash
+python -m benchmarks.eval.benchmark_tts_seedtts \
+  --generate-only \
+  --use-existing-server \
+  --base-url http://localhost:8000 \
+  --model OpenMOSS-Team/MOSS-TTS-Local-Transformer-v1.5 \
+  --ref-format references \
+  --token-count auto \
+  --warmup 0 \
+  --concurrency 8 \
+  --max-samples 64 \
+  --output-dir results/m4b-gate-moss-local-c8 \
+  --profile-request-events \
+  --profile-run-id m4b-gate-moss-local-c8
+```
 
 ## Torch profiler
 

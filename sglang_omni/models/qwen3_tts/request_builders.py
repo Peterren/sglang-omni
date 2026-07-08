@@ -766,6 +766,7 @@ def _prepare_qwen3_tts_base_request(
     state: Qwen3TTSState,
     model: Any,
     wrapper: Any,
+    request_id: str | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor | None]:
     speaker_cache = get_speaker_artifact_cache()
     cache_key = _qwen3_tts_uploaded_voice_cache_key(state)
@@ -782,6 +783,7 @@ def _prepare_qwen3_tts_base_request(
         voice_clone_prompt, ref_text = reference_service.get_or_encode(
             state,
             desc="Qwen3-TTS ad-hoc reference",
+            request_id=request_id,
         )
     else:
         with torch.no_grad():
@@ -875,6 +877,7 @@ def _prepare_qwen3_tts_request(
             state=state,
             model=model,
             wrapper=wrapper,
+            request_id=payload.request_id,
         )
     elif state.task_type == QWEN3_TTS_TASK_CUSTOM_VOICE:
         (

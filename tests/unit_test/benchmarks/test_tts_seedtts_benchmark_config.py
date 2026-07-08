@@ -44,3 +44,29 @@ def test_seedtts_benchmark_batch_args_are_independent() -> None:
     )
     assert results_config["max_running_requests"] == 32
     assert results_config["cuda_graph_max_bs"] == 128
+
+
+def test_seedtts_benchmark_profile_args_are_recorded() -> None:
+    config = _config_from_cli(
+        "--profile-request-events",
+        "--profile-run-id",
+        "m4b-gate",
+        "--profile-event-dir",
+        "/tmp/events",
+        "--profile-report-path",
+        "/tmp/report.json",
+    )
+
+    assert config.profile_request_events is True
+    assert config.profile_run_id == "m4b-gate"
+    assert config.profile_event_dir == "/tmp/events"
+    assert config.profile_report_path == "/tmp/report.json"
+
+    results_config = _build_results_config(
+        config,
+        base_url="http://localhost:8000",
+    )
+    assert results_config["profile_request_events"] is True
+    assert results_config["profile_run_id"] == "m4b-gate"
+    assert results_config["profile_event_dir"] == "/tmp/events"
+    assert results_config["profile_report_path"] == "/tmp/report.json"

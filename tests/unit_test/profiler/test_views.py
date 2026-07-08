@@ -10,6 +10,7 @@ from pathlib import Path
 from sglang_omni.profiler.views import (
     build_report,
     hop_breakdown,
+    reference_encode_breakdown,
     reconstruct_timelines,
     stage_breakdown,
 )
@@ -378,7 +379,7 @@ def test_stage_breakdown_uses_prefill_start_not_queue_enter(
     assert all("scheduler_queue_enter->" not in r.interval_name for r in rows)
 
 
-def test_build_report_returns_all_three_views(tmp_path: Path) -> None:
+def test_build_report_returns_all_views(tmp_path: Path) -> None:
     events = [
         _ev("r1", "coordinator", "request_admission", 0),
         _ev("r1", "encoder", "stage_input_received", 100, from_stage="coordinator"),
@@ -402,3 +403,108 @@ def test_build_report_returns_all_three_views(tmp_path: Path) -> None:
     assert any(
         r["src"] == "encoder" and r["dst"] == "thinker" for r in rep["hop_breakdown"]
     )
+    assert "reference_encode_breakdown" in rep
+
+
+def test_reference_encode_breakdown_counts_cache_and_durations(
+    tmp_path: Path,
+) -> None:
+    events = [
+        _ev(
+            "r1",
+            "preprocessing",
+            "reference_encode_lookup",
+            0,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="miss",
+        ),
+        _ev(
+            "r1",
+            "preprocessing",
+            "reference_encode_start",
+            1_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="miss",
+        ),
+        _ev(
+            "r1",
+            "preprocessing",
+            "reference_encode_end",
+            2_001_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="success",
+        ),
+        _ev(
+            "r2",
+            "preprocessing",
+            "reference_encode_lookup",
+            3_000_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="hit",
+        ),
+        _ev(
+            "r3",
+            "preprocessing",
+            "reference_encode_lookup",
+            4_000_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="merged",
+        ),
+        _ev(
+            "r3",
+            "preprocessing",
+            "reference_encode_wait_start",
+            4_100_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="merged",
+        ),
+        _ev(
+            "r3",
+            "preprocessing",
+            "reference_encode_wait_end",
+            5_100_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="success",
+        ),
+        _ev(
+            "r4",
+            "preprocessing",
+            "reference_encode_failure",
+            6_000_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="error",
+        ),
+    ]
+    _write_events(tmp_path / "events_x.jsonl", events)
+
+    rows = reference_encode_breakdown(source=tmp_path)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.lookups == 3
+    assert row.misses == 1
+    assert row.hits == 1
+    assert row.merged == 1
+    assert row.encode_count == 1
+    assert row.encode_total_ms == 2.0
+    assert row.wait_count == 1
+    assert row.wait_total_ms == 1.0
+    assert row.failed == 1
+
+    report = build_report(tmp_path)
+    assert report["reference_encode_breakdown"][0]["encode_p95_ms"] == 2.0

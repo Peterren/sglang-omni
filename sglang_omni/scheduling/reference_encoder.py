@@ -9,6 +9,7 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Generic, TypeVar
 
+from sglang_omni.profiler.event_recorder import emit as _emit_profiler_event
 from sglang_omni.scheduling.stage_cache import StageOutputCache
 
 logger = logging.getLogger(__name__)
@@ -97,60 +98,194 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
         self._uncacheable = 0
         self._last_log_time = 0.0
 
-    def get_or_encode(self, raw_input: Any, *, desc: str | None = None) -> ArtifactT:
+    @staticmethod
+    def _event_metadata(
+        key: ReferenceEncodeKey | None,
+        **extra: Any,
+    ) -> dict[str, Any]:
+        metadata = {name: value for name, value in extra.items() if value is not None}
+        if key is not None:
+            metadata.update(
+                {
+                    "model_id": key.model_id,
+                    "encoder_id": key.encoder_id,
+                    "artifact_kind": key.artifact_kind,
+                }
+            )
+        return metadata
+
+    @staticmethod
+    def _emit_event(
+        request_id: str | None,
+        event_name: str,
+        *,
+        key: ReferenceEncodeKey | None = None,
+        **metadata: Any,
+    ) -> None:
+        if request_id is None:
+            return
+        _emit_profiler_event(
+            request_id=str(request_id),
+            stage=None,
+            event_name=event_name,
+            metadata=ReferenceEncodeService._event_metadata(key, **metadata),
+        )
+
+    def get_or_encode(
+        self,
+        raw_input: Any,
+        *,
+        desc: str | None = None,
+        request_id: str | None = None,
+    ) -> ArtifactT:
         item = self._hook.normalize_input(raw_input)
         key = self._hook.cache_key(item)
         if key is None:
             with self._lock:
                 self._uncacheable += 1
+            self._emit_event(
+                request_id,
+                "reference_encode_lookup",
+                result="uncacheable",
+            )
+            self._emit_event(
+                request_id,
+                "reference_encode_start",
+                result="uncacheable",
+            )
             try:
-                return self._hook.encode_one(item)
+                artifact = self._hook.encode_one(item)
             except BaseException as exc:
                 self._add_exception_note(exc, desc)
                 with self._lock:
                     self._failed += 1
+                self._emit_event(
+                    request_id,
+                    "reference_encode_end",
+                    result="error",
+                    error_type=type(exc).__name__,
+                )
+                self._emit_event(
+                    request_id,
+                    "reference_encode_failure",
+                    result="error",
+                    phase="encode",
+                    cacheable=False,
+                    error_type=type(exc).__name__,
+                )
                 raise
+            self._emit_event(
+                request_id,
+                "reference_encode_end",
+                result="success",
+                cacheable=False,
+            )
+            return artifact
 
         cache_key = key.to_string()
         leader_fut: concurrent.futures.Future[StoredT] | None = None
         follower_fut: concurrent.futures.Future[StoredT] | None = None
         stored: StoredT | None = None
+        lookup_result: str
         with self._lock:
             stored = self._cache.get(cache_key)
             if stored is not None:
                 self._hits += 1
+                lookup_result = "hit"
             elif cache_key in self._inflight:
                 self._merged += 1
                 follower_fut = self._inflight[cache_key]
+                lookup_result = "merged"
             else:
                 self._misses += 1
                 leader_fut = concurrent.futures.Future()
                 self._inflight[cache_key] = leader_fut
+                lookup_result = "miss"
+
+        self._emit_event(
+            request_id,
+            "reference_encode_lookup",
+            key=key,
+            result=lookup_result,
+        )
 
         if stored is not None:
             self._maybe_log()
             return self._hook.load_artifact(stored)
 
         if follower_fut is not None:
+            self._emit_event(
+                request_id,
+                "reference_encode_wait_start",
+                key=key,
+                result="merged",
+            )
             try:
                 stored = follower_fut.result(timeout=self._timeout_s)
             except concurrent.futures.TimeoutError as exc:
                 self._add_exception_note(exc, desc)
+                self._emit_event(
+                    request_id,
+                    "reference_encode_wait_end",
+                    key=key,
+                    result="timeout",
+                )
+                self._emit_event(
+                    request_id,
+                    "reference_encode_failure",
+                    key=key,
+                    result="timeout",
+                    phase="wait",
+                    error_type=type(exc).__name__,
+                )
                 raise
             except BaseException as exc:
                 self._add_exception_note(exc, desc)
+                self._emit_event(
+                    request_id,
+                    "reference_encode_wait_end",
+                    key=key,
+                    result="error",
+                    error_type=type(exc).__name__,
+                )
+                self._emit_event(
+                    request_id,
+                    "reference_encode_failure",
+                    key=key,
+                    result="error",
+                    phase="wait",
+                    error_type=type(exc).__name__,
+                )
                 raise _fresh_exception(exc) from exc
+            self._emit_event(
+                request_id,
+                "reference_encode_wait_end",
+                key=key,
+                result="success",
+            )
             return self._hook.load_artifact(stored)
 
         assert leader_fut is not None
-        # revalidate() and cache.put() run inside the same guard as encode: any
-        # exception here must still drop the in-flight entry and fail the future,
-        # otherwise same-key followers block on a future that never resolves and
-        # every later request for this key re-follows a dead leader (permanent
-        # poison + timeout-length hangs). A hook's revalidate() may legitimately
-        # raise (e.g. a reference file mutated during the encode window).
+        # note (luojiaxuan): revalidate and cache put share the encode guard.
+        # A failure must drop inflight and fail the future so same-key followers
+        # do not wait on a dead leader after a reference mutates mid-encode.
+        encode_event_closed = False
         try:
+            self._emit_event(
+                request_id,
+                "reference_encode_start",
+                key=key,
+                result="miss",
+            )
             artifact = self._hook.encode_one(item)
+            self._emit_event(
+                request_id,
+                "reference_encode_end",
+                key=key,
+                result="success",
+                cacheable=True,
+            )
+            encode_event_closed = True
             stored = self._hook.store_artifact(artifact)
             should_cache = self._hook.revalidate(item, key)
             with self._lock:
@@ -162,6 +297,22 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
             with self._lock:
                 self._inflight.pop(cache_key, None)
                 self._failed += 1
+            if not encode_event_closed:
+                self._emit_event(
+                    request_id,
+                    "reference_encode_end",
+                    key=key,
+                    result="error",
+                    error_type=type(exc).__name__,
+                )
+            self._emit_event(
+                request_id,
+                "reference_encode_failure",
+                key=key,
+                result="error",
+                phase="post_encode" if encode_event_closed else "encode",
+                error_type=type(exc).__name__,
+            )
             leader_fut.set_exception(exc)
             raise
         leader_fut.set_result(stored)

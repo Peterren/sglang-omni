@@ -8,7 +8,8 @@ encoding:
 - same-key single-flight while an encode is in progress;
 - failure propagation to waiters without caching failures;
 - artifact store/load conversion and caller-owned return values;
-- basic cache statistics.
+- basic cache statistics;
+- optional request-profiler events when callers pass a request id.
 
 The service is for ad-hoc request references. Registered or uploaded voices
 continue to use `SpeakerArtifactCache`, because they have a different lifetime,
@@ -40,7 +41,13 @@ class ReferenceEncodeHook(Generic[InputT, ArtifactT, StoredT]):
 
 
 class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
-    def get_or_encode(self, raw_input: Any, *, desc: str | None = None) -> ArtifactT: ...
+    def get_or_encode(
+        self,
+        raw_input: Any,
+        *,
+        desc: str | None = None,
+        request_id: str | None = None,
+    ) -> ArtifactT: ...
     def stats(self) -> dict[str, int]: ...
 ```
 
@@ -58,6 +65,7 @@ The service owns mechanics:
 - cache insertion, byte budget, and LRU eviction;
 - follower waits, timeout handling, and exception fanout;
 - no-poison-on-failure behavior;
+- request-profiler events for cache lookup, leader encode, follower wait, and failures;
 - stats for hits, misses, merges, failures, uncacheable inputs, entries, bytes,
   and evictions.
 
@@ -128,6 +136,8 @@ Before building M4b, run cold-cache workloads with different reference audio per
 request at concurrency 8 and 16 for FishAudio S2-Pro, Qwen3-TTS, and
 MOSS-TTS Local. Track preprocessing/reference-encode p50/p95, end-to-end TTFA
 and latency, throughput, cache hit/miss/merge counts, and GPU/CPU utilization.
+Use the SeedTTS benchmark with `--profile-request-events` so the profiler report
+includes `reference_encode_breakdown`.
 Build M4b for a model only if different-key reference encode remains a top
 bottleneck and batching gives at least 15% p95 latency reduction or 20%
 throughput improvement versus M4a.
