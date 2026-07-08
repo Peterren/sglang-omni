@@ -143,11 +143,6 @@ AISHELL4_LONG_CER_NO_SPK_PERCENT_MAX: float | None = round(
 AISHELL4_LONG_CP_CER_PERCENT_MAX: float | None = round(
     AISHELL4_LONG_CP_CER_PERCENT_REF * AISHELL4_LONG_THRESHOLD_SLACK_LOWER, 4
 )
-# Delta CER on 20 samples is a near-zero-magnitude diagnostic (calibration
-# 0.16-0.28%, observed CI spikes past 1.2%): the ratio is dominated by noise,
-# so no meaningful slack can bound it. None keeps it report-only (logged but
-# not asserted); the 800-sample movies800 delta_cer threshold remains the real
-# guard for speaker-attribution regressions.
 AISHELL4_LONG_DELTA_CER_PERCENT_MAX: float | None = None
 AISHELL4_LONG_SPEAKER_TIMESTAMP_DER_PERCENT_MAX: float | None = round(
     AISHELL4_LONG_SPEAKER_TIMESTAMP_DER_PERCENT_REF
