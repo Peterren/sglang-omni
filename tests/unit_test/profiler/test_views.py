@@ -10,8 +10,8 @@ from pathlib import Path
 from sglang_omni.profiler.views import (
     build_report,
     hop_breakdown,
-    reference_encode_breakdown,
     reconstruct_timelines,
+    reference_encode_breakdown,
     stage_breakdown,
 )
 
@@ -520,6 +520,36 @@ def test_reference_encode_breakdown_counts_cache_and_durations(
             artifact_kind="codes",
             result="error",
         ),
+        _ev(
+            "r6",
+            "preprocessing",
+            "reference_encode_wait_start",
+            13_000_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="merged",
+        ),
+        _ev(
+            "r6",
+            "preprocessing",
+            "reference_encode_wait_end",
+            143_000_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="timeout",
+        ),
+        _ev(
+            "r6",
+            "preprocessing",
+            "reference_encode_failure",
+            143_000_000,
+            model_id="fish",
+            encoder_id="codec",
+            artifact_kind="codes",
+            result="timeout",
+        ),
     ]
     _write_events(tmp_path / "events_x.jsonl", events)
 
@@ -535,7 +565,7 @@ def test_reference_encode_breakdown_counts_cache_and_durations(
     assert row.wait_count == 1
     assert row.wait_total_ms == 1.0
     assert row.wait_p95_ms == 1.0
-    assert row.failed == 2
+    assert row.failed == 3
 
     report = build_report(tmp_path)
     assert report["reference_encode_breakdown"][0]["encode_p95_ms"] == 2.0

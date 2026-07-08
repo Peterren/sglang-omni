@@ -407,7 +407,8 @@ def reference_encode_breakdown(
                 stack = pending.get(("wait", key))
                 if stack:
                     open_ns, _ = stack.pop(0)
-                    wait_durations[key].append((ts - open_ns) / 1e6)
+                    if md.get("result") not in ("error", "timeout"):
+                        wait_durations[key].append((ts - open_ns) / 1e6)
 
     keys = set(lookups) | set(encode_durations) | set(wait_durations) | set(failures)
     rows: list[ReferenceEncodeBreakdownRow] = []

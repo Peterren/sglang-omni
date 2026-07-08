@@ -41,6 +41,7 @@ def run_scheduler(
     This is a copy of tests.unit_test.pipeline.helpers.run_scheduler to avoid
     the torch transitive import in helpers.py.
     """
+
     def start() -> None:
         token = set_active_stage(active_stage) if active_stage is not None else None
         try:

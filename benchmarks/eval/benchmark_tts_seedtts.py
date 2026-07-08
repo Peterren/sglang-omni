@@ -363,6 +363,7 @@ def _write_request_profile_report(
     expect_reference_encode: bool = False,
 ) -> dict:
     report = build_report(event_dir)
+    reference_rows = report.get("reference_encode_breakdown") or []
     if expect_events and int(report.get("request_count") or 0) == 0:
         raise RuntimeError(
             "No request profile events were found in "
@@ -370,13 +371,21 @@ def _write_request_profile_report(
             "server-side event_dir; run the benchmark next to the server or "
             "pass a shared --profile-event-dir."
         )
-    if expect_reference_encode and not report.get("reference_encode_breakdown"):
+    if expect_reference_encode and not reference_rows:
         raise RuntimeError(
             "No reference encode profile events were found in "
             f"{event_dir!r}. For M4B gate runs, verify this model uses "
             "ReferenceEncodeService and that the benchmark can read the "
             "server-side event_dir."
         )
+    if expect_reference_encode:
+        encode_count = sum(int(row.get("encode_count") or 0) for row in reference_rows)
+        if encode_count == 0:
+            raise RuntimeError(
+                "No successful reference encode misses were found in "
+                f"{event_dir!r}. For M4B gate runs, use a cold-cache workload "
+                "with different reference audio per request."
+            )
     path = Path(report_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
@@ -390,6 +399,11 @@ async def run_tts_seedtts_benchmark(
 
     Returns a dict with keys: summary, per_request, config.
     """
+    if config.profile_request_events and config.warmup != 0:
+        raise ValueError(
+            "profile_request_events requires warmup=0 so warmup requests do "
+            "not populate the reference cache inside the profiling window"
+        )
     base_url = build_base_url(config)
     api_url = f"{base_url}/v1/audio/speech"
 
@@ -880,6 +894,8 @@ def main() -> None:
         parser.error(
             "--require-reference-encode-profile requires --profile-request-events"
         )
+    if args.profile_request_events and args.warmup != 0:
+        parser.error("--profile-request-events requires --warmup 0")
     config = _config_from_args(args)
     wait_for_gpu_release = not args.skip_gpu_cleanup
 

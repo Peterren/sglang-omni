@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 
@@ -11,6 +12,7 @@ from benchmarks.eval.benchmark_tts_seedtts import (
     _build_results_config,
     _config_from_args,
     _write_request_profile_report,
+    run_tts_seedtts_benchmark,
 )
 
 
@@ -55,6 +57,8 @@ def test_seedtts_benchmark_batch_args_are_independent() -> None:
 def test_seedtts_benchmark_profile_args_are_recorded() -> None:
     config = _config_from_cli(
         "--profile-request-events",
+        "--warmup",
+        "0",
         "--profile-run-id",
         "m4b-gate",
         "--profile-event-dir",
@@ -69,6 +73,7 @@ def test_seedtts_benchmark_profile_args_are_recorded() -> None:
     assert config.profile_event_dir == "/tmp/events"
     assert config.profile_report_path == "/tmp/report.json"
     assert config.require_reference_encode_profile is True
+    assert config.warmup == 0
 
     results_config = _build_results_config(
         config,
@@ -79,6 +84,18 @@ def test_seedtts_benchmark_profile_args_are_recorded() -> None:
     assert results_config["profile_event_dir"] == "/tmp/events"
     assert results_config["profile_report_path"] == "/tmp/report.json"
     assert results_config["require_reference_encode_profile"] is True
+
+
+def test_seedtts_profile_run_requires_zero_warmup() -> None:
+    config = TtsSeedttsBenchmarkConfig(
+        model="fishaudio/s2-pro",
+        meta="zhaochenyang20/seed-tts-eval-arrow",
+        profile_request_events=True,
+        warmup=1,
+    )
+
+    with pytest.raises(ValueError, match="warmup=0"):
+        asyncio.run(run_tts_seedtts_benchmark(config))
 
 
 def test_seedtts_profile_report_fails_when_events_are_missing(tmp_path) -> None:
@@ -112,6 +129,39 @@ def test_seedtts_profile_report_can_require_reference_encode_events(tmp_path) ->
     )
 
     with pytest.raises(RuntimeError, match="No reference encode profile events"):
+        _write_request_profile_report(
+            event_dir=str(event_dir),
+            report_path=str(tmp_path / "report.json"),
+            expect_events=True,
+            expect_reference_encode=True,
+        )
+
+
+def test_seedtts_profile_report_can_require_successful_reference_encode(
+    tmp_path,
+) -> None:
+    event_dir = tmp_path / "events"
+    event_dir.mkdir()
+    event = {
+        "request_id": "r1",
+        "stage": "preprocessing",
+        "event_name": "reference_encode_lookup",
+        "timestamp_ns": 0,
+        "run_id": "run",
+        "pid": os.getpid(),
+        "metadata": {
+            "model_id": "fish",
+            "encoder_id": "codec",
+            "artifact_kind": "codes",
+            "result": "hit",
+        },
+    }
+    (event_dir / "events_preprocessing_1.jsonl").write_text(
+        json.dumps(event) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="No successful reference encode misses"):
         _write_request_profile_report(
             event_dir=str(event_dir),
             report_path=str(tmp_path / "report.json"),
