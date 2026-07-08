@@ -1664,8 +1664,6 @@ async def _transcription_stream(
     try:
         async for chunk in client.generate(gen_req, request_id=request_id):
             if chunk.finish_reason is not None:
-                # Terminal aggregate result — capture the authoritative full
-                # text for the done event, do not re-emit it as a delta.
                 if isinstance(chunk.text, str) and chunk.text:
                     final_text = chunk.text
                 continue
@@ -1673,7 +1671,6 @@ async def _transcription_stream(
                 event = TranscriptionTextDeltaEvent(delta=chunk.text)
                 yield f"data: {event.model_dump_json(exclude_none=True)}\n\n"
     except Exception as exc:
-        # Headers are already sent; surface the failure as an SSE error event.
         logger.exception("Error streaming transcription for request %s", request_id)
         payload = {"type": "error", "error": {"message": str(exc)}}
         yield f"data: {json.dumps(payload)}\n\n"

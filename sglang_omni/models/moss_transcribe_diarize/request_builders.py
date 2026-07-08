@@ -411,7 +411,7 @@ def make_moss_transcribe_diarize_stream_output_builder(
 
         # note (guozhihao): rate-limit by holding tokens until the interval elapses;
         # last_emit == 0.0 means nothing emitted yet (first delta goes out immediately),
-        # and EOS always flushes the remaining buffer.      
+        # and EOS always flushes the remaining buffer.
         now = time.perf_counter()
         last_emit = float(getattr(req, "_moss_stream_last_emit_t", 0.0))
         if (

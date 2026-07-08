@@ -1,10 +1,4 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Unit tests for make_moss_transcribe_diarize_stream_output_builder.
-
-All tests run without a real MOSS-TD model — mock tokenizers are used. The
-builder is exercised exactly as OmniScheduler calls it: once per decode step
-with ``(request_id, req_data, req_output)``.
-"""
 
 from __future__ import annotations
 
