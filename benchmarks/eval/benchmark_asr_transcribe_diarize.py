@@ -259,6 +259,7 @@ def make_send_fn(
                     max_new_tokens,
                     stream=stream,
                 ),
+                headers=_request_headers(stream=stream),
             ) as response:
                 if response.status != 200:
                     result.error = f"HTTP {response.status}: {await response.text()}"
@@ -299,13 +300,15 @@ async def _consume_transcription_stream(
     """
     final_text: str | None = None
     last_delta_t: float | None = None
+    seen_done = False
     async for raw_line in response.content:
         line = raw_line.decode("utf-8").strip()
         if not line.startswith("data: "):
             continue
         payload = line[len("data: ") :]
         if payload == "[DONE]":
-            break
+            seen_done = True
+            continue
         event = json.loads(payload)
         event_type = event.get("type")
         if event_type == "transcript.text.delta":
@@ -321,6 +324,8 @@ async def _consume_transcription_stream(
             raise ValueError(f"Stream error event: {event.get('error')}")
     if not isinstance(final_text, str):
         raise ValueError("Stream ended without a transcript.text.done event")
+    if not seen_done:
+        raise ValueError("Stream ended without a [DONE] event")
     return final_text.strip()
 
 
@@ -994,6 +999,12 @@ def _request_form(
         or "application/octet-stream",
     )
     return form
+
+
+def _request_headers(*, stream: bool = False) -> dict[str, str] | None:
+    if not stream:
+        return None
+    return {"x-sglang-omni-route-stream": "true"}
 
 
 if __name__ == "__main__":
