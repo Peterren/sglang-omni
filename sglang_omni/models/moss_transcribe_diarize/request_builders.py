@@ -409,10 +409,9 @@ def make_moss_transcribe_diarize_stream_output_builder(
         if not pending:
             return []
 
-        # note (guozhihao): rate-limit by holding tokens until the interval elapses.
-        # last_emit == 0.0
-        # means nothing was emitted yet — the first delta goes out immediately.
-        # EOS always flushes the remaining buffer.
+        # note (guozhihao): rate-limit by holding tokens until the interval elapses;
+        # last_emit == 0.0 means nothing emitted yet (first delta goes out immediately),
+        # and EOS always flushes the remaining buffer.      
         now = time.perf_counter()
         last_emit = float(getattr(req, "_moss_stream_last_emit_t", 0.0))
         if (
@@ -424,7 +423,6 @@ def make_moss_transcribe_diarize_stream_output_builder(
             return []
 
         delta = _decode_token_ids(tokenizer, pending, skip_special_tokens=True)
-        # note (guozhihao): hold until the trailing multi-byte char completes.
         if delta.endswith("\ufffd"):
             return []
         pending.clear()
