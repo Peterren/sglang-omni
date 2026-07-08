@@ -565,6 +565,7 @@ def _run_from_asr_results(args: argparse.Namespace) -> tuple[EvaluationPayload, 
         concurrency=int(config.get("concurrency", args.concurrency)),
         repo_id=str(config.get("repo_id", args.repo_id)),
         split=str(config.get("split", args.split)),
+        dataset=str(config.get("dataset", args.dataset)),
     )
     output_path = _save_payload(args, payload)
     return payload, output_path
@@ -624,6 +625,7 @@ def _build_payload(
         concurrency=args.concurrency,
         repo_id=args.repo_id,
         split=args.split,
+        dataset=args.dataset,
     )
 
 

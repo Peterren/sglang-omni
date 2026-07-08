@@ -22,6 +22,7 @@ from benchmarks.eval.benchmark_asr_transcribe_diarize import (
     MODEL_PATH,
     run_eval,
 )
+from benchmarks.metrics._format import format_benchmark_dataset_label
 from benchmarks.metrics.transcribe_diarize_metrics import (
     print_diarization_accuracy_summary,
     print_diarization_speed_summary,
@@ -322,6 +323,14 @@ def _run_transcribe_diarize(
     )
 
 
+def _dataset_preset(repo_id: str) -> str:
+    if repo_id == MOVIES800_REPO_ID:
+        return "movies800times"
+    if repo_id == AISHELL4_REPO_ID:
+        return "aishell4_long"
+    return repo_id
+
+
 def _build_results(
     *,
     samples,
@@ -337,6 +346,18 @@ def _build_results(
         concurrency=MOSS_TD_CONCURRENCY,
         repo_id=repo_id,
         split="validation",
+        dataset=_dataset_preset(repo_id),
+    )
+
+
+def _dataset_label_from_results(results) -> str | None:
+    config = results.get("config", {})
+    if not isinstance(config, dict):
+        return None
+    return format_benchmark_dataset_label(
+        dataset=config.get("dataset"),
+        repo_id=config.get("repo_id"),
+        split=config.get("split"),
     )
 
 
@@ -350,16 +371,19 @@ def _print_and_save_results(
     summary = results["summary"]
     speed = results["speed"]
     diarization_metrics = results["diarization_metrics"]
+    dataset_label = _dataset_label_from_results(results)
     print_diarization_accuracy_summary(
         summary=summary,
         diarization_metrics=diarization_metrics,
         model_name=MOSS_TD_CI_MODEL_PATH,
         concurrency=MOSS_TD_CONCURRENCY,
+        dataset=dataset_label,
     )
     print_diarization_speed_summary(
         speed=speed,
         model_name=MOSS_TD_CI_MODEL_PATH,
         concurrency=MOSS_TD_CONCURRENCY,
+        dataset=dataset_label,
     )
 
     results_path = tmp_path / filename
