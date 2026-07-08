@@ -171,6 +171,11 @@ waveforms, call the codec once, and split outputs while preserving parity with
 `encode_one`. Qwen3-TTS should remain M4a-only unless the upstream wrapper
 exposes a safe batch primitive for `create_voice_clone_prompt`.
 
+If M4b needs shared scheduler support instead of an internal service queue, use
+the M7 design in `docs/design/07_simple_scheduler_batching.md`. Do not remove
+the current `SimpleScheduler` guard as part of M4b profiling prep; M7 requires
+its own design review and red contract tests.
+
 When profiling MOSS-TTS Local anyway, keep the reference-audio cache enabled.
 The reported miss encode time includes its existing `_BatchedReferenceEncoder`
 queue and batch behavior, so compare it as evidence for whether any additional
