@@ -343,8 +343,7 @@ class HiggsTTSModelRunner(ModelRunner):
             if was_done_cpu[b]:
                 cb0_per_row.append(0)
                 continue
-            codes_N = codes_BN_cpu[b].to(torch.long).clone()
-            data.output_codes.append(codes_N)
+            codes_N = self._append_output_code(data, codes_BN_cpu[b])
             if logprobs_cpu is not None and self._request_captures_rollout_logprobs(
                 sched_req
             ):
@@ -433,7 +432,7 @@ class HiggsTTSModelRunner(ModelRunner):
                 cb0_per_row.append(0)
                 continue
             codes_N = codes_log[-1]
-            data.output_codes.append(codes_N.detach().cpu().clone())
+            codes_cpu = self._append_output_code(data, codes_N)
             if logprobs_BN is not None and self._request_captures_rollout_logprobs(
                 sched_req
             ):
@@ -441,7 +440,7 @@ class HiggsTTSModelRunner(ModelRunner):
             data.generation_done = bool(model._sampler_pool.generation_done[row].item())
             self._queue_or_emit_code_chunk(
                 sched_req,
-                data.output_codes[-1],
+                codes_cpu,
                 force=self._is_final_code_step(data),
             )
             self._mark_sampler_finished(req, data.generation_done)
@@ -460,6 +459,44 @@ class HiggsTTSModelRunner(ModelRunner):
 
     def _should_capture_rollout_logprobs(self, requests: list) -> bool:
         return any(self._request_captures_rollout_logprobs(req) for req in requests)
+
+    @staticmethod
+    def _append_output_code(data: Any, codes_N: torch.Tensor) -> torch.Tensor:
+        try:
+            max_new_tokens = int(data.max_new_tokens)
+            num_codebooks = int(data.num_codebooks)
+            count = int(data.output_code_count)
+            buffer = data.output_code_buffer
+        except AttributeError:
+            codes_cpu = codes_N.detach().cpu().to(torch.long).clone()
+            data.output_codes.append(codes_cpu)
+            return codes_cpu
+
+        if buffer is None:
+            buffer = torch.empty(
+                (max(1, max_new_tokens), num_codebooks),
+                dtype=torch.long,
+                device="cpu",
+            )
+            data.output_code_buffer = buffer
+        elif count >= buffer.shape[0]:
+            new_cap = max(count + 1, buffer.shape[0] * 2)
+            new_buffer = torch.empty(
+                (new_cap, num_codebooks),
+                dtype=torch.long,
+                device="cpu",
+            )
+            new_buffer[:count].copy_(buffer[:count])
+            buffer = new_buffer
+            data.output_code_buffer = buffer
+
+        row = buffer[count]
+        if codes_N.device.type == "cpu" and codes_N.dtype == torch.long:
+            row.copy_(codes_N, non_blocking=True)
+        else:
+            row.copy_(codes_N.detach().to(device="cpu", dtype=torch.long))
+        data.output_code_count = count + 1
+        return row
 
     def _decode_step_logprobs(self, result: Any, n_real: int) -> torch.Tensor:
         model = self.model
@@ -535,8 +572,12 @@ class HiggsTTSModelRunner(ModelRunner):
         try:
             max_new_tokens = int(data.max_new_tokens or 0)
         except AttributeError:
-            max_new_tokens = 0
-        return max_new_tokens > 0 and len(data.output_codes) >= max_new_tokens
+            return False
+        try:
+            output_count = int(data.output_code_count)
+        except AttributeError:
+            output_count = len(data.output_codes)
+        return max_new_tokens > 0 and output_count >= max_new_tokens
 
     def _queue_or_emit_code_chunk(
         self, sched_req: Any, codes_N: torch.Tensor, *, force: bool = False

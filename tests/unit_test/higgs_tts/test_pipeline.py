@@ -675,6 +675,62 @@ def test_higgs_model_runner_batches_stream_code_rows_on_decode_boundaries() -> N
     assert second.data[-1].tolist() == [17, 18, 19]
 
 
+def test_higgs_model_runner_collect_streaming_uses_preallocated_buffer() -> None:
+    runner = object.__new__(HiggsTTSModelRunner)
+    runner._outbox = queue.Queue()
+    runner._vocoder_target = "vocoder"
+    runner.model = SimpleNamespace(
+        _rid_to_row={"req": 0},
+        _output_codes={"req": []},
+        _sampler_pool=SimpleNamespace(generation_done=torch.tensor([False])),
+    )
+    req = SimpleNamespace(
+        is_chunked=0,
+        finished_reason=None,
+        finished=lambda: False,
+    )
+    data = SimpleNamespace(
+        req=req,
+        output_codes=[],
+        output_code_buffer=None,
+        output_code_count=0,
+        output_logprobs=[],
+        return_omni_rollout=False,
+        return_logprob=False,
+        generation_done=False,
+        max_new_tokens=2,
+        num_codebooks=3,
+        stream_metadata={
+            "modality": "audio_codes",
+            "stream": True,
+            "num_codebooks": 3,
+            "codebook_size": 17,
+            HIGGS_STREAM_STRIDE_METADATA: 8,
+            HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA: 8,
+        },
+        stream_code_buffer=[],
+        stream_code_first_flush_done=False,
+        stream_code_seen_rows=0,
+        stream_code_next_flush_rows=0,
+    )
+    result = SimpleNamespace(
+        logits_output=SimpleNamespace(next_token_logits=torch.zeros(1, 4))
+    )
+    sched_req = SimpleNamespace(request_id="req", data=data)
+
+    for row in ([10, 11, 12], [13, 14, 15]):
+        runner.model._output_codes["req"] = [torch.tensor(row, dtype=torch.long)]
+        runner._collect_step_outputs(result, [sched_req])
+
+    out = runner._outbox.get_nowait()
+    assert out.type == "stream"
+    assert out.target == "vocoder"
+    assert out.data.tolist() == [[10, 11, 12], [13, 14, 15]]
+    assert data.output_codes == []
+    assert data.output_code_count == 2
+    assert data.output_code_buffer[:2].tolist() == [[10, 11, 12], [13, 14, 15]]
+
+
 def test_higgs_stream_metadata_carries_initial_codec_chunk_frames() -> None:
     payload = StagePayload(
         request_id="req",

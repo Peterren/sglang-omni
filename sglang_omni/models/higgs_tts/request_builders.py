@@ -34,6 +34,8 @@ class HiggsSGLangRequestData(SGLangARRequestData):
     num_codebooks: int = 8
     codebook_size: int = 1026
     output_codes: list[torch.Tensor] = field(default_factory=list)
+    output_code_buffer: torch.Tensor | None = None
+    output_code_count: int = 0
     output_logprobs: list[torch.Tensor] = field(default_factory=list)
     return_omni_rollout: bool = False
     generation_done: bool = False
@@ -164,7 +166,11 @@ def build_higgs_stream_metadata(
 
 def apply_higgs_result(state: HiggsTtsState, data: HiggsSGLangRequestData) -> None:
     num_codebooks = int(data.num_codebooks)
-    if data.output_codes:
+    if data.output_code_buffer is not None and data.output_code_count > 0:
+        codes = data.output_code_buffer[: data.output_code_count].to(torch.long)
+        state.output_codes_delayed = codes.tolist()
+        state.completion_tokens = int(codes.shape[0])
+    elif data.output_codes:
         codes = torch.stack(data.output_codes, dim=0).to(torch.long)
         state.output_codes_delayed = codes.tolist()
         state.completion_tokens = int(codes.shape[0])
