@@ -384,6 +384,7 @@ def test_moss_transcribe_diarize_multi_speaker_datasets(
         tmp_path=tmp_path,
         filename="moss_transcribe_diarize_stream_results.json",
         router_ready_s=moss_td_router_server.router_ready_s,
+        stream=True,
     )
     _assert_movies800times_stream_results(
         checks,
@@ -486,11 +487,14 @@ def _print_and_save_results(
     tmp_path: Path,
     filename: str,
     router_ready_s: float,
+    stream: bool = False,
 ) -> None:
     summary = results["summary"]
     speed = results["speed"]
     diarization_metrics = results["diarization_metrics"]
     dataset_label = _dataset_label_from_results(results)
+    if stream and dataset_label:
+        dataset_label = f"{dataset_label} [stream]"
     print_diarization_accuracy_summary(
         summary=summary,
         diarization_metrics=diarization_metrics,
