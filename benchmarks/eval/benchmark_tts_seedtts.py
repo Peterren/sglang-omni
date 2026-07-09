@@ -374,8 +374,8 @@ def _write_request_profile_report(
     if expect_reference_encode and not reference_rows:
         raise RuntimeError(
             "No reference encode profile events were found in "
-            f"{event_dir!r}. For M4B gate runs, verify this model uses "
-            "ReferenceEncodeService and that the benchmark can read the "
+            f"{event_dir!r}. Verify this model uses ReferenceEncodeService "
+            "and that the benchmark can read the "
             "server-side event_dir."
         )
     if expect_reference_encode:
@@ -389,8 +389,8 @@ def _write_request_profile_report(
         if successful_miss_count == 0:
             raise RuntimeError(
                 "No successful reference encode misses were found in "
-                f"{event_dir!r}. For M4B gate runs, use a cold-cache workload "
-                "with different reference audio per request."
+                f"{event_dir!r}. Use a cold-cache workload with different "
+                "reference audio per request."
             )
     path = Path(report_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -845,7 +845,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Fail if --profile-request-events produces no reference encode "
-            "breakdown. Use this for M4B gate runs."
+            "breakdown. Use this when validating reference encode coverage."
         ),
     )
     parser.add_argument(
