@@ -154,7 +154,7 @@ Pick by responsibility:
 - `SimpleScheduler` - a single callable, optionally batched via
   `batch_compute_fn` when `max_concurrency=1`. Concurrent non-batched execution
   uses `max_concurrency > 1`; combining concurrency with local batching belongs
-  to the M7 design in `docs/design/07_simple_scheduler_batching.md`.
+  in `docs/design/simple_scheduler_batching.md`.
 - `OmniScheduler` - wraps SGLang's prefill/decode managers, KV cache, and
   request-limit machinery. Use it for AR generation.
 - A custom scheduler - when neither of the above fits (stateful streaming

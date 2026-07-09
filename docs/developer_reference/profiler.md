@@ -191,9 +191,9 @@ reconstructed even when each stage runs in its own process.
 For TTS reference-encode profiling, use the SeedTTS benchmark profile hook:
 run the benchmark where it can read the server-side event directory, or pass a
 shared `--profile-event-dir`. The benchmark fails if a non-empty run produces
-no readable request events. Profiling runs require `--warmup 0`; for M4B gate
-runs, `--require-reference-encode-profile` also requires at least one successful
-reference encode miss in the report.
+no readable request events. Profiling runs require `--warmup 0`; for reference
+batching gate runs, `--require-reference-encode-profile` also requires at least
+one successful reference encode miss in the report.
 
 ```bash
 python -m benchmarks.eval.benchmark_tts_seedtts \
@@ -204,9 +204,9 @@ python -m benchmarks.eval.benchmark_tts_seedtts \
   --warmup 0 \
   --concurrency 8 \
   --max-samples 64 \
-  --output-dir results/m4b-gate-fish-c8 \
+  --output-dir results/reference-batch-gate-fish-c8 \
   --profile-request-events \
-  --profile-run-id m4b-gate-fish-c8 \
+  --profile-run-id reference-batch-gate-fish-c8 \
   --require-reference-encode-profile
 ```
 

@@ -1,10 +1,6 @@
-# 07_simple_scheduler_batching
-
-## SimpleScheduler Concurrent Batching
+# SimpleScheduler Concurrent Batching
 
 Status: Draft
-
-Top-level module: M7
 
 Behavior level: Red
 
@@ -28,7 +24,7 @@ real consumer and profiling evidence.
 ## Non-scope
 
 - This is not a simple deletion of the current guard.
-- Do not mix this with T2 or T5 work.
+- Do not mix this with unrelated transport or scheduler work.
 - Do not implement runtime scheduler changes without a consumer or profiling
   evidence.
 
@@ -52,10 +48,10 @@ accounting, and per-request error ownership.
 
 ## Migration Plan
 
-1. Attach consumer or profile evidence. M4B is one possible consumer, but only
-   after reference-encode profiling shows different-key batching is useful.
+1. Attach consumer or profile evidence. Different-key reference batching is one
+   possible consumer, but only after profiling shows the batched path is useful.
 2. Write a design for the queue-agnostic collector and get it reviewed.
-3. Add contract tests first in an isolated red PR.
+3. Add contract tests first in an isolated behavior PR.
 4. Modify `SimpleScheduler` only after the contract is accepted.
 5. Keep the old `max_concurrency=1` batching behavior unchanged.
 

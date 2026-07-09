@@ -108,8 +108,8 @@ It supports a batch compute function for stages where local batching is
 useful. Today that local batching path is serial: `batch_compute_fn` is
 supported with `max_concurrency=1`, while `max_concurrency > 1` is only for
 non-batched `compute_fn` execution. Concurrent local batching is tracked by
-`docs/design/07_simple_scheduler_batching.md` and should only be implemented
-after a real consumer and profile evidence justify the extra scheduler surface.
+`docs/design/simple_scheduler_batching.md` and should only be implemented after
+a real consumer and profile evidence justify the extra scheduler surface.
 
 #### Code2WavScheduler
 

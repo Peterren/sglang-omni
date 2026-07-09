@@ -123,39 +123,39 @@ Leader failures are propagated to waiters and are not cached. The next request
 can retry as a new leader. A follower timeout does not remove the leader's
 in-flight entry.
 
-## M4a And M4b Boundary
+## Cache And Batch Boundary
 
-This document covers **M4a only**: the ad-hoc reference cache and same-key
-single-flight that ships today.
+This document covers the ad-hoc reference cache and same-key single-flight that
+ship today.
 
-**M4b (different-key batch coalescing) is not implemented and is a non-goal
-here**; it is described only to mark the scope boundary. Do not add M4b runtime
-code until profiling proves it is worth the extra scheduling surface.
+Different-key batch coalescing is not implemented and is a non-goal here; it is
+described only to mark the scope boundary. Do not add runtime batching until
+profiling proves it is worth the extra scheduling surface.
 
-Before building M4b, run cold-cache workloads with different reference audio per
-request at concurrency 8 and 16 for FishAudio S2-Pro, Qwen3-TTS, and
-MOSS-TTS Local. Track preprocessing/reference-encode p50/p95, end-to-end TTFA
-and latency, throughput, cache hit/miss/merge counts, and GPU/CPU utilization.
-Use the SeedTTS benchmark with `--profile-request-events` so the profiler report
+Before building it, run cold-cache workloads with different reference audio per
+request at concurrency 8 and 16 for FishAudio S2-Pro, Qwen3-TTS, and MOSS-TTS
+Local. Track preprocessing/reference-encode p50/p95, end-to-end TTFA and
+latency, throughput, cache hit/miss/merge counts, and GPU/CPU utilization. Use
+the SeedTTS benchmark with `--profile-request-events` so the profiler report
 includes `reference_encode_breakdown`. Run the benchmark where it can read the
-server-side event directory, or pass a shared `--profile-event-dir`. For M4b
+server-side event directory, or pass a shared `--profile-event-dir`. For batch
 gate runs, also pass `--require-reference-encode-profile` so a run without
-successful reference encode miss events fails loudly. Profile gate runs must
-use `--warmup 0` so warmup requests do not populate the reference cache inside
-the profiling window. Uncacheable inputs still report encode time, but they do
-not count as M4b gate cache misses and appear in the unknown profiler bucket.
-Build M4b for a model only if different-key reference encode remains a top
+successful reference encode miss events fails loudly. Profile gate runs must use
+`--warmup 0` so warmup requests do not populate the reference cache inside the
+profiling window. Uncacheable inputs still report encode time, but they do not
+count as batch gate cache misses and appear in the unknown profiler bucket.
+Build different-key batching for a model only if reference encode remains a top
 bottleneck and batching gives at least 15% p95 latency reduction or 20%
-throughput improvement versus M4a.
+throughput improvement versus the cache plus same-key merge path.
 
-If M4b is built later, it should be an opt-in extension of
-`ReferenceEncodeService`, not the default path:
+If different-key reference batching is built later, it should be an opt-in
+extension of `ReferenceEncodeService`, not the default path:
 
 - add explicit hook capability, for example `can_encode_batch()` defaulting to
   `False`, and call `encode_batch(items)` only for hooks that opt in;
 - add service knobs such as `max_batch_size=1` and `max_batch_wait_ms=0`;
-- preserve M4a ordering: normalize input, compute cache key, check cache,
-  merge same-key inflight work, and only then enqueue distinct cache-miss
+- preserve cache-first ordering: normalize input, compute cache key, check
+  cache, merge same-key inflight work, and only then enqueue distinct cache-miss
   leaders for different-key batching;
 - use an internal queue that drains up to `max_batch_size` or
   `max_batch_wait_ms`, calls one hook batch encode, and then stores,
@@ -168,15 +168,16 @@ batched reference encoder and should not be migrated just to fit this generic
 surface. FishAudio S2-Pro is the first plausible candidate only if profiling
 shows real benefit; its batched path would decode/resample each reference, pad
 waveforms, call the codec once, and split outputs while preserving parity with
-`encode_one`. Qwen3-TTS should remain M4a-only unless the upstream wrapper
-exposes a safe batch primitive for `create_voice_clone_prompt`.
+`encode_one`. Qwen3-TTS should stay on cache plus same-key merge unless the
+upstream wrapper exposes a safe batch primitive for `create_voice_clone_prompt`.
 
-If M4b needs shared scheduler support instead of an internal service queue, use
-the M7 design in `docs/design/07_simple_scheduler_batching.md`. Do not remove
-the current `SimpleScheduler` guard as part of M4b profiling prep; M7 requires
-its own design review and red contract tests.
+If different-key reference batching needs shared scheduler support instead of an
+internal service queue, use the design in
+`docs/design/simple_scheduler_batching.md`. Do not remove the current
+`SimpleScheduler` guard as part of reference profiling prep; concurrent batching
+requires its own design review and behavior contract tests.
 
 When profiling MOSS-TTS Local anyway, keep the reference-audio cache enabled.
 The reported miss encode time includes its existing `_BatchedReferenceEncoder`
 queue and batch behavior, so compare it as evidence for whether any additional
-generic M4b surface is still needed, not as a clean no-batch baseline.
+generic batch surface is still needed, not as a clean no-batch baseline.
