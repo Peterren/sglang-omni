@@ -127,27 +127,27 @@ python -m benchmarks.eval.benchmark_asr_transcribe_diarize \
 
 ## Benchmark Results
 
-Here we provide the benchmark results of movies800times and aishell4_long on a single H100 80GB GPU.
+Here we provide the benchmark results of movies800times and aishell4_long on a single H100 80GB GPU. Each row is the **mean of 3 runs** against a server with `max_running_requests=16`, `cuda_graph_max_bs=16`, and `mem_fraction_static=0.80`.
 
 ### movies800times
 
 | Concurrency | Throughput (req/s) | Mean latency (s) | RTF mean | audio_s/s |
 |---:|---:|---:|---:|---:|
-| 1 | 2.43 | 0.411 | 0.0663 | 28.12 |
-| 2 | 4.53 | 0.441 | 0.0729 | 52.43 |
-| 4 | 6.88 | 0.507 | 0.0792 | 79.66 |
-| 8 | 7.65 | 0.504 | 0.0747 | 88.53 |
-| 16 | 6.58 | 0.660 | 0.0933 | 76.18 |
+| 1 | 2.57 | 0.388 | 0.0612 | 29.76 |
+| 2 | 4.89 | 0.409 | 0.0659 | 56.55 |
+| 4 | 6.62 | 0.513 | 0.0790 | 76.64 |
+| 8 | 6.80 | 0.533 | 0.0810 | 78.70 |
+| 16 | 7.08 | 0.659 | 0.0922 | 81.98 |
 
 ### aishell4_long
 
 | Concurrency | Throughput (req/s) | Mean latency (s) | RTF mean | audio_s/s |
 |---:|---:|---:|---:|---:|
-| 1 | 0.022 | 45.4 | 0.0198 | 50.49 |
-| 2 | 0.032 | 62.1 | 0.0271 | 72.56 |
-| 4 | 0.034 | 112.2 | 0.0490 | 77.01 |
-| 8 | 0.039 | 175.0 | 0.0765 | 89.40 |
-| 16 | 0.040 | 308.6 | 0.1348 | 91.63 |
+| 1 | 0.022 | 45.2 | 0.0197 | 50.64 |
+| 2 | 0.032 | 60.7 | 0.0265 | 74.25 |
+| 4 | 0.036 | 105.6 | 0.0461 | 81.64 |
+| 8 | 0.040 | 172.6 | 0.0754 | 90.62 |
+| 16 | 0.043 | 282.8 | 0.1237 | 98.83 |
 
 
 - **Concurrency** — Maximum number of in-flight client requests (`--concurrency`).
