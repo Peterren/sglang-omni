@@ -1,8 +1,8 @@
 # MOSS-Transcribe-Diarize
 
-[MOSS-Transcribe-Diarize](https://huggingface.co/OpenMOSS-Team/MOSS-Transcribe-Diarize) is a multi-speaker ASR and diarization model from the OpenMOSS team. It transcribes dialog audio with speaker labels and timestamps, and is served through the OpenAI-compatible `/v1/audio/transcriptions` endpoint.
+[MOSS-Transcribe-Diarize](https://huggingface.co/OpenMOSS-Team/MOSS-Transcribe-Diarize) is a multi-speaker ASR and diarization model from the OpenMOSS team.
 
-【TODO：这个应该重点强调 long sequence + multi-speaker 的性质吧 @gaoyang】
+It transcribes speech, assigns speakers, and predicts timestamps in a single generation pass. With 128K context, it supports up to ~90-minute audio, handles meetings, interruptions, long conversations, and overlapping speech, and adds hotword boosting for names, companies, product terms, and domain vocabulary. MOSS-Transcribe-Diarize is served through the OpenAI-compatible `/v1/audio/transcriptions` endpoint.
 
 | Component | Spec |
 |---|---|
