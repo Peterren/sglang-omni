@@ -424,13 +424,13 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#request-parameters">Request Parameters</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#performance-optimization">Performance Optimization</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#benchmarking">Benchmarking</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#benchmark-results">Benchmark Results</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#movies800times">movies800times</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#aishell4-long">aishell4_long</a></li>
 </ul>
 </li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acknowledgments">Acknowledgments</a></li>
 </ul>
             </nav>
         </div>
@@ -445,6 +445,7 @@
   <section class="tex2jax_ignore mathjax_ignore" id="moss-transcribe-diarize">
 <h1>MOSS-Transcribe-Diarize<a class="headerlink" href="#moss-transcribe-diarize" title="Link to this heading">#</a></h1>
 <p><a class="reference external" href="https://huggingface.co/OpenMOSS-Team/MOSS-Transcribe-Diarize">MOSS-Transcribe-Diarize</a> is a multi-speaker ASR and diarization model from the OpenMOSS team.</p>
+<p><img alt="Model Architecture" src="https://huggingface.co/OpenMOSS-Team/MOSS-Transcribe-Diarize/resolve/main/Model_Architecture.png" /></p>
 <p>It transcribes speech, assigns speakers, and predicts timestamps in a single generation pass. With 128K context, it supports up to ~90-minute audio, handles meetings, interruptions, long conversations, and overlapping speech, and adds hotword boosting for names, companies, product terms, and domain vocabulary. MOSS-Transcribe-Diarize is served through the OpenAI-compatible <code class="docutils literal notranslate"><span class="pre">/v1/audio/transcriptions</span></code> endpoint.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -583,10 +584,6 @@
 <code class="docutils literal notranslate"><span class="pre">json</span></code> / <code class="docutils literal notranslate"><span class="pre">text</span></code> return the full transcript string without segment parsing.</p>
 </section>
 </section>
-<section id="performance-optimization">
-<h2>Performance Optimization<a class="headerlink" href="#performance-optimization" title="Link to this heading">#</a></h2>
-<p>【TODO：&#64;yichi】</p>
-</section>
 <section id="benchmarking">
 <h2>Benchmarking<a class="headerlink" href="#benchmarking" title="Link to this heading">#</a></h2>
 <p>Thanks to the Moss team for providing the benchmark datasets, we prepare movies800times and aishell4_long as benchmark datasets for multi-speaker ASR. movies800times is a short-sequence dataset with 800 dialog clips, and aishell4_long is a long-sequence dataset with 20 long-form meeting audio. These two datasets are right now under private license, and you can contact the Moss team for access.</p>
@@ -716,6 +713,12 @@ python<span class="w"> </span>-m<span class="w"> </span>benchmarks.eval.benchmar
 <p>To reproduce the results, follow the commands above or the entry point in <a class="reference external" href="https://github.com/sgl-project/sglang-omni/blob/main/benchmarks/eval/benchmark_asr_transcribe_diarize.py"><code class="docutils literal notranslate"><span class="pre">benchmark_asr_transcribe_diarize.py</span></code></a>.</p>
 </section>
 </section>
+<section id="acknowledgments">
+<h2>Acknowledgments<a class="headerlink" href="#acknowledgments" title="Link to this heading">#</a></h2>
+<p>Thanks for the joint effort of the OpenMOSS team and SGLang Omni team.</p>
+<p>MOSS Team: Donghua Yu, Zhengyuan Lin, Hanfu Chen, Yiyang Zhang, Yang Gao, Zhaoye Fei, Qinyuan Cheng, Shimin Li, Xipeng Qiu</p>
+<p>SGLang Omni Team: Yijiang Tian, Xinli Jin, Xiangrui Ke, Zhihao Guo, Ruoqi Zhang, Lifan Shen, Jintao Qu, Xuxiang Tian, Kaige Li, Ratish P, Haoguang Cai, Zijie Xia, Chenchen Hong, Xuesong Ye, Jingwen Gu,  Jiaxin Deng, Jiaxuan Luo, Xinyu Lu, Hao Jin, Chenyang Zhao, Yichi Zhang</p>
+</section>
 </section>
 
 
@@ -771,13 +774,13 @@ python<span class="w"> </span>-m<span class="w"> </span>benchmarks.eval.benchmar
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#request-parameters">Request Parameters</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#performance-optimization">Performance Optimization</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#benchmarking">Benchmarking</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#benchmark-results">Benchmark Results</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#movies800times">movies800times</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#aishell4-long">aishell4_long</a></li>
 </ul>
 </li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acknowledgments">Acknowledgments</a></li>
 </ul>
   </nav></div>
 
