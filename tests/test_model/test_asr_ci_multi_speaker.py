@@ -78,7 +78,8 @@ AISHELL4_LONG_LATENCY_P95_S_REF = 207.51
 AISHELL4_LONG_RTF_MEAN_REF = 0.0694
 AISHELL4_LONG_RTF_P95_REF = 0.092
 
-# Movies800 streaming thresholds (worst-of-N refs filled by tune.py).
+# Note (guozhihao): Streaming emits partial deltas, so keep its refs separate
+# from non-streaming thresholds to avoid mixing latency and accuracy baselines.
 MOSS_TD_STREAM_CER_PERCENT_REF: float | None = None
 MOSS_TD_STREAM_CER_NO_SPK_PERCENT_REF: float | None = None
 MOSS_TD_STREAM_CER_NO_SPK_BELOW_50_PERCENT_REF: float | None = None

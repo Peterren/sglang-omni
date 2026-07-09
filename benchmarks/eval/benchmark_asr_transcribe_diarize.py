@@ -18,6 +18,12 @@ Usage:
         --output-dir results/moss_transcribe_diarize_movies800times
 
     python -m benchmarks.eval.benchmark_asr_transcribe_diarize \
+        --dataset movies800times \
+        --stream \
+        --max-concurrency 16 \
+        --output-dir results/moss_transcribe_diarize_movies800times_stream
+
+    python -m benchmarks.eval.benchmark_asr_transcribe_diarize \
         --dataset aishell4_long \
         --max-concurrency 16 \
         --output-dir results/moss_transcribe_diarize_aishell4_long
