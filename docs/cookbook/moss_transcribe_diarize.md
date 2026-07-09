@@ -159,6 +159,6 @@ To reproduce the results, follow the commands above or the entry point in [`benc
 
 Thanks for the joint effort of the OpenMOSS team and SGLang Omni team.
 
-Moss Team: Yiyang Zhang, Yitian Gong, Chaoye Fei, Zhengyuan Lin, Yang Gao
+MOSS Team: Donghua Yu, Zhengyuan Lin, Hanfu Chen, Yiyang Zhang, Yang Gao, Zhaoye Fei, Qinyuan Cheng, Shimin Li, Xipeng Qiu
 
 SGLang Omni Team: Yijiang Tian, Xinli Jin, Xiangrui Ke, Zhihao Guo, Ruoqi Zhang, Lifan Shen, Jintao Qu, Xuxiang Tian, Kaige Li, Ratish P, Haoguang Cai, Zijie Xia, Chenchen Hong, Xuesong Ye, Jingwen Gu,  Jiaxin Deng, Jiaxuan Luo, Xinyu Lu, Hao Jin, Chenyang Zhao, Yichi Zhang
