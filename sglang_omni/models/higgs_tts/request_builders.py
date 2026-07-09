@@ -14,7 +14,13 @@ from sglang.srt.sampling.sampling_params import SamplingParams
 
 from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
 from sglang_omni.models.higgs_tts.rollout_trace import build_omni_rollout_trace
-from sglang_omni.models.tts_streaming import INITIAL_CODEC_CHUNK_FRAMES_PARAM
+from sglang_omni.models.tts_streaming import (
+    DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
+    DEFAULT_HIGGS_STREAM_STRIDE,
+    HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA,
+    HIGGS_STREAM_STRIDE_METADATA,
+    INITIAL_CODEC_CHUNK_FRAMES_PARAM,
+)
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.sglang_backend import SGLangARRequestData
 
@@ -33,6 +39,10 @@ class HiggsSGLangRequestData(SGLangARRequestData):
     generation_done: bool = False
     engine_start_s: float = 0.0
     stream_metadata: dict[str, Any] | None = None
+    stream_code_buffer: list[torch.Tensor] = field(default_factory=list)
+    stream_code_first_flush_done: bool = False
+    stream_code_seen_rows: int = 0
+    stream_code_next_flush_rows: int = 0
 
 
 class _ResettableHiggsModel(Protocol):
@@ -142,6 +152,8 @@ def build_higgs_stream_metadata(
         "stream": True,
         "num_codebooks": num_codebooks,
         "codebook_size": codebook_size,
+        HIGGS_STREAM_STRIDE_METADATA: DEFAULT_HIGGS_STREAM_STRIDE,
+        HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA: DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
     }
     if params.get(INITIAL_CODEC_CHUNK_FRAMES_PARAM) is not None:
         metadata[INITIAL_CODEC_CHUNK_FRAMES_PARAM] = params[

@@ -45,6 +45,10 @@ from sglang_omni.models.higgs_tts.utils import (
 from sglang_omni.models.higgs_tts.vocoder_scheduler import (
     HiggsStreamingVocoderScheduler,
 )
+from sglang_omni.models.tts_streaming import (
+    DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
+    DEFAULT_HIGGS_STREAM_STRIDE,
+)
 
 # _REF_PATH_HASH_MEMO is the shared memo object, re-exported so tests can
 # reset it; the underscored alias keeps this module's historical API.
@@ -417,8 +421,8 @@ def create_vocoder_executor(
     dtype: str = "bfloat16",
     vocoder_decode_batch_size: int = 16,
     max_batch_wait_ms: int = 2,
-    stream_stride: int = 75,
-    stream_followup_stride: int = 75,
+    stream_stride: int = DEFAULT_HIGGS_STREAM_STRIDE,
+    stream_followup_stride: int = DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
     stream_overlap_tokens: int = 8,
     stream_holdback_tokens: int = 4,
 ):

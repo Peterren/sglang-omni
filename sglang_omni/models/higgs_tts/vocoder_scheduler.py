@@ -143,25 +143,30 @@ class HiggsStreamingVocoderScheduler(StreamingSimpleScheduler):
         state = self._stream_states.setdefault(request_id, _HiggsStreamState())
         self._latch_stream_metadata(request_id, state, item.metadata)
 
-        row = item.data
-        if not isinstance(row, torch.Tensor):
+        chunk = item.data
+        if not isinstance(chunk, torch.Tensor):
             raise TypeError(
                 f"Higgs stream chunk for {request_id!r} must carry a torch.Tensor, "
-                f"got {type(row).__name__}"
+                f"got {type(chunk).__name__}"
             )
-        row = row.to(dtype=torch.long)
-        if row.ndim != 1:
+        chunk = chunk.to(dtype=torch.long)
+        if chunk.ndim == 1:
+            rows = chunk.unsqueeze(0)
+        elif chunk.ndim == 2:
+            rows = chunk
+        else:
             raise ValueError(
-                f"Higgs stream chunk must be 1-D [N], got {tuple(row.shape)}"
+                f"Higgs stream chunk must be 1-D [N] or 2-D [T, N], "
+                f"got {tuple(chunk.shape)}"
             )
 
         num_codebooks = self._require_stream_contract(state, request_id)[0]
-        if int(row.shape[0]) != num_codebooks:
+        if int(rows.shape[1]) != num_codebooks:
             raise ValueError(
-                f"Higgs stream chunk has {int(row.shape[0])} codebooks, "
+                f"Higgs stream chunk has {int(rows.shape[1])} codebooks, "
                 f"expected {num_codebooks}"
             )
-        state.delayed_rows.append(row)
+        state.delayed_rows.extend(rows.unbind(0))
 
         output = self._decode_delta(state, is_final=False)
         if output is None:

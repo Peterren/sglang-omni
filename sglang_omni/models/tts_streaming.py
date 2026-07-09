@@ -6,6 +6,10 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 INITIAL_CODEC_CHUNK_FRAMES_PARAM = "initial_codec_chunk_frames"
+HIGGS_STREAM_STRIDE_METADATA = "stream_stride"
+HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA = "stream_followup_stride"
+DEFAULT_HIGGS_STREAM_STRIDE = 75
+DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE = 75
 
 
 def resolve_initial_codec_chunk_frames(

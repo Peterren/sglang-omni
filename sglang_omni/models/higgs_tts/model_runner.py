@@ -21,6 +21,13 @@ from sglang_omni.models.higgs_tts.model import _flat_sampling_attr
 from sglang_omni.models.higgs_tts.sampler import K_MAX, selected_token_logprobs
 from sglang_omni.models.higgs_tts.text_tokenizer import AUDIO_PLACEHOLDER_ID
 from sglang_omni.models.higgs_tts.utils import EOC_ID
+from sglang_omni.models.tts_streaming import (
+    DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
+    DEFAULT_HIGGS_STREAM_STRIDE,
+    HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA,
+    HIGGS_STREAM_STRIDE_METADATA,
+    INITIAL_CODEC_CHUNK_FRAMES_PARAM,
+)
 from sglang_omni.scheduling.messages import OutgoingMessage
 
 logger = logging.getLogger(__name__)
@@ -343,7 +350,11 @@ class HiggsTTSModelRunner(ModelRunner):
             ):
                 data.output_logprobs.append(logprobs_cpu[b].to(torch.float32).clone())
             data.generation_done = bool(gen_done_after_cpu[b])
-            self._emit_code_chunk(sched_req, codes_N)
+            self._queue_or_emit_code_chunk(
+                sched_req,
+                codes_N,
+                force=self._is_final_code_step(data),
+            )
             self._mark_sampler_finished(req, data.generation_done)
             cb0_per_row.append(int(codes_N[0].item()))
 
@@ -428,7 +439,11 @@ class HiggsTTSModelRunner(ModelRunner):
             ):
                 data.output_logprobs.append(logprobs_BN[b].detach().cpu().clone())
             data.generation_done = bool(model._sampler_pool.generation_done[row].item())
-            self._emit_code_chunk(sched_req, data.output_codes[-1])
+            self._queue_or_emit_code_chunk(
+                sched_req,
+                data.output_codes[-1],
+                force=self._is_final_code_step(data),
+            )
             self._mark_sampler_finished(req, data.generation_done)
             cb0_per_row.append(int(codes_N[0].item()))
 
@@ -512,6 +527,106 @@ class HiggsTTSModelRunner(ModelRunner):
         """Bridge Higgs sampler completion into upstream SGLang finish state."""
         if generation_done and req.finished_reason is None:
             req.finished_reason = FINISH_MATCHED_TOKEN(EOC_ID)
+
+    @staticmethod
+    def _is_final_code_step(data: Any) -> bool:
+        if bool(data.generation_done):
+            return True
+        try:
+            max_new_tokens = int(data.max_new_tokens or 0)
+        except AttributeError:
+            max_new_tokens = 0
+        return max_new_tokens > 0 and len(data.output_codes) >= max_new_tokens
+
+    def _queue_or_emit_code_chunk(
+        self, sched_req: Any, codes_N: torch.Tensor, *, force: bool = False
+    ) -> None:
+        if self._outbox is None:
+            return
+        data = sched_req.data
+        if data.stream_metadata is None:
+            return
+
+        data.stream_code_buffer.append(codes_N)
+        data.stream_code_seen_rows += 1
+        if int(data.stream_code_next_flush_rows) <= 0:
+            data.stream_code_next_flush_rows = self._initial_stream_flush_rows(data)
+        if force or data.stream_code_seen_rows >= data.stream_code_next_flush_rows:
+            self._flush_code_chunks(sched_req, force=force)
+
+    @staticmethod
+    def _stream_params(data: Any) -> tuple[int, int, int, int]:
+        num_codebooks = max(int(data.num_codebooks or 1), 1)
+        metadata = data.stream_metadata or {}
+        stride = max(
+            int(
+                metadata.get(HIGGS_STREAM_STRIDE_METADATA, DEFAULT_HIGGS_STREAM_STRIDE)
+            ),
+            1,
+        )
+        followup = max(
+            int(
+                metadata.get(
+                    HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA,
+                    DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
+                )
+            ),
+            1,
+        )
+        initial_frames = metadata.get(INITIAL_CODEC_CHUNK_FRAMES_PARAM)
+        if initial_frames is None:
+            return num_codebooks, stride, followup, 0
+        try:
+            initial_frames_i = int(initial_frames)
+        except (TypeError, ValueError):
+            initial_frames_i = 0
+        if initial_frames_i <= 0:
+            return num_codebooks, stride, followup, 0
+        steady_codec_frames = max(1, stride - num_codebooks + 1)
+        return (
+            num_codebooks,
+            stride,
+            followup,
+            min(initial_frames_i, steady_codec_frames),
+        )
+
+    @classmethod
+    def _initial_stream_flush_rows(cls, data: Any) -> int:
+        num_codebooks, stride, _, initial_frames = cls._stream_params(data)
+        steady_codec_frames = max(1, stride - num_codebooks + 1)
+        if 0 < initial_frames < steady_codec_frames:
+            return max(num_codebooks, initial_frames + num_codebooks - 1)
+        return max(num_codebooks, stride)
+
+    @classmethod
+    def _next_stream_flush_rows(cls, data: Any, flushed_rows: int) -> int:
+        num_codebooks, stride, followup, initial_frames = cls._stream_params(data)
+        steady_codec_frames = max(1, stride - num_codebooks + 1)
+        emitted_initial_chunk = (
+            not bool(data.stream_code_first_flush_done)
+            and 0 < initial_frames < steady_codec_frames
+        )
+        if emitted_initial_chunk:
+            return max(num_codebooks, stride) + followup
+        return int(flushed_rows) + followup
+
+    def _flush_code_chunks(self, sched_req: Any, *, force: bool = False) -> None:
+        data = sched_req.data
+        rows = data.stream_code_buffer
+        if not rows:
+            return
+        if len(rows) == 1:
+            payload = rows[0]
+        else:
+            payload = torch.stack(rows, dim=0)
+        flushed_rows = int(data.stream_code_seen_rows)
+        if not force:
+            data.stream_code_next_flush_rows = self._next_stream_flush_rows(
+                data, flushed_rows
+            )
+        data.stream_code_buffer = []
+        data.stream_code_first_flush_done = True
+        self._emit_code_chunk(sched_req, payload)
 
     def _emit_code_chunk(self, sched_req: Any, codes_N: torch.Tensor) -> None:
         if self._outbox is None:
