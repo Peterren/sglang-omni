@@ -661,6 +661,70 @@ def test_fish_reference_encode_service_failure_does_not_poison(
     assert codec.calls == 2
 
 
+def test_fish_reference_encode_batch_pads_and_preserves_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sglang_omni.models.fishaudio_s2_pro.stages import _FishReferenceEncodeHook
+    from sglang_omni.preprocessing import audio as audio_module
+
+    class _AudioMediaIO:
+        def __init__(self, *, target_sr: int) -> None:
+            self.target_sr = target_sr
+
+        def load_bytes(self, payload: bytes):
+            length = int(payload.decode("ascii"))
+            return np.arange(length, dtype=np.float32), self.target_sr
+
+    class _Codec:
+        sample_rate = 16000
+
+        def __init__(self) -> None:
+            self.calls = 0
+            self.audios: torch.Tensor | None = None
+            self.audio_lengths: torch.Tensor | None = None
+
+        def encode(self, audios: torch.Tensor, audio_lengths: torch.Tensor):
+            self.calls += 1
+            self.audios = audios.detach().clone()
+            self.audio_lengths = audio_lengths.detach().clone()
+            max_frames = int(torch.ceil(audio_lengths.float().max() / 4).item())
+            codes = torch.zeros((audios.shape[0], 2, max_frames), dtype=torch.long)
+            for row in range(audios.shape[0]):
+                codes[row, 0] = row + 1
+                codes[row, 1] = row + 11
+            lengths = torch.ceil(audio_lengths.float() / 4).long()
+            return codes, lengths
+
+    monkeypatch.setattr(audio_module, "AudioMediaIO", _AudioMediaIO)
+    monkeypatch.setitem(
+        sys.modules,
+        "torchaudio",
+        SimpleNamespace(
+            functional=SimpleNamespace(
+                resample=lambda audio, sr, target_sr: audio,
+            )
+        ),
+    )
+
+    codec = _Codec()
+    hook = _FishReferenceEncodeHook(codec=codec, checkpoint_id="ckpt")
+
+    results = hook.encode_batch(
+        [
+            hook.normalize_input({"bytes": b"8"}),
+            hook.normalize_input({"bytes": b"12"}),
+        ]
+    )
+
+    assert codec.calls == 1
+    assert codec.audios is not None
+    assert codec.audio_lengths is not None
+    assert codec.audios.shape == (2, 12)
+    assert torch.equal(codec.audio_lengths, torch.tensor([8, 12]))
+    assert torch.equal(results[0], torch.tensor([[1, 1], [11, 11]]))
+    assert torch.equal(results[1], torch.tensor([[2, 2, 2], [12, 12, 12]]))
+
+
 def test_fish_reference_path_mutation_returns_but_does_not_cache(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

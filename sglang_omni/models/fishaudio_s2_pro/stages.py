@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import torch
+import torch.nn.functional as F
 
 from sglang_omni.models.fishaudio_s2_pro.payload_types import S2ProState
 from sglang_omni.preprocessing.cache_key import hash_bytes as _hash_bytes
@@ -152,11 +153,25 @@ class _FishReferenceEncodeHook(
         )
 
     def encode_one(self, item: _FishReferenceInput) -> torch.Tensor:
+        return self.encode_batch([item])[0]
+
+    def can_encode_batch(self) -> bool:
+        return True
+
+    def encode_batch(self, items: list[_FishReferenceInput]) -> list[torch.Tensor]:
+        if not items:
+            return []
+        waveforms = [self._load_reference_waveform(item) for item in items]
+        return self._encode_reference_waveforms(waveforms)
+
+    def _load_reference_waveform(
+        self, item: _FishReferenceInput
+    ) -> tuple[torch.Tensor, int]:
         if item.source_kind == "path":
             import torchaudio
 
             audio, sr = torchaudio.load(str(item.source))
-            return self._encode_reference_waveform(audio, int(sr))
+            return audio.float(), int(sr)
         if item.source_kind in ("bytes", "base64"):
             from sglang_omni.preprocessing.audio import AudioMediaIO
 
@@ -168,7 +183,7 @@ class _FishReferenceEncodeHook(
                     item.media_type or "audio/wav", item.source
                 )
             audio_tensor = torch.from_numpy(audio).float().reshape(1, -1)
-            return self._encode_reference_waveform(audio_tensor, int(sr))
+            return audio_tensor, int(sr)
         raise TypeError(f"unknown FishAudio reference source: {item.source_kind}")
 
     def store_artifact(self, artifact: torch.Tensor) -> torch.Tensor:
@@ -193,19 +208,47 @@ class _FishReferenceEncodeHook(
             return f"base64:{media_type}:{_hash_bytes(payload)}"
         return None
 
-    def _encode_reference_waveform(self, audio: torch.Tensor, sr: int) -> torch.Tensor:
+    def _encode_reference_waveforms(
+        self, waveforms: list[tuple[torch.Tensor, int]]
+    ) -> list[torch.Tensor]:
         import torchaudio
 
-        if audio.shape[0] > 1:
-            audio = audio.mean(0, keepdim=True)
-        audio = torchaudio.functional.resample(audio, sr, self._codec.sample_rate)
-        audios = audio.squeeze(0).unsqueeze(0)
-        audio_lengths = torch.tensor([audios.shape[1]], dtype=torch.long)
+        audio_rows: list[torch.Tensor] = []
+        lengths: list[int] = []
+        for audio, sr in waveforms:
+            if audio.shape[0] > 1:
+                audio = audio.mean(0, keepdim=True)
+            audio = torchaudio.functional.resample(audio, sr, self._codec.sample_rate)
+            row = audio.squeeze(0).contiguous().float()
+            audio_rows.append(row)
+            lengths.append(int(row.shape[0]))
+
+        max_len = max(lengths)
+        audios = torch.stack(
+            [F.pad(row, (0, max_len - row.shape[0])) for row in audio_rows]
+        )
+        audio_lengths = torch.tensor(lengths, dtype=torch.long)
         with torch.no_grad():
-            indices, _ = self._codec.encode(audios, audio_lengths)
-            if indices.ndim == 3:
-                indices = indices[0]
-        return indices.cpu()
+            indices, indices_lens = self._codec.encode(audios, audio_lengths)
+        if indices.ndim == 2 and len(waveforms) == 1:
+            indices = indices.unsqueeze(0)
+        if indices.shape[0] != len(waveforms):
+            raise ValueError(
+                "FishAudio codec returned batch "
+                f"{indices.shape[0]} for {len(waveforms)} inputs"
+            )
+        if indices_lens is None:
+            indices_lens = torch.full(
+                (len(waveforms),),
+                indices.shape[-1],
+                dtype=torch.long,
+                device=indices.device,
+            )
+        results = []
+        for item_indices, item_len in zip(indices, indices_lens):
+            length = int(item_len.item() if hasattr(item_len, "item") else item_len)
+            results.append(item_indices[..., :length].cpu())
+        return results
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +260,8 @@ def create_preprocessing_executor(
     model_path: str,
     *,
     max_concurrency: int = 8,
+    reference_encode_batch_size: int = 1,
+    reference_encode_batch_wait_ms: int = 0,
 ):
     """Returns a threaded scheduler for CPU-heavy preprocessing."""
     from sglang_omni.scheduling.threaded_simple_scheduler import ThreadedSimpleScheduler
@@ -239,6 +284,8 @@ def create_preprocessing_executor(
         max_bytes=64 * 1024 * 1024,
         timeout_s=130.0,
         log_prefix="FishAudio S2-Pro",
+        max_batch_size=reference_encode_batch_size,
+        max_batch_wait_ms=reference_encode_batch_wait_ms,
     )
 
     def _preprocess(payload: StagePayload) -> StagePayload:

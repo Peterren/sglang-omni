@@ -92,6 +92,21 @@ class _TensorHook(ReferenceEncodeHook[str, torch.Tensor, torch.Tensor]):
         return stored.detach().clone().to(dtype=torch.long)
 
 
+class _BatchTensorHook(_TensorHook):
+    def __init__(self) -> None:
+        super().__init__()
+        self.batch_calls: list[list[str]] = []
+        self.batch_lock = threading.Lock()
+
+    def can_encode_batch(self) -> bool:
+        return True
+
+    def encode_batch(self, items: list[str]) -> list[torch.Tensor]:
+        with self.batch_lock:
+            self.batch_calls.append(list(items))
+        return [self.encode_one(item) for item in items]
+
+
 def test_same_key_concurrent_single_flight() -> None:
     release = threading.Event()
     entered = threading.Event()
@@ -155,6 +170,94 @@ def test_cache_hit_returns_loaded_artifact() -> None:
     assert torch.all(second >= 0)
     assert first.data_ptr() != second.data_ptr()
     assert service.stats()["hits"] == 1
+
+
+def test_different_keys_coalesce_when_hook_opts_in() -> None:
+    worker_count = 4
+    gate = _FirstWaveGate(worker_count)
+
+    class _GatedBatchHook(_BatchTensorHook):
+        def normalize_input(self, raw_input: Any) -> str:
+            item = super().normalize_input(raw_input)
+            gate.wait()
+            return item
+
+    hook = _GatedBatchHook()
+    service = ReferenceEncodeService(
+        hook,
+        max_items=16,
+        max_bytes=1024,
+        max_batch_size=worker_count,
+        max_batch_wait_ms=50,
+    )
+    results: list[torch.Tensor | None] = [None] * worker_count
+
+    def worker(index: int) -> None:
+        results[index] = service.get_or_encode(f"item-{index}")
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(worker_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    multi_item_calls = [call for call in hook.batch_calls if len(call) > 1]
+    assert len(multi_item_calls) == 1
+    assert set(multi_item_calls[0]) == {f"item-{i}" for i in range(worker_count)}
+    assert all(result is not None for result in results)
+    stats = service.stats()
+    assert stats["misses"] == worker_count
+    assert stats["batches"] == 1
+    assert stats["batched_items"] == worker_count
+    service.close()
+
+
+def test_batch_failure_retries_each_item() -> None:
+    worker_count = 3
+    gate = _FirstWaveGate(worker_count)
+
+    class _FallbackHook(_BatchTensorHook):
+        def normalize_input(self, raw_input: Any) -> str:
+            item = super().normalize_input(raw_input)
+            gate.wait()
+            return item
+
+        def encode_batch(self, items: list[str]) -> list[torch.Tensor]:
+            with self.batch_lock:
+                self.batch_calls.append(list(items))
+            raise RuntimeError("batch failed")
+
+    hook = _FallbackHook()
+    service = ReferenceEncodeService(
+        hook,
+        max_items=16,
+        max_bytes=1024,
+        max_batch_size=worker_count,
+        max_batch_wait_ms=50,
+    )
+    results: list[torch.Tensor | None] = [None] * worker_count
+
+    def worker(index: int) -> None:
+        results[index] = service.get_or_encode(f"fallback-{index}")
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(worker_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert all(result is not None for result in results)
+    assert len(hook.batch_calls) == 1
+    assert set(hook.batch_calls[0]) == {
+        f"fallback-{i}" for i in range(worker_count)
+    }
+    assert hook.calls == Counter({f"fallback-{i}": 1 for i in range(worker_count)})
+    stats = service.stats()
+    assert stats["batch_fallbacks"] == 1
+    assert stats["failed"] == 0
+    service.close()
 
 
 def test_key_none_bypasses_cache() -> None:

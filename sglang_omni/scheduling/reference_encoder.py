@@ -4,6 +4,7 @@ from __future__ import annotations
 import concurrent.futures
 import json
 import logging
+import queue as _queue_mod
 import threading
 import time
 from dataclasses import asdict, dataclass
@@ -53,8 +54,10 @@ class ReferenceEncodeHook(Generic[InputT, ArtifactT, StoredT]):
     def revalidate(self, item: InputT, key: ReferenceEncodeKey) -> bool:
         return True
 
+    def can_encode_batch(self) -> bool:
+        return False
+
     def encode_batch(self, items: list[InputT]) -> list[ArtifactT]:
-        """Reserved; ReferenceEncodeService does not call this until batching."""
         return [self.encode_one(item) for item in items]
 
 
@@ -70,8 +73,19 @@ def _fresh_exception(exc: BaseException) -> BaseException:
     return fresh
 
 
+@dataclass
+class _BatchJob(Generic[InputT, StoredT]):
+    item: InputT
+    key: ReferenceEncodeKey
+    cache_key: str
+    future: concurrent.futures.Future[StoredT]
+    desc: str | None
+    request_id: str | None
+
+
 class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
     _LOG_INTERVAL_S = 60.0
+    _BATCH_STOP = object()
 
     def __init__(
         self,
@@ -81,15 +95,25 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
         max_bytes: int | None = 64 * 1024 * 1024,
         timeout_s: float = 130.0,
         log_prefix: str | None = None,
+        max_batch_size: int = 1,
+        max_batch_wait_ms: int = 0,
     ) -> None:
         if max_items is not None and max_items < 1:
             raise ValueError(f"max_items must be >= 1, got {max_items}")
         if max_bytes is not None and max_bytes < 1:
             raise ValueError(f"max_bytes must be >= 1, got {max_bytes}")
+        if max_batch_size < 1:
+            raise ValueError(f"max_batch_size must be >= 1, got {max_batch_size}")
+        if max_batch_wait_ms < 0:
+            raise ValueError(
+                f"max_batch_wait_ms must be >= 0, got {max_batch_wait_ms}"
+            )
         self._hook = hook
         self._cache = StageOutputCache(max_size=max_items, max_bytes=max_bytes)
         self._timeout_s = float(timeout_s)
         self._log_prefix = log_prefix
+        self._max_batch_size = int(max_batch_size)
+        self._max_batch_wait_s = float(max_batch_wait_ms) / 1000.0
         self._lock = threading.Lock()
         self._inflight: dict[str, concurrent.futures.Future[StoredT]] = {}
         self._hits = 0
@@ -97,7 +121,21 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
         self._merged = 0
         self._failed = 0
         self._uncacheable = 0
+        self._batches = 0
+        self._batched_items = 0
+        self._batch_fallbacks = 0
         self._last_log_time = 0.0
+        self._batch_enabled = self._max_batch_size > 1 and hook.can_encode_batch()
+        self._batch_queue: _queue_mod.Queue[Any] | None = None
+        self._batch_thread: threading.Thread | None = None
+        if self._batch_enabled:
+            self._batch_queue = _queue_mod.Queue()
+            self._batch_thread = threading.Thread(
+                target=self._batch_worker,
+                name="reference-encode-batch",
+                daemon=True,
+            )
+            self._batch_thread.start()
 
     @staticmethod
     def _event_metadata(
@@ -267,6 +305,16 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
             return self._hook.load_artifact(stored)
 
         assert leader_fut is not None
+        if self._batch_enabled:
+            return self._enqueue_batch_job(
+                item=item,
+                key=key,
+                cache_key=cache_key,
+                future=leader_fut,
+                desc=desc,
+                request_id=request_id,
+            )
+
         # note (luojiaxuan): revalidate and cache put share the encode guard.
         # A failure must drop inflight and fail the future so same-key followers
         # do not wait on a dead leader after a reference mutates mid-encode.
@@ -320,6 +368,152 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
         self._maybe_log()
         return self._hook.load_artifact(stored)
 
+    def _enqueue_batch_job(
+        self,
+        *,
+        item: InputT,
+        key: ReferenceEncodeKey,
+        cache_key: str,
+        future: concurrent.futures.Future[StoredT],
+        desc: str | None,
+        request_id: str | None,
+    ) -> ArtifactT:
+        assert self._batch_queue is not None
+        self._batch_queue.put(
+            _BatchJob(
+                item=item,
+                key=key,
+                cache_key=cache_key,
+                future=future,
+                desc=desc,
+                request_id=request_id,
+            )
+        )
+        try:
+            stored = future.result(timeout=self._timeout_s)
+        except BaseException as exc:
+            self._add_exception_note(exc, desc)
+            raise
+        self._maybe_log()
+        return self._hook.load_artifact(stored)
+
+    def _batch_worker(self) -> None:
+        assert self._batch_queue is not None
+        while True:
+            job = self._batch_queue.get()
+            if job is self._BATCH_STOP:
+                return
+            batch = [job]
+            deadline = time.monotonic() + self._max_batch_wait_s
+            while len(batch) < self._max_batch_size:
+                try:
+                    if self._max_batch_wait_s <= 0:
+                        next_job = self._batch_queue.get_nowait()
+                    else:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            break
+                        next_job = self._batch_queue.get(timeout=remaining)
+                except _queue_mod.Empty:
+                    break
+                if next_job is self._BATCH_STOP:
+                    self._batch_queue.put(self._BATCH_STOP)
+                    break
+                batch.append(next_job)
+            self._run_batch_jobs(batch)
+
+    def _run_batch_jobs(self, batch: list[_BatchJob[InputT, StoredT]]) -> None:
+        for job in batch:
+            self._emit_event(
+                job.request_id,
+                "reference_encode_start",
+                key=job.key,
+                result="miss",
+            )
+        try:
+            artifacts = self._hook.encode_batch([job.item for job in batch])
+            if len(artifacts) != len(batch):
+                raise ValueError(
+                    "encode_batch returned "
+                    f"{len(artifacts)} results for {len(batch)} inputs"
+                )
+        except BaseException:
+            logger.warning(
+                "Reference encode batch failed; retrying each item",
+                exc_info=True,
+            )
+            with self._lock:
+                self._batch_fallbacks += 1
+            for job in batch:
+                self._run_batch_job_one(job)
+            return
+
+        with self._lock:
+            self._batches += 1
+            self._batched_items += len(batch)
+        for job, artifact in zip(batch, artifacts):
+            self._complete_batch_job(job, artifact)
+
+    def _run_batch_job_one(self, job: _BatchJob[InputT, StoredT]) -> None:
+        try:
+            artifact = self._hook.encode_one(job.item)
+        except BaseException as exc:
+            self._fail_batch_job(job, exc, phase="encode")
+            return
+        self._complete_batch_job(job, artifact)
+
+    def _complete_batch_job(
+        self,
+        job: _BatchJob[InputT, StoredT],
+        artifact: ArtifactT,
+    ) -> None:
+        try:
+            stored = self._hook.store_artifact(artifact)
+            should_cache = self._hook.revalidate(job.item, job.key)
+            with self._lock:
+                if should_cache:
+                    self._cache.put(job.cache_key, stored)
+                self._inflight.pop(job.cache_key, None)
+        except BaseException as exc:
+            self._fail_batch_job(job, exc, phase="post_encode")
+            return
+        self._emit_event(
+            job.request_id,
+            "reference_encode_end",
+            key=job.key,
+            result="success",
+            cacheable=True,
+        )
+        job.future.set_result(stored)
+
+    def _fail_batch_job(
+        self,
+        job: _BatchJob[InputT, StoredT],
+        exc: BaseException,
+        *,
+        phase: str,
+    ) -> None:
+        self._add_exception_note(exc, job.desc)
+        with self._lock:
+            self._inflight.pop(job.cache_key, None)
+            self._failed += 1
+        self._emit_event(
+            job.request_id,
+            "reference_encode_end",
+            key=job.key,
+            result="error",
+            error_type=type(exc).__name__,
+        )
+        self._emit_event(
+            job.request_id,
+            "reference_encode_failure",
+            key=job.key,
+            result="error",
+            phase=phase,
+            error_type=type(exc).__name__,
+        )
+        job.future.set_exception(exc)
+
     def stats(self) -> dict[str, int]:
         with self._lock:
             return {
@@ -331,6 +525,9 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
                 "evictions": self._cache.eviction_count,
                 "failed": self._failed,
                 "uncacheable": self._uncacheable,
+                "batches": self._batches,
+                "batched_items": self._batched_items,
+                "batch_fallbacks": self._batch_fallbacks,
             }
 
     @staticmethod
@@ -360,5 +557,14 @@ class ReferenceEncodeService(Generic[InputT, ArtifactT, StoredT]):
                 "evictions": self._cache.eviction_count,
                 "failed": self._failed,
                 "uncacheable": self._uncacheable,
+                "batches": self._batches,
+                "batched_items": self._batched_items,
+                "batch_fallbacks": self._batch_fallbacks,
             }
         logger.info("%s reference encode stats: %s", self._log_prefix, stats)
+
+    def close(self) -> None:
+        if self._batch_queue is None or self._batch_thread is None:
+            return
+        self._batch_queue.put(self._BATCH_STOP)
+        self._batch_thread.join(timeout=1.0)
