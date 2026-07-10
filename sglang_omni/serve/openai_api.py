@@ -1656,8 +1656,8 @@ async def _transcription_stream(
 ) -> AsyncIterator[str]:
     """SSE generator for streaming transcriptions.
 
-    Emits OpenAI-style ``transcript.text.delta`` events for each partial text
-    chunk, then a terminal ``transcript.text.done`` event carrying the full
+    Emits OpenAI-style transcript.text.delta events for each partial text
+    chunk, then a terminal transcript.text.done event carrying the full
     post-processed transcript.
     """
     final_text: str | None = None

@@ -366,30 +366,27 @@ def make_moss_transcribe_diarize_stream_output_builder(
     eos_token_id: int | None = None,
     min_emit_interval_s: float = 0.0,
 ) -> Callable[[str, Any, Any], list[OutgoingMessage]]:
+    tokenizer_eos = tokenizer.eos_token_id
     resolved_eos = (
         eos_token_id
         if eos_token_id is not None
-        else (
-            int(tokenizer.eos_token_id)
-            if getattr(tokenizer, "eos_token_id", None) is not None
-            else None
-        )
+        else (int(tokenizer_eos) if tokenizer_eos is not None else None)
     )
 
     def _build_stream_output(
         request_id: str, req_data: Any, req_output: Any
     ) -> list[OutgoingMessage]:
-        req = getattr(req_data, "req", None)
-        if req is None or req_output.data is None:
+        if req_data.req is None or req_output.data is None:
             return []
+        req = req_data.req
         # note (guozhihao): while chunked prefill is still consuming prompt tokens, suppress
         # emission — prompt-side states would masquerade as output text.
         if req.is_chunked > 0:
             return []
 
-        stage_payload = getattr(req_data, "stage_payload", None)
-        if stage_payload is None:
+        if req_data.stage_payload is None:
             return []
+        stage_payload = req_data.stage_payload
         if not (stage_payload.request.params or {}).get("stream", False):
             return []
 
@@ -398,8 +395,9 @@ def make_moss_transcribe_diarize_stream_output_builder(
         except (TypeError, ValueError):
             return []
 
-        pending = getattr(req, "_moss_stream_pending_ids", None)
-        if pending is None:
+        try:
+            pending = req._moss_stream_pending_ids
+        except AttributeError:
             pending = []
             req._moss_stream_pending_ids = pending
 
@@ -413,7 +411,10 @@ def make_moss_transcribe_diarize_stream_output_builder(
         # last_emit == 0.0 means nothing emitted yet (first delta goes out immediately),
         # and EOS always flushes the remaining buffer.
         now = time.perf_counter()
-        last_emit = getattr(req, "_moss_stream_last_emit_t", 0.0)
+        try:
+            last_emit = req._moss_stream_last_emit_t
+        except AttributeError:
+            last_emit = 0.0
         if (
             not is_eos
             and min_emit_interval_s > 0.0
