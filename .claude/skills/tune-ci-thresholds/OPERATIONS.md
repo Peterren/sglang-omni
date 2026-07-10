@@ -43,9 +43,39 @@ explicit target set on a shared host.
 
 ## Monitoring
 
-Use `status`, `strict-audit`, the active pytest log, and `nvidia-smi`. Treat the
-milestone log and verbose pytest log as separate streams. Poll at least every
-120 seconds while work is active.
+Create exactly one Tab A and one Tab B for every configured GPU group. Three GPU
+groups require three Tab A terminals and three Tab B terminals, even when a
+group is temporarily idle between queued runs.
+
+Tab A shows aggregate strict progress for every run assigned to that GPU group:
+
+```bash
+bash .claude/skills/tune-ci-thresholds/watch_calibration_group.sh \
+  <gpu-group> <group-run-1> [<group-run-2> ...]
+```
+
+Tab B follows server logs for the active pytest in that GPU group:
+
+```bash
+bash .claude/skills/tune-ci-thresholds/watch_calibration_servers.sh \
+  <gpu-group> <group-run-1> [<group-run-2> ...]
+```
+
+The Tab B watcher resolves the active pytest from its process and `--basetemp`,
+discovers every new `server.log`, and attaches it dynamically. When cleanup
+kills a server or pytest exits, it detaches stale logs. A later server launch is
+discovered and attached in the same Tab B; the terminal must never remain stuck
+on a completed server log.
+
+Start both watchers before launching that group's first calibration job. Pass
+all run directories already assigned to the group, including queued directories
+whose `plan.json` does not exist yet. Keep the watchers alive until the group's
+entire queue is complete.
+
+Also poll `status`, `strict-audit`, and `nvidia-smi` at least every 120 seconds
+while work is active. The legacy `tail_calibration_pytest.sh` follows combined
+pytest output and is only a debugging fallback; it does not replace either
+group-level watcher.
 
 ## CUDA recovery
 

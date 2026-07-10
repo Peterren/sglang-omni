@@ -87,14 +87,24 @@ Pass criteria:
 
 ## 7. Active supervision
 
-During a run, poll at most every 120 seconds:
+For every GPU group, start two persistent terminals before its first run:
 
 ```bash
-python .claude/skills/tune-ci-thresholds/tune.py status --run-dir "$RUN"
-python .claude/skills/tune-ci-thresholds/tune.py strict-audit --run-dir "$RUN"
-nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv
-bash .claude/skills/tune-ci-thresholds/tail_calibration_pytest.sh "$RUN"
+# Tab A: aggregate progress for every run assigned to this group.
+bash .claude/skills/tune-ci-thresholds/watch_calibration_group.sh \
+  <gpu-group> <run-dir> [<run-dir> ...]
+
+# Tab B: dynamically follows every current and future server.log.
+bash .claude/skills/tune-ci-thresholds/watch_calibration_servers.sh \
+  <gpu-group> <run-dir> [<run-dir> ...]
 ```
+
+The number of Tab A terminals and Tab B terminals must each equal the number of
+GPU groups. Tab B must switch away from killed servers and attach logs from each
+new server launch in the same terminal.
+
+During a run, also poll at most every 120 seconds with `status`, `strict-audit`,
+and `nvidia-smi`.
 
 Stop on CUDA initialization failure, extraction warnings, wrong sample scope,
 or cleanup affecting GPUs outside the configured group.

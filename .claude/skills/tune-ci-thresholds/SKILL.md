@@ -31,12 +31,13 @@ not a hand-maintained source of truth.
 1. Resolve a host profile and choose an explicit GPU group.
 2. Create a fresh UTC-timestamped run directory on current `HEAD`.
 3. Run `precheck` for every selected model.
-4. Run all selected stages for five repeats.
-5. Poll `status`, `strict-audit`, the active pytest log, and GPU state at least
+4. Start one progress Tab A and one dynamic server-log Tab B per GPU group.
+5. Run all selected stages for five repeats.
+6. Poll `status`, `strict-audit`, the active pytest log, and GPU state at least
    every 120 seconds.
-6. Generate `report.md` only after the shared readiness gate passes.
-7. Show the report before asking whether thresholds should be applied.
-8. Apply only with explicit user confirmation. Run a post-apply validation.
+7. Generate `report.md` only after the shared readiness gate passes.
+8. Show the report before asking whether thresholds should be applied.
+9. Apply only with explicit user confirmation. Run a post-apply validation.
 
 ```bash
 export TUNE_HOST=sglang-h100-ci
@@ -202,6 +203,8 @@ tune-ci-thresholds/
   AGENT-PRECHECK.md
   tune.py
   tail_calibration_pytest.sh
+  watch_calibration_group.sh
+  watch_calibration_servers.sh
   hosts/*.yaml
   models/{asr,tts,omni}/{config.yaml,stages.yaml}
 ```
