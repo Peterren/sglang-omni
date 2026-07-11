@@ -21,15 +21,26 @@ A stage repeat is strict-valid only when:
 - the recorded commit matches the plan.
 
 Threshold assertion failures may still yield a valid observation when all
-metrics and samples were produced. Infrastructure crashes, OOMs, timeouts,
-missing output, and partial samples are not valid metric observations.
+metrics and samples were produced. Typical artifact shape:
+
+- `status=ok`
+- `reason=threshold_assertion (exit 1)` (or equivalent)
+- non-null metrics and full sample scope
+
+That case is a **threshold failure** against the previous CI constants, not a
+**missing** observation. Agents must not treat pytest `failed: exit 1` as
+incomplete calibration when `strict-audit` marks the cell ✓ and `status`
+reports `missing=[]`.
+
+Infrastructure crashes, OOMs, timeouts, missing output, SIGKILL from foreign
+cleanup, and partial samples are not valid metric observations.
 
 ## Worst-of-N
 
 - Default N is 5.
 - Every selected stage needs exactly N strict-valid observations.
 - Lower-bound metrics use the minimum; upper-bound metrics use the maximum.
-- No partial or failed observation participates in aggregation.
+- No partial or infrastructure-failed observation participates in aggregation.
 - Outliers are flagged and retained unless a separately documented invalidation
   proves the run was not a valid observation.
 
@@ -42,18 +53,27 @@ missing output, and partial samples are not valid metric observations.
 - A test or threshold-file hash mismatch blocks calibration.
 - Report and apply consume the schema bound to the run.
 
-## GPU ownership
+## GPU ownership and concurrent isolation
 
 - A pytest invocation owns only its selected physical GPU indices.
-- Cleanup may target only those indices.
-- Concurrent groups require disjoint `TUNE_GPU_INCLUDE` values.
+- Cleanup may target only those indices (`CUDA_VISIBLE_DEVICES` = physical ids;
+  unset CVD before `nvidia-smi --id`).
+- Concurrent groups require disjoint `TUNE_GPU_INCLUDE` values, separate run
+  directories, and separate cache roots.
+- Cleanup must not kill processes whose CVD is disjoint from its scope, nor
+  ephemeral version-probe cmdlines.
 - Global process-pattern and user-wide kills are forbidden.
+- Non-CI `wait_for_gpu_memory_release` requires an explicit CVD scope.
 
 ## Final consumers
 
 `report` and `apply-plan` use the same readiness validator. Neither may consume
 an incomplete run. Apply writes raw pre-slack references and must never write a
 derived assertion threshold.
+
+`apply-plan` is read-only planning output. File edits happen only after an
+explicit apply decision (`report` / `smart` / `full`). After a `full` apply,
+re-running `apply-plan` should show `direction=equal` for every metric.
 
 ## Required provenance
 

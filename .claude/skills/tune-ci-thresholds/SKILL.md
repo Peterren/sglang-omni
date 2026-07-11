@@ -28,8 +28,9 @@ not a hand-maintained source of truth.
 
 ## Standard workflow
 
-1. Resolve a host profile and choose an explicit GPU group.
-2. Create a fresh UTC-timestamped run directory on current `HEAD`.
+1. Resolve a host profile and choose an explicit GPU layout (see below).
+2. Create a fresh UTC-timestamped run directory on current `HEAD` (one per
+   independent calibration process).
 3. Run `precheck` for every selected model.
 4. Start one progress Tab A and one dynamic server-log Tab B per GPU group.
 5. Run all selected stages for five repeats.
@@ -60,45 +61,60 @@ user request always gets a new run directory.
 
 ## GPU execution layouts
 
-All of these layouts are supported:
+Layouts are modes, not a fixed two-group recipe. Any number of concurrent GPU
+groups is valid when include sets are disjoint and each process has its own run
+directory, cache root, and Tab A/B pair. See `OPERATIONS.md` for isolation
+rules that make concurrency safe.
 
-### One two-GPU group, one calibration
+### Mode A — one group, one calibration (simplest)
 
-`TUNE_GPU_INCLUDE=0,1` runs every selected `stage x 5` sequentially. Each pytest
-invocation is cleaned up before the next invocation.
+`TUNE_GPU_INCLUDE=0,1` runs every selected `stage × 5` sequentially. Each
+pytest invocation is cleaned up before the next invocation.
 
-### Two groups split one calibration scope
+### Mode C — N groups, N independent full calibrations (default for multi-GPU)
 
-With GPUs `0,1,2,3`, run two processes with disjoint stage selections and run
-directories:
+**Preferred** when several two-GPU groups are available (for example three
+groups on `0,1` / `2,3` / `4,5`). Each group runs a complete `ALL × 5` into its
+own run directory:
+
+```bash
+TUNE_GPU_INCLUDE=0,1 python tune.py --model omni run --stages ALL --repeats 5 \
+  --output-dir "$RUN_G01"
+TUNE_GPU_INCLUDE=2,3 python tune.py --model omni run --stages ALL --repeats 5 \
+  --output-dir "$RUN_G23"
+TUNE_GPU_INCLUDE=4,5 python tune.py --model omni run --stages ALL --repeats 5 \
+  --output-dir "$RUN_G45"
+```
+
+These are independent replications. Do **not** `merge-runs` them into one
+worst-of-five report; that silently changes N. Compare distributions, or
+explicitly analyze them as more than five observations when the user asks.
+
+### Mode B — N groups share one calibration scope (optional speedup)
+
+Split stages across groups with **disjoint** stage ownership, then merge:
 
 ```bash
 TUNE_GPU_INCLUDE=0,1 python tune.py --model omni run \
-  --stages <first-half> --repeats 5 --output-dir "$RUN_A"
+  --stages <partition-A> --repeats 5 --output-dir "$RUN_A"
 TUNE_GPU_INCLUDE=2,3 python tune.py --model omni run \
-  --stages <second-half> --repeats 5 --output-dir "$RUN_B"
+  --stages <partition-B> --repeats 5 --output-dir "$RUN_B"
 ```
 
-Do not merge the directories by copying JSON files. After both partitions are
-strict-ready, use the validated merge command:
+Do not merge by copying JSON files. After every partition is strict-ready:
 
 ```bash
 python tune.py merge-runs --run-dir "$RUN_A" --run-dir "$RUN_B" \
   --output-dir "$RUN_COMBINED"
 ```
 
-It validates commit, model, repeat count, stage schema, environment identity,
-and disjoint stage ownership before producing the combined report.
-
-### Two independent full calibrations
-
-Run `ALL x 5` twice in separate directories, pinned to `0,1` and `2,3`. These are
-independent replications. Do not collapse them into one five-repeat report; they
-may be compared or explicitly analyzed as ten observations.
+`merge-runs` validates commit, model, repeat count, stage schema, environment
+identity, and disjoint stage ownership. Use Mode B only when the user wants one
+combined worst-of-five faster; it is not the default multi-GPU layout.
 
 Every concurrent process must set `TUNE_GPU_INCLUDE`. Cleanup is scoped to the
-physical GPU indices actually used by that pytest invocation. Global `pkill`,
-user-wide process kills, and cleanup over the entire host pool are forbidden.
+physical GPU indices owned by that process. Global `pkill`, user-wide kills, and
+host-wide cleanup are forbidden.
 
 ## Stage schema lifecycle
 
@@ -133,6 +149,11 @@ For every metric it contains all per-run values plus:
 
 Accuracy/WER and performance retain separate threshold semantics. Display
 rounding never changes the raw worst value used by `apply-plan`.
+
+Pytest may exit non-zero because an **old** CI threshold assertion failed while
+metrics and full sample scope were still produced. That is a threshold failure,
+not a missing observation. Completeness is decided by `strict-audit` /
+`status` (`missing=[]`, N/N strict), not by pytest pass/fail. See `CONTRACT.md`.
 
 ### Operational reliability
 
@@ -170,25 +191,28 @@ mismatch is reported as non-comparable and must not drive threshold changes.
 `report` and `apply-plan` call the same `validate_run_ready()` gate. Both refuse
 partial observations, wrong sample scope, missing metrics, or mixed commit SHA.
 
-Application writes pre-slack reference values only. CI assertion slack remains
-in the tests. Never write constants derived by `apply_slack`,
-`apply_wer_slack`, `apply_mos_slack`, `THRESHOLD_SLACK_HIGHER`, or
-`THRESHOLD_SLACK_LOWER`.
+`apply-plan` is read-only JSON: for each metric it emits `worst_raw`,
+`write_value`, `current_raw`, and `direction` (`tightens` / `loosens` /
+`equal`). The agent (or operator) performs the file edits. Application writes
+pre-slack reference values only. CI assertion slack remains in the tests. Never
+write constants derived by `apply_slack`, `apply_wer_slack`, `apply_mos_slack`,
+`THRESHOLD_SLACK_HIGHER`, or `THRESHOLD_SLACK_LOWER`.
 
 Supported decisions after the report:
 
 - `report`: do not edit thresholds.
 - `smart`: apply correctness/quality references; automatically tighten speed;
   ask before loosening speed.
-- `full`: apply every worst-of-N reference.
+- `full`: apply every non-equal worst-of-N `write_value`.
 
 After edits:
 
-1. Regenerate stages and confirm source symbols still match current assertions.
-2. Run focused unit/static tests.
-3. Run at least one validation observation using the applied references and
-   derived slack.
-4. Confirm serialization and rounding did not tighten past the raw worst value.
+1. Regenerate stages (`discover`) and confirm source symbols still match.
+2. Re-run `apply-plan`; every metric should report `direction=equal`.
+3. Run focused unit/static tests when practical.
+4. Run at least one validation observation using the applied references and
+   derived slack when the user wants post-apply confirmation.
+5. Confirm serialization and rounding did not tighten past the raw worst value.
 
 Do not edit threshold files before the final apply decision. Do not commit or
 push without explicit authorization.

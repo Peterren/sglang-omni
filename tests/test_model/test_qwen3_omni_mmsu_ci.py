@@ -31,7 +31,7 @@ from tests.utils import MetricCheckCollector, apply_slack, assert_speed_threshol
 
 CONCURRENCY = 16
 
-MMSU_MIN_ACCURACY = 0.699
+MMSU_MIN_ACCURACY = 0.6925
 
 # (Note: Xuesong)P95 recalibrated for the #698 backend bump
 # new stack measures ~50.6 qps (3 CI rounds, sigma~0.1) vs ~60.8 on the old stack,
@@ -40,9 +40,9 @@ MMSU_MIN_ACCURACY = 0.699
 # util-ratio == qps-ratio). See PR.
 _MMSU_P95 = {
     16: {
-        "throughput_qps": 68.3,  # was 62.519
-        "output_tok_per_req_s": 8.8,  # was 8.1
-        "latency_mean_s": 0.234,  # was 0.255
+        "throughput_qps": 66.12,  # was 62.519
+        "output_tok_per_req_s": 8.6,  # was 8.1
+        "latency_mean_s": 0.241,  # was 0.255
     },
 }
 MMSU_THRESHOLDS = apply_slack(_MMSU_P95)

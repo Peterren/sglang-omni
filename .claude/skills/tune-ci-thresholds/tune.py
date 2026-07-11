@@ -73,11 +73,14 @@ def _flashinfer_cache_dirs(env: dict[str, str] | None = None) -> list[Path]:
 
 
 def _cleanup_flashinfer_cache(env: dict[str, str] | None = None) -> None:
-    # Wipe the runtime FlashInfer JIT dirs so kernels recompile cleanly on the
-    # next cold start. Matches CI, which wipes the same dir before every pytest
-    # attempt (omni-setup at job start + run_flaky_pytest.sh before each retry).
-    for cache_dir in _flashinfer_cache_dirs(env):
-        shutil.rmtree(cache_dir, ignore_errors=True)
+    # Wipe only this job's FlashInfer JIT dir so kernels recompile cleanly.
+    # Concurrent calibration groups must use distinct XDG_CACHE_HOME / HOME
+    # partitions; never delete every candidate path (that races live workers).
+    env = env or os.environ
+    cache_dirs = _flashinfer_cache_dirs(env)
+    if not cache_dirs:
+        return
+    shutil.rmtree(cache_dirs[0], ignore_errors=True)
 
 
 # Metric registry. Each entry encodes how a named metric should be
@@ -371,9 +374,34 @@ def read_pins():
 
 
 def venv_version(py, mod):
-    r = subprocess.run([py, "-c", f"import {mod};print({mod}.__version__)"],
-                       capture_output=True, text=True, timeout=60)
-    if r.returncode: raise RuntimeError(f"{mod} version read failed: {r.stderr.strip()}")
+    # Prefer importlib.metadata so precheck does not import heavy packages
+    # (importing sglang touches CUDA and can be SIGKILL'd by a sibling group's
+    # scoped GPU cleanup during parallel calibration).
+    r = subprocess.run(
+        [
+            py,
+            "-c",
+            (
+                "import importlib.metadata as m\n"
+                f"print(m.version({mod!r}))\n"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env={**os.environ, "CUDA_VISIBLE_DEVICES": ""},
+    )
+    if r.returncode == 0 and r.stdout.strip():
+        return r.stdout.strip()
+    r = subprocess.run(
+        [py, "-c", f"import {mod};print({mod}.__version__)"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env={**os.environ, "CUDA_VISIBLE_DEVICES": ""},
+    )
+    if r.returncode:
+        raise RuntimeError(f"{mod} version read failed: {r.stderr.strip()}")
     return r.stdout.strip()
 
 
@@ -599,9 +627,9 @@ def _kill_calibration_gpu_processes(gpu_indices: list[int] | tuple[int, ...]) ->
     env = os.environ.copy()
     env["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, targets))
     if script.exists():
+        # Keep stdout/stderr visible so cross-group mis-kills are auditable.
         subprocess.run(
             ["bash", str(script), "--kill-orphans"],
-            capture_output=True,
             check=False,
             env=env,
         )
