@@ -75,6 +75,19 @@ derived assertion threshold.
 explicit apply decision (`report` / `smart` / `full`). After a `full` apply,
 re-running `apply-plan` should show `direction=equal` for every metric.
 
+## Speed health before apply
+
+Strict readiness is necessary but not sufficient for speed thresholds. Before
+applying large speed `loosens` / `tightens`, inspect per-run values for each
+speed stage:
+
+- Flag stages whose five observations have a large relative range (rough guide:
+  max−min over |median| ≳ 0.20–0.30 for throughput or latency/RTF).
+- Present the spread and ask before writing those references, especially when
+  the session shared the host with other heavy GPU work.
+- Contaminated or rejected sessions must not drive apply; recover with a fresh
+  run directory per `OPERATIONS.md`.
+
 ## Required provenance
 
 The final artifact records commit, dirty state, venv, dependency hash, core

@@ -32,13 +32,13 @@ from tests.utils import MetricCheckCollector, apply_slack, assert_speed_threshol
 CONCURRENCY = 16
 MAX_SAMPLES = 50
 
-VIDEOMME_MIN_ACCURACY = 0.58
+VIDEOMME_MIN_ACCURACY = 0.56
 
 _VIDEOMME_P95 = {
     16: {
-        "throughput_qps": 0.968,
-        "output_tok_per_req_s": 7.5,
-        "latency_mean_s": 14.602,
+        "throughput_qps": 1.169,
+        "output_tok_per_req_s": 9.3,
+        "latency_mean_s": 11.884,
     },
 }
 VIDEOMME_THRESHOLDS = apply_slack(_VIDEOMME_P95)

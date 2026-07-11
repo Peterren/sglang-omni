@@ -82,6 +82,20 @@ groups require three Tab A terminals and three Tab B terminals, even when a
 group is temporarily idle between queued runs. Watcher count follows the number
 of GPU groups, not the Mode A/B/C choice.
 
+### IDE-visible terminals (required)
+
+Tab A and Tab B are **operator-facing**. They must run in Cursor / IDE terminal
+panels so the user can see live progress without opening log files.
+
+- Launch each watcher in a dedicated IDE terminal (agent background shell that
+  streams into the Terminal panel, or a user-opened tab).
+- **Do not** treat `nohup … > /tmp/*.log &` as having started Tab A/B. Durable
+  tees under `/tmp` are a backup only; they do not replace visible terminals.
+- Keep **exactly one** Tab A and **exactly one** Tab B per GPU group. Kill
+  duplicate watcher processes before restarting.
+- If the user closes an IDE tab, restart that watcher in a new visible terminal;
+  do not assume a leftover background process is still visible to them.
+
 Tab A — aggregate strict progress:
 
 ```bash
@@ -117,6 +131,37 @@ yet. Keep watchers alive until the group’s queue is complete.
 Also poll `status`, `strict-audit`, and `nvidia-smi` at least every 120 seconds
 while work is active. The legacy `tail_calibration_pytest.sh` is a debugging
 fallback only.
+
+## Ghost GPU memory / invisible clients
+
+Before pinning a group, confirm selected GPUs are actually free
+(`memory.used` near idle and no compute apps). On shared hosts you may see:
+
+- high `memory.used` with **no** processes in `nvidia-smi`;
+- `nvidia-smi --gpu-reset` failing with *In use by another client*;
+- no matching `/dev/nvidiaN` holders inside this container.
+
+Do **not** block forever on that pair. Prefer another idle two-GPU pair, update
+`TUNE_GPU_INCLUDE` / `TUNE_GPU_EXCLUDE`, and tell the user which GPUs were
+substituted. Never broaden cleanup onto reserved or foreign GPUs to chase
+ghost memory. Host-side reset (Fabric Manager / container restart) is outside
+this skill’s scope unless the user asks.
+
+## Contaminated-run recovery
+
+When the user rejects a calibration (for example concurrent interference,
+implausible speed regressions, or mixed environments), follow this checklist:
+
+1. Stop the old queue and all Tab A/B watchers for that session.
+2. Roll back applied threshold edits if any (restore pre-apply test constants /
+   `stages.yaml`). Keep unrelated skill or infra fixes unless the user asks to
+   revert those too.
+3. Create a **new** UTC run directory on current `HEAD` (do not resume the
+   contaminated dir).
+4. Relaunch with an explicit layout and a free GPU pair; start IDE-visible
+   Tab A/B before the first pytest.
+5. After the new run is strict-ready, generate `report` / `apply-plan` from the
+   new directory only. Do not mix artifacts from the contaminated session.
 
 ## CUDA recovery
 

@@ -32,12 +32,14 @@ not a hand-maintained source of truth.
 2. Create a fresh UTC-timestamped run directory on current `HEAD` (one per
    independent calibration process).
 3. Run `precheck` for every selected model.
-4. Start one progress Tab A and one dynamic server-log Tab B per GPU group.
+4. Start one **IDE-visible** progress Tab A and one dynamic server-log Tab B
+   per GPU group (`nohup` to `/tmp` alone does not count — see `OPERATIONS.md`).
 5. Run all selected stages for five repeats.
 6. Poll `status`, `strict-audit`, the active pytest log, and GPU state at least
    every 120 seconds.
 7. Generate `report.md` only after the shared readiness gate passes.
-8. Show the report before asking whether thresholds should be applied.
+8. Show the report before asking whether thresholds should be applied. For
+   speed metrics, skim per-run spread first (see Threshold application).
 9. Apply only with explicit user confirmation. Run a post-apply validation.
 
 ```bash
@@ -204,6 +206,12 @@ Supported decisions after the report:
 - `smart`: apply correctness/quality references; automatically tighten speed;
   ask before loosening speed.
 - `full`: apply every non-equal worst-of-N `write_value`.
+
+Before applying speed changes, skim each speed stage’s five raw values. If the
+relative range is large (rough guide: ≳ 20–30% of the median for throughput or
+latency/RTF), flag the stage and ask before writing large loosens. Rejected or
+contaminated sessions need a fresh run directory — see Contaminated-run
+recovery in `OPERATIONS.md`.
 
 After edits:
 

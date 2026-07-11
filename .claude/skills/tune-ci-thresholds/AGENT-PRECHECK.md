@@ -34,6 +34,10 @@ Run this checklist before every fresh session and after environment recovery.
 - Concurrent processes must use disjoint include sets, run directories, and
   cache roots.
 - Verify every selected GPU is idle and below 2048 MiB before launch.
+- If a requested pair shows high memory with no processes, or
+  `--gpu-reset` reports *In use by another client*, pick another free pair and
+  tell the user (see `OPERATIONS.md` ghost-memory section). Do not wait forever
+  or clean reserved GPUs.
 - Never free GPUs with global `pkill` or user-wide process kills.
 - Non-CI cleanup and `wait_for_gpu_memory_release` require
   `CUDA_VISIBLE_DEVICES` set to the physical ids owned by this job.
@@ -113,7 +117,9 @@ Pass criteria:
 
 ## 7. Active supervision
 
-For every GPU group, start two persistent terminals before its first run:
+For every GPU group, start two **IDE-visible** terminals before its first run.
+`nohup` into `/tmp` alone is not sufficient — the operator must see Tab A/B in
+the Terminal panel (see `OPERATIONS.md`).
 
 ```bash
 # Tab A: aggregate progress for every run assigned to this group.
@@ -126,10 +132,11 @@ bash .claude/skills/tune-ci-thresholds/watch_calibration_servers.sh \
 ```
 
 The number of Tab A terminals and Tab B terminals must each equal the number of
-GPU groups. Tab B must switch away from killed servers and attach logs from each
-new server launch in the same terminal. Locally, expect `runN.log` fallback
-because `server_log_file()` only creates `server.log` when `GITHUB_ACTIONS=true`.
-Durable filtered Tab B output is teed under `/tmp/calibration_tabB_<group>.log`.
+GPU groups (one pair per group; no duplicates). Tab B must switch away from
+killed servers and attach logs from each new server launch in the same
+terminal. Locally, expect `runN.log` fallback because `server_log_file()` only
+creates `server.log` when `GITHUB_ACTIONS=true`. Durable filtered Tab B output
+is teed under `/tmp/calibration_tabB_<group>.log` as a backup.
 
 During a run, also poll at most every 120 seconds with `status`, `strict-audit`,
 and `nvidia-smi`.
@@ -147,4 +154,8 @@ Before report or apply:
 - every observation has full expected sample scope and all metrics;
 - git provenance passes;
 - `report` succeeds through `validate_run_ready()`;
-- no calibration or pytest process remains alive for that run directory.
+- no calibration or pytest process remains alive for that run directory;
+- for speed metrics, skim per-run spread before apply (see `SKILL.md` /
+  `CONTRACT.md` speed health check). If a stage’s five runs show large
+  relative range (rough guide: throughput or latency span ≳ 20–30%), flag it
+  and ask before applying large loosens.
