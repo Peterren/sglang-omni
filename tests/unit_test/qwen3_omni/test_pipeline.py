@@ -287,12 +287,18 @@ def test_qwen_pretokenized_media_validates_placeholder_counts() -> None:
         _validate_pretokenized_media_tokens,
     )
 
+    tokenizer = SimpleNamespace(
+        convert_tokens_to_ids=lambda token: {
+            "<image>": 101,
+            "<audio>": 102,
+            "<video>": 103,
+        }[token]
+    )
     processor = SimpleNamespace(
-        tokenizer=SimpleNamespace(
-            image_token_id=101,
-            audio_token_id=102,
-            video_token_id=103,
-        )
+        tokenizer=tokenizer,
+        image_token="<image>",
+        audio_token="<audio>",
+        video_token="<video>",
     )
     processed = torch.tensor([101, 101, 102, 103, 103, 103])
 
@@ -316,12 +322,15 @@ def test_qwen_pretokenized_media_preserves_ids_and_builds_encoders(
     import sglang_omni.models.qwen3_omni.components.preprocessor as preprocessor_mod
 
     class _Tokenizer:
-        image_token_id = 101
-        audio_token_id = 102
-        video_token_id = 103
+        @staticmethod
+        def convert_tokens_to_ids(token):
+            return {"<image>": 101, "<audio>": 102, "<video>": 103}[token]
 
     class _Processor:
         tokenizer = _Tokenizer()
+        image_token = "<image>"
+        audio_token = "<audio>"
+        video_token = "<video>"
 
         def apply_chat_template(self, *args, **kwargs):
             del args, kwargs

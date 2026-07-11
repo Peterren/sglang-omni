@@ -123,16 +123,13 @@ def _is_pretokenized_prompt(inputs: Any) -> bool:
     )
 
 
-def _media_token_id(processor: Any, modality: str) -> int | None:
+def _media_token_ids(processor: Any) -> dict[str, int]:
     tokenizer = processor.tokenizer
-    token_id = getattr(tokenizer, f"{modality}_token_id", None)
-    if token_id is not None:
-        return int(token_id)
-    token = getattr(processor, f"{modality}_token", None)
-    if token is None:
-        return None
-    resolved = tokenizer.convert_tokens_to_ids(token)
-    return int(resolved) if resolved is not None else None
+    return {
+        "image": int(tokenizer.convert_tokens_to_ids(processor.image_token)),
+        "audio": int(tokenizer.convert_tokens_to_ids(processor.audio_token)),
+        "video": int(tokenizer.convert_tokens_to_ids(processor.video_token)),
+    }
 
 
 def _validate_pretokenized_media_tokens(
@@ -141,10 +138,7 @@ def _validate_pretokenized_media_tokens(
     processed_input_ids: torch.Tensor,
 ) -> None:
     """Require caller-provided ids to reserve every derived media embedding slot."""
-    for modality in ("image", "audio", "video"):
-        token_id = _media_token_id(processor, modality)
-        if token_id is None:
-            continue
+    for modality, token_id in _media_token_ids(processor).items():
         provided_count = int((provided_input_ids == token_id).sum().item())
         processed_count = int((processed_input_ids == token_id).sum().item())
         if provided_count != processed_count:
