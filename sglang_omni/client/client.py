@@ -646,16 +646,16 @@ def _extract_inputs(request: GenerateRequest) -> Any:
             result["audios"] = audios
         if videos:
             result["videos"] = videos
-        for key in (
-            "video_fps",
-            "video_max_frames",
-            "video_min_pixels",
-            "video_max_pixels",
-            "video_total_pixels",
+        for key, typed_value in (
+            ("video_fps", request.video_fps),
+            ("video_max_frames", request.video_max_frames),
+            ("video_min_pixels", request.video_min_pixels),
+            ("video_max_pixels", request.video_max_pixels),
+            ("video_total_pixels", request.video_total_pixels),
         ):
-            value = getattr(request, key)
-            if value is None:
-                value = request.metadata.get(key)
+            value = (
+                typed_value if typed_value is not None else request.metadata.get(key)
+            )
             if value is not None:
                 result[key] = value
         return result
