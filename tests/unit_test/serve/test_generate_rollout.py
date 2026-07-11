@@ -98,6 +98,48 @@ def test_generate_returns_codebook_tokens_when_present() -> None:
     assert resp.json()["meta_info"]["output_codebook_tokens"] == [[11, 1], [22, 2]]
 
 
+def test_generate_normalizes_media_aliases_with_input_ids() -> None:
+    client = _RolloutClient(_text_result())
+    tc = TestClient(create_app(client, model_name="qwen3-omni"))
+
+    resp = tc.post(
+        "/generate",
+        json={
+            "input_ids": [1, 2, 3],
+            "image_data": ["data:image/png;base64,SU1H"],
+            "audio_data": ["data:audio/wav;base64,QVVESU8="],
+            "video_data": ["https://example.test/video.mp4"],
+            "video_fps": 2.0,
+            "sampling_params": {"max_new_tokens": 2},
+        },
+    )
+
+    assert resp.status_code == 200
+    request = client.requests[0]
+    assert request.prompt_token_ids == [1, 2, 3]
+    assert request.images == ["data:image/png;base64,SU1H"]
+    assert request.audios == ["data:audio/wav;base64,QVVESU8="]
+    assert request.videos == ["https://example.test/video.mp4"]
+    assert request.video_fps == 2.0
+
+
+def test_generate_rejects_unknown_top_level_fields() -> None:
+    client = _RolloutClient(_text_result())
+    tc = TestClient(create_app(client, model_name="qwen3-omni"))
+
+    resp = tc.post(
+        "/generate",
+        json={
+            "input_ids": [1, 2, 3],
+            "sampling_params": {"max_new_tokens": 2},
+            "audoi_data": ["typo-must-not-be-dropped"],
+        },
+    )
+
+    assert resp.status_code == 422
+    assert client.requests == []
+
+
 def test_generate_rejects_empty_input_ids() -> None:
     client = _RolloutClient(_text_result())
     tc = TestClient(create_app(client, model_name="higgs-audio"))

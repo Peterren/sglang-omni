@@ -1080,6 +1080,14 @@ def _build_rollout_generate_request(req: RolloutGenerateRequest) -> GenerateRequ
         output_modalities=(
             req.output_modalities if req.output_modalities is not None else ["text"]
         ),
+        images=req.images,
+        audios=req.audios,
+        videos=req.videos,
+        video_fps=req.video_fps,
+        video_max_frames=req.video_max_frames,
+        video_min_pixels=req.video_min_pixels,
+        video_max_pixels=req.video_max_pixels,
+        video_total_pixels=req.video_total_pixels,
         metadata=metadata,
     )
 

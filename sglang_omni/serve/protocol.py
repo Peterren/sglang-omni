@@ -174,7 +174,7 @@ class RolloutGenerateRequest(BaseModel):
     """Rollout request for ``POST /generate``; set exactly one of
     ``input_ids``, ``prompt``, ``messages``."""
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
     model: str | None = None
 
@@ -189,6 +189,27 @@ class RolloutGenerateRequest(BaseModel):
     stage_sampling: dict[str, RolloutSamplingParams] | None = None
     stage_params: dict[str, dict[str, Any]] | None = None
     output_modalities: list[str] | None = None
+
+    # Canonical media names match ChatCompletionRequest and the internal
+    # preprocessors. The *_data aliases keep existing Miles/SGLang payloads
+    # wire-compatible while callers migrate to the canonical names.
+    images: list[str] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("images", "image_data"),
+    )
+    audios: list[str] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("audios", "audio_data"),
+    )
+    videos: list[str] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("videos", "video_data"),
+    )
+    video_fps: float | None = None
+    video_max_frames: int | None = None
+    video_min_pixels: int | None = None
+    video_max_pixels: int | None = None
+    video_total_pixels: int | None = None
 
     metadata: dict[str, Any] | None = None
 

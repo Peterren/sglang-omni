@@ -21,6 +21,17 @@ class _SubmitStubCoordinator:
         return self._result
 
 
+class _CapturingSubmitCoordinator(_SubmitStubCoordinator):
+    def __init__(self, result: Any) -> None:
+        super().__init__(result)
+        self.request = None
+
+    async def submit(self, request_id: str, omni_request: Any) -> Any:
+        del request_id
+        self.request = omni_request
+        return self._result
+
+
 class _StreamStubCoordinator:
     """Streaming coordinator stub: yields the given StreamMessages in order."""
 
@@ -51,6 +62,33 @@ def test_completion_surfaces_logprobs_and_weight_version() -> None:
     assert out.output_token_logprobs == [[-0.1, 11], [-0.2, 22], [-0.3, 33]]
     assert out.output_codebook_tokens == [[11, 1], [22, 2], [33, 3]]
     assert out.weight_version == "v7"
+
+
+def test_completion_combines_pretokenized_ids_and_media() -> None:
+    coordinator = _CapturingSubmitCoordinator({"text": "ok", "finish_reason": "stop"})
+    client = Client(coordinator)
+
+    asyncio.run(
+        client.completion(
+            GenerateRequest(
+                prompt_token_ids=[5, 6, 7],
+                images=["data:image/png;base64,SU1H"],
+                audios=["data:audio/wav;base64,QVVESU8="],
+                videos=["https://example.test/video.mp4"],
+                video_fps=2.0,
+                stream=False,
+            ),
+            request_id="r-mm",
+        )
+    )
+
+    assert coordinator.request.inputs == {
+        "input_ids": [5, 6, 7],
+        "images": ["data:image/png;base64,SU1H"],
+        "audios": ["data:audio/wav;base64,QVVESU8="],
+        "videos": ["https://example.test/video.mp4"],
+        "video_fps": 2.0,
+    }
 
 
 def test_completion_surfaces_omni_rollout() -> None:
