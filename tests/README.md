@@ -16,6 +16,7 @@ tests/
 └── unit_test/
     ├── benchmarks/
     │   └── test_dataset_regressions.py
+    ├── test_tune_ci_thresholds.py
     ├── fixtures/
     │   ├── fish_fakes.py
     │   ├── pipeline_fakes.py
@@ -104,7 +105,8 @@ tests/
     ├── scheduling/
     │   ├── test_engine_factory.py
     │   ├── test_pipeline_state.py
-    │   └── test_reference_encoder.py
+    │   ├── test_reference_encoder.py
+    │   └── test_streaming_vocoder.py
     ├── fishaudio_s2_pro/
     │   ├── test_pipeline.py
     │   ├── test_streaming_vocoder.py
@@ -291,6 +293,17 @@ that happened to contain an older version of the test.
   - scheduler callable contracts, including sync wrappers and callable objects
     that return awaitables.
 - `unit_test/benchmarks/`: Benchmark dataset/loading regression tests.
+- `unit_test/test_tune_ci_thresholds.py`: Unit tests for
+  `.claude/skills/tune-ci-thresholds/tune.py` calibration tooling — sample-scope
+  discovery (`CONCURRENCY` must not be treated as a sample count), GPU cleanup
+  scoping for concurrent calibration groups, metric dispersion/outlier reporting,
+  Wilson accuracy intervals, and `merge-runs` validation for disjoint strict-ready
+  partitions. Run with the rest of the fast suite:
+
+  ```bash
+  pytest tests/unit_test/test_tune_ci_thresholds.py -q
+  ```
+
 - `unit_test/utils/`: Shared utility tests:
   - audio loading helpers for data URIs, file URIs, HTTP URLs, timeout fallback,
     and mono/channel preservation.
