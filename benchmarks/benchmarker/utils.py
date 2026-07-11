@@ -93,9 +93,9 @@ def wait_for_gpu_memory_release(
 ) -> None:
     """Kill orphan GPU processes on this job's GPUs; wait until they are idle.
 
-    Requires ``CUDA_VISIBLE_DEVICES`` (physical ids) so concurrent calibration
+    Requires CUDA_VISIBLE_DEVICES (physical ids) so concurrent calibration
     groups cannot wipe each other. Single-tenant CI may omit it when
-    ``GITHUB_ACTIONS=true``.
+    GITHUB_ACTIONS=true.
     """
     if not GPU_CLEANUP_SCRIPT.exists():
         raise FileNotFoundError(f"GPU cleanup script missing: {GPU_CLEANUP_SCRIPT}")
