@@ -207,6 +207,8 @@ class HiggsStreamingVocoderScheduler(StreamingSimpleScheduler):
             final_data["output_codebook_tokens"] = final_state.output_codes_delayed
         if final_state.omni_rollout is not None:
             final_data["omni_rollout"] = final_state.omni_rollout
+        if final_state.weight_version is not None:
+            final_data["weight_version"] = final_state.weight_version
         messages.append(
             OutgoingMessage(
                 request_id=request_id,
@@ -499,6 +501,8 @@ class HiggsStreamingVocoderScheduler(StreamingSimpleScheduler):
             data["output_codebook_tokens"] = state.output_codes_delayed
         if state.omni_rollout is not None:
             data["omni_rollout"] = state.omni_rollout
+        if state.weight_version is not None:
+            data["weight_version"] = state.weight_version
         payload.data = data
         return payload
 

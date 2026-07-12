@@ -37,6 +37,7 @@ def _fake_data(*, return_omni_rollout, return_logprob, t_raw=6):
         return_omni_rollout=return_omni_rollout,
         return_logprob=return_logprob,
         input_ids=list(range(5)),
+        weight_version="7",
     )
 
 
@@ -52,8 +53,10 @@ def test_omni_rollout_built_and_roundtrips():
     assert state.omni_rollout["version"] == 2
     assert state.omni_rollout["total_action_count"] == 6 * N + 1
     assert state.output_token_logprobs == data.output_token_logprobs
+    assert state.weight_version == "7"
     # Survives the StagePayload dict round-trip the client reads from.
     assert HiggsTtsState.from_dict(state.to_dict()).omni_rollout == state.omni_rollout
+    assert HiggsTtsState.from_dict(state.to_dict()).weight_version == "7"
     assert (
         HiggsTtsState.from_dict(state.to_dict()).output_token_logprobs
         == state.output_token_logprobs

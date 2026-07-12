@@ -48,6 +48,7 @@ class HiggsTtsState(PipelineStateBase):
     output_codes_delayed: list[list[int]] | None = None
     output_token_logprobs: list[Any] | None = None
     omni_rollout: dict[str, Any] | None = None
+    weight_version: str | None = None
 
     # vocoder
     audio_samples: Any | None = None
@@ -87,6 +88,8 @@ class HiggsTtsState(PipelineStateBase):
             data["output_token_logprobs"] = self.output_token_logprobs
         if self.omni_rollout is not None:
             data["omni_rollout"] = self.omni_rollout
+        if self.weight_version is not None:
+            data["weight_version"] = self.weight_version
         self.append_usage_fields(data)
         if self.audio_samples is not None:
             data["audio_samples"] = self.audio_samples
@@ -116,6 +119,7 @@ class HiggsTtsState(PipelineStateBase):
             output_codes_delayed=data.get("output_codes_delayed"),
             output_token_logprobs=data.get("output_token_logprobs"),
             omni_rollout=data.get("omni_rollout"),
+            weight_version=data.get("weight_version"),
             prompt_tokens=data.get("prompt_tokens", 0),
             completion_tokens=data.get("completion_tokens", 0),
             engine_time_s=data.get("engine_time_s", 0.0),

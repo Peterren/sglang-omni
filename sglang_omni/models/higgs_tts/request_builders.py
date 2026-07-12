@@ -226,6 +226,7 @@ def apply_higgs_result(state: HiggsTtsState, data: HiggsSGLangRequestData) -> No
             policy_logprobs=delayed_logprobs,
             action_mask=action_mask,
         )
+    state.weight_version = data.weight_version
     state.prompt_tokens = len(data.input_ids)
 
 

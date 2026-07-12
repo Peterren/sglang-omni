@@ -900,6 +900,7 @@ def test_higgs_tts_vocoder_batches_decode_requests(
             prompt_tokens=5,
             completion_tokens=10,
             engine_time_s=0.5,
+            weight_version="7",
         ),
     )
     p2 = _make_payload(
@@ -917,6 +918,7 @@ def test_higgs_tts_vocoder_batches_decode_requests(
     assert audio.size > 0
     assert "audio_data" not in results[0].data
     assert results[0].data["usage"]["prompt_tokens"] == 5
+    assert results[0].data["weight_version"] == "7"
 
 
 def test_higgs_tts_vocoder_batch_handles_empty_items(
