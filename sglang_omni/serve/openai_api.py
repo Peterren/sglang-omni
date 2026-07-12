@@ -365,8 +365,7 @@ async def _send_voice_upload_too_large(
 
 
 def _register_health(app: FastAPI) -> None:
-    @app.get("/health")
-    async def health() -> JSONResponse:
+    async def health_response() -> JSONResponse:
         """Health check endpoint (includes filesystem browse info)."""
         client: Client = app.state.client
         info = client.health()
@@ -379,6 +378,9 @@ def _register_health(app: FastAPI) -> None:
             },
             status_code=status_code,
         )
+
+    app.add_api_route("/health", health_response, methods=["GET"])
+    app.add_api_route("/health_generate", health_response, methods=["GET"])
 
 
 def _register_models(app: FastAPI) -> None:
@@ -438,6 +440,31 @@ def _register_admin(app: FastAPI, admin_api_key: str | None = None) -> None:
                 stages=req.stages,
                 timeout_s=_timeout_or_default(req.timeout_s, 60.0),
             )
+        )
+
+    @app.get("/flush_cache", dependencies=[Depends(_auth)])
+    async def flush_cache() -> JSONResponse:
+        client: Client = app.state.client
+        return _admin_response(await client.admin("flush_cache", timeout_s=60.0))
+
+    @app.post("/begin_weight_update", dependencies=[Depends(_auth)])
+    async def begin_weight_update() -> JSONResponse:
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Omni weight updates are atomic per update request",
+                "data": {"session_required": False},
+            }
+        )
+
+    @app.post("/end_weight_update", dependencies=[Depends(_auth)])
+    async def end_weight_update() -> JSONResponse:
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Omni weight update request completed atomically",
+                "data": {"session_required": False},
+            }
         )
 
     @app.post("/update_weights_from_disk", dependencies=[Depends(_auth)])
