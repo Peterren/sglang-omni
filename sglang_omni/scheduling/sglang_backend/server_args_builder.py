@@ -7,6 +7,42 @@ from typing import Any
 from sglang.srt.server_args import ServerArgs
 
 
+class OmniServerArgs(ServerArgs):
+    """ServerArgs with opt-in support for multimodal piecewise prefill."""
+
+    def _handle_piecewise_cuda_graph(self) -> None:
+        model_config = self.get_model_config()
+        if not (
+            model_config.is_multimodal
+            and _supports_sglang_piecewise_prefill(model_config)
+        ):
+            super()._handle_piecewise_cuda_graph()
+            return
+
+        is_multimodal = model_config.is_multimodal
+        try:
+            # note (kaige): The opted-in model keeps multimodal preprocessing
+            # outside PCG, so only SGLang's blanket multimodal gate is skipped.
+            model_config.is_multimodal = False
+            super()._handle_piecewise_cuda_graph()
+        finally:
+            model_config.is_multimodal = is_multimodal
+
+
+def _supports_sglang_piecewise_prefill(model_config: Any) -> bool:
+    from sglang_omni.models.model_capabilities import get_model_capabilities
+
+    hf_config = getattr(model_config, "hf_config", None)
+    architectures = getattr(hf_config, "architectures", None) or ()
+    if isinstance(architectures, str):
+        architectures = (architectures,)
+    for architecture in architectures:
+        capabilities = get_model_capabilities(architecture)
+        if capabilities is not None and capabilities.supports_sglang_piecewise_prefill:
+            return True
+    return False
+
+
 def build_sglang_server_args(
     model_path: str,
     context_length: int,
@@ -34,7 +70,7 @@ def build_sglang_server_args(
     kwargs.update(overrides)
     if kwargs.get("mem_fraction_static") is None:
         kwargs.pop("mem_fraction_static", None)
-    return ServerArgs(**kwargs)
+    return OmniServerArgs(**kwargs)
 
 
 def apply_encoder_mem_reserve(

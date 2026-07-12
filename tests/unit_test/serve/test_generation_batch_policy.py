@@ -49,6 +49,7 @@ def test_default_cuda_graph_bs_matches_sglang_normal_buckets() -> None:
 
 def test_build_generation_batch_overrides_tie_batch_knobs() -> None:
     assert build_generation_batch_overrides(max_running_requests=16) == {
+        "disable_piecewise_cuda_graph": False,
         "max_running_requests": 16,
         "cuda_graph_max_bs": 16,
         "torch_compile_max_bs": 16,
@@ -62,6 +63,7 @@ def test_build_generation_batch_overrides_allow_explicit_caps() -> None:
         cuda_graph_max_bs=32,
         torch_compile_max_bs=8,
     ) == {
+        "disable_piecewise_cuda_graph": False,
         "max_running_requests": 16,
         "cuda_graph_max_bs": 32,
         "torch_compile_max_bs": 8,
@@ -174,3 +176,85 @@ def test_build_generation_batch_overrides_rebinds_default_caps_when_max_changes(
     assert overrides["cuda_graph_max_bs"] == 32
     assert overrides["torch_compile_max_bs"] == 32
     assert overrides["cuda_graph_bs"] == [1, 2, 4, 8, 12, 16, 24, 32]
+
+
+def test_build_generation_batch_overrides_uses_sglang_prefill_graph_sizes() -> None:
+    overrides = build_generation_batch_overrides(
+        max_running_requests=16,
+        enable_prefill_cuda_graph=True,
+        prefill_graph_token_buckets=None,
+        server_args_overrides={"disable_radix_cache": True},
+    )
+
+    assert overrides["disable_radix_cache"] is True
+    assert overrides["disable_piecewise_cuda_graph"] is False
+    assert "piecewise_cuda_graph_tokens" not in overrides
+
+
+def test_build_generation_batch_overrides_disables_prefill_graph() -> None:
+    overrides = build_generation_batch_overrides(
+        max_running_requests=16,
+        enable_prefill_cuda_graph=False,
+        prefill_graph_token_buckets=None,
+    )
+
+    assert overrides["disable_piecewise_cuda_graph"] is True
+    assert "piecewise_cuda_graph_tokens" not in overrides
+
+
+def test_build_generation_batch_overrides_normalizes_prefill_graph_sizes() -> None:
+    overrides = build_generation_batch_overrides(
+        max_running_requests=16,
+        enable_prefill_cuda_graph=True,
+        prefill_graph_token_buckets=[8192, 240, 4608, 240],
+        server_args_overrides={"chunked_prefill_size": 8192},
+    )
+
+    assert overrides["chunked_prefill_size"] == 8192
+    assert overrides["disable_piecewise_cuda_graph"] is False
+    assert overrides["piecewise_cuda_graph_tokens"] == [240, 4608, 8192]
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("disable_piecewise_cuda_graph", True),
+        ("enforce_piecewise_cuda_graph", True),
+        ("piecewise_cuda_graph_tokens", [240, 640]),
+    ],
+)
+def test_build_generation_batch_overrides_preserves_low_level_prefill_graph(
+    key: str, value: object
+) -> None:
+    overrides = build_generation_batch_overrides(
+        max_running_requests=16,
+        enable_prefill_cuda_graph=True,
+        prefill_graph_token_buckets=None,
+        server_args_overrides={key: value},
+    )
+
+    assert overrides[key] == value
+
+
+def test_build_generation_batch_overrides_rejects_buckets_when_disabled() -> None:
+    with pytest.raises(ValueError, match="enable_prefill_cuda_graph is False"):
+        build_generation_batch_overrides(
+            max_running_requests=16,
+            enable_prefill_cuda_graph=False,
+            prefill_graph_token_buckets=[240],
+        )
+
+
+@pytest.mark.parametrize(
+    "buckets",
+    [[], [240.5], [0], [-1], [True], 240, "240,640"],
+)
+def test_build_generation_batch_overrides_rejects_invalid_prefill_graph_sizes(
+    buckets,
+) -> None:
+    with pytest.raises(ValueError, match="positive integers"):
+        build_generation_batch_overrides(
+            max_running_requests=16,
+            enable_prefill_cuda_graph=True,
+            prefill_graph_token_buckets=buckets,
+        )

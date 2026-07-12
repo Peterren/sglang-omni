@@ -21,6 +21,7 @@ EXPECTED_TTS_CAPABILITIES = {
         supports_batch_vocoder=True,
         supports_streaming_vocoder=False,
         supports_cuda_graph=True,
+        supports_sglang_piecewise_prefill=False,
         supports_torch_compile=True,
     ),
     "HiggsMultimodalQwen3ForConditionalGeneration": ModelCapabilities(
@@ -28,6 +29,7 @@ EXPECTED_TTS_CAPABILITIES = {
         supports_batch_vocoder=True,
         supports_streaming_vocoder=True,
         supports_cuda_graph=True,
+        supports_sglang_piecewise_prefill=False,
         supports_torch_compile=True,
     ),
     "MossTTSDelayModel": ModelCapabilities(
@@ -35,6 +37,7 @@ EXPECTED_TTS_CAPABILITIES = {
         supports_batch_vocoder=True,
         supports_streaming_vocoder=False,
         supports_cuda_graph=True,
+        supports_sglang_piecewise_prefill=False,
         supports_torch_compile=False,
     ),
     "MossTTSLocalModel": ModelCapabilities(
@@ -42,6 +45,7 @@ EXPECTED_TTS_CAPABILITIES = {
         supports_batch_vocoder=True,
         supports_streaming_vocoder=True,
         supports_cuda_graph=True,
+        supports_sglang_piecewise_prefill=False,
         supports_torch_compile=True,
     ),
     "FishQwen3OmniForCausalLM": ModelCapabilities(
@@ -49,6 +53,7 @@ EXPECTED_TTS_CAPABILITIES = {
         supports_batch_vocoder=True,
         supports_streaming_vocoder=True,
         supports_cuda_graph=True,
+        supports_sglang_piecewise_prefill=False,
         supports_torch_compile=True,
     ),
     "VoxtralTTSForConditionalGeneration": ModelCapabilities(
@@ -56,6 +61,7 @@ EXPECTED_TTS_CAPABILITIES = {
         supports_batch_vocoder=False,
         supports_streaming_vocoder=False,
         supports_cuda_graph=True,
+        supports_sglang_piecewise_prefill=False,
         supports_torch_compile=True,
     ),
 }

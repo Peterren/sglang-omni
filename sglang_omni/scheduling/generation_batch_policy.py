@@ -29,10 +29,22 @@ def build_generation_batch_overrides(
     max_running_requests: int,
     cuda_graph_max_bs: int | None = None,
     torch_compile_max_bs: int | None = None,
+    enable_prefill_cuda_graph: bool = True,
+    prefill_graph_token_buckets: list[int] | None = None,
     server_args_overrides: Mapping[str, Any] | None = None,
     **stage_defaults: Any,
 ) -> dict[str, Any]:
+    """Merge generation defaults with optional prefill CUDA-graph settings.
+
+    None uses SGLang's capture sizes; a non-empty list supplies explicit sizes.
+    Low-level server_args_overrides retain final precedence.
+    """
+    prefill_cuda_graph_defaults = _build_prefill_cuda_graph_overrides(
+        enabled=enable_prefill_cuda_graph,
+        token_buckets=prefill_graph_token_buckets,
+    )
     incoming = dict(server_args_overrides or {})
+
     max_running_requests = _normalize_positive_int(
         "max_running_requests",
         incoming.pop("max_running_requests", max_running_requests),
@@ -54,6 +66,7 @@ def build_generation_batch_overrides(
     cuda_graph_bs = incoming.pop("cuda_graph_bs", _MISSING)
 
     overrides = {
+        **prefill_cuda_graph_defaults,
         **stage_defaults,
         **incoming,
         "max_running_requests": max_running_requests,
@@ -65,6 +78,38 @@ def build_generation_batch_overrides(
     else:
         overrides["cuda_graph_bs"] = cuda_graph_bs
 
+    return overrides
+
+
+def _build_prefill_cuda_graph_overrides(
+    *,
+    enabled: bool,
+    token_buckets: list[int] | None,
+) -> dict[str, Any]:
+    if not enabled:
+        if token_buckets is not None:
+            raise ValueError(
+                "prefill_graph_token_buckets must be None when "
+                "enable_prefill_cuda_graph is False"
+            )
+        return {"disable_piecewise_cuda_graph": True}
+
+    overrides: dict[str, Any] = {"disable_piecewise_cuda_graph": False}
+    if token_buckets is None:
+        return overrides
+
+    if (
+        not isinstance(token_buckets, list)
+        or not token_buckets
+        or any(
+            isinstance(bucket, bool) or not isinstance(bucket, int) or bucket < 1
+            for bucket in token_buckets
+        )
+    ):
+        raise ValueError(
+            "prefill_graph_token_buckets must be a non-empty list of positive integers"
+        )
+    overrides["piecewise_cuda_graph_tokens"] = sorted(set(token_buckets))
     return overrides
 
 

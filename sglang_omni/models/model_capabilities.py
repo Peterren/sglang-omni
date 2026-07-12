@@ -25,6 +25,8 @@ class ModelCapabilities:
     - supports_streaming_vocoder: the architecture can stream vocoder output
       before the full generation payload is complete.
     - supports_cuda_graph: the architecture has a CUDA graph path.
+    - supports_sglang_piecewise_prefill: the architecture can use SGLang's
+      piecewise CUDA graph for the language-model prefill path.
     - supports_torch_compile: the architecture has an owned ``torch.compile``
       path, including codec, codebook, or frame-sampler compiles. This is not
       limited to the generic SGLang ``enable_torch_compile`` server arg.
@@ -34,6 +36,7 @@ class ModelCapabilities:
     supports_batch_vocoder: bool
     supports_streaming_vocoder: bool
     supports_cuda_graph: bool
+    supports_sglang_piecewise_prefill: bool
     supports_torch_compile: bool
 
 

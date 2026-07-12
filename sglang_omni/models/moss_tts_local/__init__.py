@@ -8,6 +8,7 @@ CAPABILITIES = ModelCapabilities(
     supports_batch_vocoder=True,
     supports_streaming_vocoder=True,
     supports_cuda_graph=True,
+    supports_sglang_piecewise_prefill=False,
     supports_torch_compile=True,
 )
 
