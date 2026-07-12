@@ -139,6 +139,20 @@ def _assert_round_trip_preserves_payload(state: PipelineStateBase) -> None:
     assert _normalize_payload_value(after) == _normalize_payload_value(before)
 
 
+def _assert_restored_fields(state: PipelineStateBase, expected: dict[str, Any]) -> None:
+    """Assert each field in `expected` against the *restored object's
+    attributes*, not a re-serialized dict. A `to_dict()` bug that silently
+    drops a field falls back to the dataclass default on restore, but that
+    default is missing from *both* `before` and `after` dicts, so a
+    dict-vs-dict comparison alone can't see it (raised in PR #1019 review)."""
+    restored = type(state).from_dict(state.to_dict())
+    for field_name, expected_value in expected.items():
+        actual_value = getattr(restored, field_name)
+        assert _normalize_payload_value(actual_value) == _normalize_payload_value(
+            expected_value
+        ), f"{type(state).__name__}.{field_name}: {actual_value!r} != {expected_value!r}"
+
+
 def test_tts_pipeline_state_round_trips_preserve_payload_fields() -> None:
     from sglang_omni.models.fishaudio_s2_pro.payload_types import S2ProState
     from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
@@ -147,102 +161,219 @@ def test_tts_pipeline_state_round_trips_preserve_payload_fields() -> None:
     from sglang_omni.models.qwen3_tts.payload_types import Qwen3TTSState
     from sglang_omni.models.voxtral_tts.io import VoxtralTTSState
 
-    states = [
-        S2ProState(
-            input_ids=[1, 2, 3],
-            vq_mask_tokens=[False, True, False],
-            vq_parts=[torch.tensor([[1, 2], [3, 4]])],
-            output_codes=torch.tensor([[0, 1], [2, 3]]),
-            prompt_tokens=3,
-            completion_tokens=5,
-            engine_time_s=0.125,
-            finish_reason="stop",
-            audio_samples=[0.1, 0.2],
+    # Each (state, expected) pair is checked two ways: the existing
+    # to_dict()-vs-to_dict() comparison (wire-format stability across a
+    # double round trip), and an attribute-level check on the restored
+    # object against explicit expected values (catches a field silently
+    # dropped by to_dict()/from_dict()). `expected` encodes each model's
+    # actual tensor-vs-list round-trip behavior instead of assuming they
+    # all match: Qwen3-TTS flattens tensors to lists in to_dict() and never
+    # rebuilds them in from_dict(); Voxtral does the same only for
+    # audio_samples (audio_codes round-trips as a tensor via typed_tensor
+    # bytes); MOSS / MOSS-Local / S2-Pro / Higgs round-trip their tensor
+    # fields natively.
+    cases: list[tuple[PipelineStateBase, dict[str, Any]]] = [
+        (
+            S2ProState(
+                input_ids=[1, 2, 3],
+                vq_mask_tokens=[False, True, False],
+                vq_parts=[torch.tensor([[1, 2], [3, 4]])],
+                output_codes=torch.tensor([[0, 1], [2, 3]]),
+                prompt_tokens=3,
+                completion_tokens=5,
+                engine_time_s=0.125,
+                finish_reason="stop",
+                audio_samples=[0.1, 0.2],
+            ),
+            {
+                "input_ids": [1, 2, 3],
+                "vq_mask_tokens": [False, True, False],
+                "vq_parts": [torch.tensor([[1, 2], [3, 4]])],
+                "output_codes": torch.tensor([[0, 1], [2, 3]]),
+                "prompt_tokens": 3,
+                "completion_tokens": 5,
+                "engine_time_s": 0.125,
+                "finish_reason": "stop",
+                "audio_samples": [0.1, 0.2],
+            },
         ),
-        HiggsTtsState(
-            prompt_token_ids=[10, 11],
-            reference_codes_delayed=[[1, 2], [3, 4]],
-            target_text="target",
-            reference_text="reference",
-            reference_waveform=torch.tensor([[[0.1, 0.2]]]),
-            reference_code_cache_key="cache-key",
-            uploaded_voice_name="voice",
-            uploaded_voice_created_at=123,
-            top_p=0.9,
-            top_k=10,
-            seed=7,
-            return_logprob=True,
-            return_omni_rollout=True,
-            output_codes_delayed=[[5, 6], [7, 8]],
-            omni_rollout={"tokens": [1, 2], "logprobs": [-0.1, -0.2]},
-            prompt_tokens=2,
-            completion_tokens=4,
-            engine_time_s=0.25,
-            audio_samples=torch.tensor([0.3, 0.4]),
+        (
+            HiggsTtsState(
+                prompt_token_ids=[10, 11],
+                reference_codes_delayed=[[1, 2], [3, 4]],
+                target_text="target",
+                reference_text="reference",
+                reference_waveform=torch.tensor([[[0.1, 0.2]]]),
+                reference_code_cache_key="cache-key",
+                uploaded_voice_name="voice",
+                uploaded_voice_created_at=123,
+                top_p=0.9,
+                top_k=10,
+                seed=7,
+                return_logprob=True,
+                return_omni_rollout=True,
+                output_codes_delayed=[[5, 6], [7, 8]],
+                omni_rollout={"tokens": [1, 2], "logprobs": [-0.1, -0.2]},
+                prompt_tokens=2,
+                completion_tokens=4,
+                engine_time_s=0.25,
+                audio_samples=torch.tensor([0.3, 0.4]),
+            ),
+            {
+                "prompt_token_ids": [10, 11],
+                "reference_codes_delayed": [[1, 2], [3, 4]],
+                "target_text": "target",
+                "reference_text": "reference",
+                "reference_waveform": torch.tensor([[[0.1, 0.2]]]),
+                "reference_code_cache_key": "cache-key",
+                "uploaded_voice_name": "voice",
+                "uploaded_voice_created_at": 123,
+                "top_p": 0.9,
+                "top_k": 10,
+                "seed": 7,
+                "return_logprob": True,
+                "return_omni_rollout": True,
+                "output_codes_delayed": [[5, 6], [7, 8]],
+                "omni_rollout": {"tokens": [1, 2], "logprobs": [-0.1, -0.2]},
+                "prompt_tokens": 2,
+                "completion_tokens": 4,
+                "engine_time_s": 0.25,
+                "audio_samples": torch.tensor([0.3, 0.4]),
+            },
         ),
-        MossTTSState(
-            text="hello",
-            ref_audio={"path": "ref.wav"},
-            ref_text="ref",
-            language="en",
-            instructions="calm",
-            token_count=6,
-            generation_kwargs={"temperature": 0.7},
-            delayed_audio_codes=torch.tensor([[1, 2], [3, 4]]),
-            assistant_start_length=2,
-            prompt_tokens=6,
-            completion_tokens=8,
-            engine_time_s=0.375,
+        (
+            MossTTSState(
+                text="hello",
+                ref_audio={"path": "ref.wav"},
+                ref_text="ref",
+                language="en",
+                instructions="calm",
+                token_count=6,
+                generation_kwargs={"temperature": 0.7},
+                delayed_audio_codes=torch.tensor([[1, 2], [3, 4]]),
+                assistant_start_length=2,
+                prompt_tokens=6,
+                completion_tokens=8,
+                engine_time_s=0.375,
+            ),
+            {
+                "text": "hello",
+                "ref_audio": {"path": "ref.wav"},
+                "ref_text": "ref",
+                "language": "en",
+                "instructions": "calm",
+                "token_count": 6,
+                "generation_kwargs": {"temperature": 0.7},
+                "delayed_audio_codes": torch.tensor([[1, 2], [3, 4]]),
+                "assistant_start_length": 2,
+                "prompt_tokens": 6,
+                "completion_tokens": 8,
+                "engine_time_s": 0.375,
+            },
         ),
-        MossTTSLocalState(
-            text="hello",
-            ref_audio={"path": "ref.wav"},
-            ref_text="ref",
-            language="en",
-            instructions="bright",
-            token_count=5,
-            generation_kwargs={"top_p": 0.8},
-            audio_codes=torch.tensor([[1, 2, 3], [4, 5, 6]]),
-            prompt_tokens=5,
-            completion_tokens=7,
-            engine_time_s=0.5,
+        (
+            MossTTSLocalState(
+                text="hello",
+                ref_audio={"path": "ref.wav"},
+                ref_text="ref",
+                language="en",
+                instructions="bright",
+                token_count=5,
+                generation_kwargs={"top_p": 0.8},
+                audio_codes=torch.tensor([[1, 2, 3], [4, 5, 6]]),
+                prompt_tokens=5,
+                completion_tokens=7,
+                engine_time_s=0.5,
+            ),
+            {
+                "text": "hello",
+                "ref_audio": {"path": "ref.wav"},
+                "ref_text": "ref",
+                "language": "en",
+                "instructions": "bright",
+                "token_count": 5,
+                "generation_kwargs": {"top_p": 0.8},
+                "audio_codes": torch.tensor([[1, 2, 3], [4, 5, 6]]),
+                "prompt_tokens": 5,
+                "completion_tokens": 7,
+                "engine_time_s": 0.5,
+            },
         ),
-        Qwen3TTSState(
-            text="hello",
-            task_type="Instruct",
-            task_type_explicit=True,
-            language="en",
-            voice="voice",
-            instructions="fast",
-            ref_audio={"path": "ref.wav"},
-            ref_text="ref",
-            uploaded_voice_name="uploaded",
-            uploaded_voice_created_at=456,
-            x_vector_only_mode=True,
-            non_streaming_mode=True,
-            generation_kwargs={"seed": 9},
-            seed=9,
-            audio_codes=torch.tensor([[1, 2], [3, 4]]),
-            ref_code_len=1,
-            audio_samples=torch.tensor([0.5, 0.6]),
-            prompt_tokens=9,
-            completion_tokens=11,
-            engine_time_s=0.625,
+        (
+            Qwen3TTSState(
+                text="hello",
+                task_type="Instruct",
+                task_type_explicit=True,
+                language="en",
+                voice="voice",
+                instructions="fast",
+                ref_audio={"path": "ref.wav"},
+                ref_text="ref",
+                uploaded_voice_name="uploaded",
+                uploaded_voice_created_at=456,
+                x_vector_only_mode=True,
+                non_streaming_mode=True,
+                generation_kwargs={"seed": 9},
+                seed=9,
+                audio_codes=torch.tensor([[1, 2], [3, 4]]),
+                ref_code_len=1,
+                audio_samples=torch.tensor([0.5, 0.6]),
+                prompt_tokens=9,
+                completion_tokens=11,
+                engine_time_s=0.625,
+            ),
+            {
+                "text": "hello",
+                "task_type": "Instruct",
+                "task_type_explicit": True,
+                "language": "en",
+                "voice": "voice",
+                "instructions": "fast",
+                "ref_audio": {"path": "ref.wav"},
+                "ref_text": "ref",
+                "uploaded_voice_name": "uploaded",
+                "uploaded_voice_created_at": 456,
+                "x_vector_only_mode": True,
+                "non_streaming_mode": True,
+                "generation_kwargs": {"seed": 9},
+                "seed": 9,
+                "audio_codes": [[1, 2], [3, 4]],
+                "ref_code_len": 1,
+                # float32 tensor -> Python list loses precision (0.6 != 0.6
+                # exactly); derive expected from the same conversion path.
+                "audio_samples": torch.tensor([0.5, 0.6]).tolist(),
+                "prompt_tokens": 9,
+                "completion_tokens": 11,
+                "engine_time_s": 0.625,
+            },
         ),
-        VoxtralTTSState(
-            input_ids=[1, 2],
-            voice="voice",
-            max_new_tokens=16,
-            audio_codes=torch.tensor([[1, 2], [3, 4]]),
-            prompt_tokens=2,
-            completion_tokens=3,
-            engine_time_s=0.75,
-            audio_samples=torch.tensor([0.7, 0.8]),
+        (
+            VoxtralTTSState(
+                input_ids=[1, 2],
+                voice="voice",
+                max_new_tokens=16,
+                audio_codes=torch.tensor([[1, 2], [3, 4]]),
+                prompt_tokens=2,
+                completion_tokens=3,
+                engine_time_s=0.75,
+                audio_samples=torch.tensor([0.7, 0.8]),
+            ),
+            {
+                "input_ids": [1, 2],
+                "voice": "voice",
+                "max_new_tokens": 16,
+                "audio_codes": torch.tensor([[1, 2], [3, 4]]),
+                "prompt_tokens": 2,
+                "completion_tokens": 3,
+                "engine_time_s": 0.75,
+                "audio_samples": torch.tensor([0.7, 0.8]).tolist(),
+            },
         ),
     ]
 
-    for state in states:
+    for state, expected in cases:
         _assert_round_trip_preserves_payload(state)
+        _assert_restored_fields(state, expected)
 
 
 def test_base_requires_to_dict_and_from_dict() -> None:
