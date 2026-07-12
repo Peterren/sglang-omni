@@ -207,6 +207,8 @@ class CompletionAudio:
     id: str
     data: str  # base64
     transcript: str | None = None
+    format: str = "wav"
+    sample_rate: int | None = None
 
 
 @dataclass

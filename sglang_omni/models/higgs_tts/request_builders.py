@@ -28,6 +28,7 @@ class HiggsSGLangRequestData(SGLangARRequestData):
     num_codebooks: int = 8
     codebook_size: int = 1026
     output_codes: list[torch.Tensor] = field(default_factory=list)
+    output_action_masks: list[torch.Tensor] = field(default_factory=list)
     output_logprobs: list[torch.Tensor] = field(default_factory=list)
     output_token_logprobs: list[list[float | int]] = field(default_factory=list)
     return_omni_rollout: bool = False
@@ -71,6 +72,8 @@ def _ref_audio_fingerprint(codes: list[list[int]] | None) -> str | None:
 def build_sglang_higgs_request(
     state: HiggsTtsState, *, request_id: str = ""
 ) -> HiggsSGLangRequestData:
+    if state.return_omni_rollout and not state.return_logprob:
+        raise ValueError("Higgs return_omni_rollout=true requires return_logprob=true")
     input_ids_list = list(state.prompt_token_ids)
     input_ids = torch.tensor(input_ids_list, dtype=torch.long)
 
@@ -170,7 +173,17 @@ def apply_higgs_result(state: HiggsTtsState, data: HiggsSGLangRequestData) -> No
                 f"does not match codes shape {tuple(codes.shape)}"
             )
 
-    raw_token_logprobs = getattr(data, "output_token_logprobs", None)
+    if data.output_action_masks:
+        action_mask = torch.stack(data.output_action_masks, dim=0).to(torch.bool)
+        if action_mask.shape != codes.shape:
+            raise ValueError(
+                f"Higgs rollout action-mask shape {tuple(action_mask.shape)} "
+                f"does not match codes shape {tuple(codes.shape)}"
+            )
+    else:
+        action_mask = torch.empty_like(codes, dtype=torch.bool)
+
+    raw_token_logprobs = data.output_token_logprobs
     if data.return_logprob and raw_token_logprobs is not None:
         if len(raw_token_logprobs) != int(codes.shape[0]):
             raise ValueError(
@@ -202,11 +215,16 @@ def apply_higgs_result(state: HiggsTtsState, data: HiggsSGLangRequestData) -> No
         state.output_token_logprobs = None
 
     if data.return_omni_rollout:
+        if not data.output_action_masks or delayed_logprobs is None:
+            raise ValueError(
+                "Higgs structured rollout is missing aligned action masks or policy logprobs"
+            )
         state.omni_rollout = build_omni_rollout_trace(
             codes,
             num_codebooks=num_codebooks,
             codebook_vocab_size=int(data.codebook_size),
-            delayed_logprobs=delayed_logprobs,
+            policy_logprobs=delayed_logprobs,
+            action_mask=action_mask,
         )
     state.prompt_tokens = len(data.input_ids)
 

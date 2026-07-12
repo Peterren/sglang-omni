@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 from sglang_omni.client.types import (
@@ -50,6 +51,30 @@ def _text_result() -> CompletionResult:
         output_token_logprobs=[[-0.1, 11], [-0.2, 22]],
         weight_version="v3",
     )
+
+
+def _audio_trace() -> dict[str, Any]:
+    return {
+        "version": 2,
+        "model_family": "higgs_tts",
+        "total_action_count": 3,
+        "action_streams": [
+            {
+                "name": "higgs_codes",
+                "stage": "tts_engine",
+                "modality": "audio",
+                "action_type": "multi_discrete",
+                "layout": "time_codebook",
+                "shape": [2, 2],
+                "vocab_size": 1026,
+                "actions": [[10, 1024], [1025, 11]],
+                "policy_logprobs": [[-1.0, 0.0], [-2.0, -3.0]],
+                "action_mask": [[True, False], [True, True]],
+                "codec_content_mask": [[True, False], [False, True]],
+                "channel_ids": [0, 1],
+            }
+        ],
+    }
 
 
 def test_generate_returns_miles_meta_info() -> None:
@@ -160,13 +185,11 @@ def test_generate_rejects_empty_input_ids() -> None:
 def test_generate_returns_omni_rollout_when_present() -> None:
     result = _text_result()
     result.output_token_logprobs = None
-    result.omni_rollout = {
-        "version": 1,
-        "model_family": "qwen3_omni",
-        "stages": ["talker"],
-        "total_action_count": 1,
-        "action_streams": [],
-    }
+    result.output_codebook_tokens = [[10, 1024], [1025, 11]]
+    result.omni_rollout = _audio_trace()
+    result.audio = CompletionAudio(
+        id="a1", data="QUJD", format="wav", sample_rate=24000
+    )
     client = _RolloutClient(result)
     tc = TestClient(create_app(client, model_name="qwen3-omni"))
 
@@ -175,12 +198,76 @@ def test_generate_returns_omni_rollout_when_present() -> None:
         json={
             "prompt": "hi",
             "sampling_params": {},
+            "output_modalities": ["audio"],
             "return_omni_rollout": True,
         },
     )
 
     assert resp.status_code == 200
     assert resp.json()["meta_info"]["omni_rollout"] == result.omni_rollout
+    assert resp.json()["audio"]["sample_rate"] == 24000
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("temperature", 0.7, "temperature must be 1.0"),
+        ("top_p", 0.9, "top_p must be 1.0"),
+        ("top_k", 20, "top_k must be absent"),
+        ("min_p", 0.1, "min_p must be 0.0"),
+        ("repetition_penalty", 1.1, "repetition_penalty must be 1.0"),
+    ],
+)
+def test_generate_rejects_filtered_structured_rollout(
+    field: str, value: float, message: str
+) -> None:
+    client = _RolloutClient(_text_result())
+    tc = TestClient(create_app(client, model_name="higgs-audio"))
+
+    resp = tc.post(
+        "/generate",
+        json={
+            "prompt": "hi",
+            "sampling_params": {field: value},
+            "return_omni_rollout": True,
+        },
+    )
+
+    assert resp.status_code == 400
+    assert message in resp.text
+    assert client.requests == []
+
+
+def test_generate_rejects_structured_rollout_without_logprobs() -> None:
+    client = _RolloutClient(_text_result())
+    tc = TestClient(create_app(client, model_name="higgs-audio"))
+    resp = tc.post(
+        "/generate",
+        json={
+            "prompt": "hi",
+            "return_omni_rollout": True,
+            "return_logprob": False,
+        },
+    )
+    assert resp.status_code == 400
+    assert client.requests == []
+
+
+def test_generate_rejects_structured_audio_without_waveform() -> None:
+    result = _text_result()
+    result.output_token_logprobs = None
+    result.output_codebook_tokens = [[10, 1024], [1025, 11]]
+    result.omni_rollout = _audio_trace()
+    client = _RolloutClient(result)
+    tc = TestClient(create_app(client, model_name="higgs-audio"))
+
+    resp = tc.post(
+        "/generate",
+        json={"prompt": "hi", "return_omni_rollout": True},
+    )
+
+    assert resp.status_code == 500
+    assert "nonempty WAV" in resp.text
 
 
 def test_generate_omits_omni_rollout_when_not_requested() -> None:

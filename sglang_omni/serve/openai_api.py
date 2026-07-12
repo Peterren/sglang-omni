@@ -989,6 +989,7 @@ def _register_generate(app: FastAPI) -> None:
                 status_code=400,
                 detail="stream=true is not supported by /generate yet",
             )
+        _validate_structured_rollout_sampling(req)
 
         request_id = str(uuid.uuid4())
         audio_format = "wav"
@@ -1012,8 +1013,48 @@ def _register_generate(app: FastAPI) -> None:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-        response = _build_generate_response(req, result, audio_format)
+        try:
+            response = _build_generate_response(req, result, audio_format)
+        except HTTPException:
+            raise
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"backend returned an invalid structured rollout: {exc}",
+            ) from exc
         return JSONResponse(content=response.model_dump())
+
+
+def _validate_structured_rollout_sampling(req: RolloutGenerateRequest) -> None:
+    """Keep policy and behavior logprobs identical for the initial v2 trace."""
+    if not req.return_omni_rollout:
+        return
+    if not req.return_logprob:
+        raise HTTPException(
+            status_code=400,
+            detail="return_omni_rollout=true requires return_logprob=true",
+        )
+
+    profiles = [("sampling_params", req.sampling_params)]
+    if req.stage_sampling is not None:
+        profiles.extend(req.stage_sampling.items())
+    for name, params in profiles:
+        invalid: list[str] = []
+        if params.temperature is not None and params.temperature != 1.0:
+            invalid.append("temperature must be 1.0")
+        if params.top_p is not None and params.top_p != 1.0:
+            invalid.append("top_p must be 1.0")
+        if params.top_k is not None and params.top_k > 0:
+            invalid.append("top_k must be absent or non-positive")
+        if params.min_p is not None and params.min_p != 0.0:
+            invalid.append("min_p must be 0.0")
+        if params.repetition_penalty is not None and params.repetition_penalty != 1.0:
+            invalid.append("repetition_penalty must be 1.0")
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"structured rollout {name}: " + "; ".join(invalid),
+            )
 
 
 def _rollout_sampling_to_client(params: RolloutSamplingParams) -> SamplingParams:
@@ -1143,7 +1184,11 @@ def _build_generate_response(
         )
     audio: GenerateAudio | None = None
     if result.audio is not None:
-        audio = GenerateAudio(data=result.audio.data, format=audio_format)
+        audio = GenerateAudio(
+            data=result.audio.data,
+            format=result.audio.format or audio_format,
+            sample_rate=result.audio.sample_rate,
+        )
 
     meta_info = GenerateMetaInfo(
         finish_reason=finish_reason,
@@ -1157,6 +1202,45 @@ def _build_generate_response(
         output_codebook_tokens=result.output_codebook_tokens,
         omni_rollout=result.omni_rollout if req.return_omni_rollout else None,
     )
+    if meta_info.omni_rollout is not None:
+        first_stream = meta_info.omni_rollout.action_streams[0]
+        if completion_tokens != first_stream.shape[0]:
+            raise HTTPException(
+                status_code=500,
+                detail="completion_tokens does not match structured action length",
+            )
+        if (
+            result.output_codebook_tokens is not None
+            and result.output_codebook_tokens != first_stream.actions
+        ):
+            raise HTTPException(
+                status_code=500,
+                detail="output_codebook_tokens does not match structured actions",
+            )
+        structured_audio = any(
+            stream.modality == "audio"
+            for stream in meta_info.omni_rollout.action_streams
+        )
+        if structured_audio:
+            if first_stream.shape[0] == 0:
+                raise HTTPException(
+                    status_code=500,
+                    detail="structured audio rollout contains no emitted action rows",
+                )
+            if (
+                result.audio is None
+                or not result.audio.data
+                or result.audio.format != "wav"
+                or result.audio.sample_rate is None
+                or result.audio.sample_rate <= 0
+            ):
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "structured audio rollout requires a nonempty WAV waveform "
+                        "with a positive sample_rate"
+                    ),
+                )
     return GenerateResponse(text=result.text, audio=audio, meta_info=meta_info)
 
 

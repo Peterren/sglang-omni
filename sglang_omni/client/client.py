@@ -142,6 +142,8 @@ class Client:
                 id=f"audio-{request_id}",
                 data=audio_b64,
                 transcript=full_text if full_text else None,
+                format=audio_format,
+                sample_rate=sample_rate or DEFAULT_SAMPLE_RATE,
             )
 
         return CompletionResult(

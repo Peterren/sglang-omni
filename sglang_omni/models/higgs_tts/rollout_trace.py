@@ -1,8 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Serialize a Higgs rollout (delayed codes + logprobs) into the
-``meta_info.omni_rollout`` schema (issue #780 §1.1.1): one ``higgs_codes``
-discrete action stream with actions, logprobs, and the trainable-action mask.
-"""
+"""Build the version-2 structured Higgs rollout trace."""
 
 from __future__ import annotations
 
@@ -10,9 +7,9 @@ from typing import Any
 
 import torch
 
-from sglang_omni.models.higgs_tts.utils import delay_pattern_action_mask
+from sglang_omni.models.higgs_tts.utils import delay_pattern_codec_content_mask
 
-OMNI_ROLLOUT_VERSION = 1
+OMNI_ROLLOUT_VERSION = 2
 
 
 def build_omni_rollout_trace(
@@ -20,21 +17,13 @@ def build_omni_rollout_trace(
     *,
     num_codebooks: int,
     codebook_vocab_size: int,
-    delayed_logprobs: torch.Tensor | None = None,
+    policy_logprobs: torch.Tensor,
+    action_mask: torch.Tensor,
     model_family: str = "higgs_tts",
     stage: str = "tts_engine",
     stream_name: str = "higgs_codes",
 ) -> dict[str, Any]:
-    """Build the ``meta_info.omni_rollout`` dict from a delayed ``[L, N]`` code
-    matrix and aligned ``[L, N]`` selected-action logprobs (``None`` if not
-    requested).
-
-    The logprob contract is the sampler's canonical Higgs RL signal: fp32
-    selected-action values from full-vocab ``log_softmax(logits / T)`` at the
-    sampled code. Greedy rows (``temperature ~= 0`` or ``top_k == 1``) use raw
-    logits. Raises ``ValueError`` on shape disagreement or a non-finite logprob
-    at a trainable action position.
-    """
+    """Validate and serialize aligned sampled actions, masks, and logprobs."""
     if delayed_codes.ndim != 2:
         raise ValueError(
             f"delayed_codes must be 2-D [L, N], got shape {tuple(delayed_codes.shape)}"
@@ -45,51 +34,51 @@ def build_omni_rollout_trace(
             f"delayed_codes has {N} codebooks but num_codebooks={num_codebooks}"
         )
 
-    action_mask = delay_pattern_action_mask(delayed_codes)  # [L, N] bool
+    if tuple(action_mask.shape) != (L, N):
+        raise ValueError(
+            f"action_mask shape {tuple(action_mask.shape)} != codes shape {(L, N)}"
+        )
+    if tuple(policy_logprobs.shape) != (L, N):
+        raise ValueError(
+            f"policy_logprobs shape {tuple(policy_logprobs.shape)} != "
+            f"codes shape {(L, N)}"
+        )
+    action_mask = action_mask.to(torch.bool)
+    if delayed_codes.numel() and not bool(
+        ((delayed_codes >= 0) & (delayed_codes < codebook_vocab_size)).all()
+    ):
+        raise ValueError("Higgs rollout action is outside the codebook vocabulary")
+    action_logprobs = policy_logprobs[action_mask]
+    if action_logprobs.numel() and not bool(torch.isfinite(action_logprobs).all()):
+        raise ValueError("non-finite policy logprob at a sampled action position")
 
-    if delayed_logprobs is not None:
-        if tuple(delayed_logprobs.shape) != (L, N):
-            raise ValueError(
-                f"delayed_logprobs shape {tuple(delayed_logprobs.shape)} != "
-                f"codes shape {(L, N)}"
-            )
-        # Every trainable action must carry a finite logprob.
-        action_logprobs = delayed_logprobs[action_mask]
-        if action_logprobs.numel() and not bool(torch.isfinite(action_logprobs).all()):
-            raise ValueError(
-                "non-finite logprob at a trainable action position; "
-                "rollout logprob capture is inconsistent with the action mask"
-            )
+    policy_logprobs = torch.where(
+        action_mask,
+        policy_logprobs.to(torch.float32),
+        torch.zeros_like(policy_logprobs, dtype=torch.float32),
+    )
+    codec_content_mask = delay_pattern_codec_content_mask(delayed_codes)
 
     stream: dict[str, Any] = {
         "name": stream_name,
         "stage": stage,
         "modality": "audio",
-        "action_type": "discrete",
-        "layout": "codebook_2d",
-        "flatten_order": "time_major",
+        "action_type": "multi_discrete",
+        "layout": "time_codebook",
         "shape": [int(L), int(N)],
         "vocab_size": int(codebook_vocab_size),
         "actions": delayed_codes.to(torch.long).tolist(),
-        "logprobs": (
-            delayed_logprobs.to(torch.float32).tolist()
-            if delayed_logprobs is not None
-            else None
-        ),
-        "action_mask": action_mask.to(torch.int64).tolist(),
-        # Omitted: action_mask==0 already marks every non-trainable position.
-        "deterministic_mask": None,
+        "policy_logprobs": policy_logprobs.tolist(),
+        "action_mask": action_mask.tolist(),
+        "codec_content_mask": codec_content_mask.tolist(),
         "channel_ids": list(range(N)),
-        "channel_roles": [f"codebook_{c}" for c in range(N)],
     }
 
     return {
         "version": OMNI_ROLLOUT_VERSION,
         "model_family": model_family,
-        "stages": [stage],
         "total_action_count": int(action_mask.sum().item()),
         "action_streams": [stream],
-        "non_action_outputs": [],
     }
 
 

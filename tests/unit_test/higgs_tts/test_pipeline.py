@@ -524,6 +524,7 @@ def test_higgs_model_runner_marks_sampler_finish() -> None:
     runner.model = SimpleNamespace(
         _rid_to_row={"req": 0},
         _output_codes={"req": [torch.tensor([EOC_ID, 1, 2])]},
+        _output_action_masks={"req": [torch.tensor([True, True, True])]},
         _sampler_pool=SimpleNamespace(generation_done=torch.tensor([True])),
     )
     req = SimpleNamespace(
@@ -534,6 +535,7 @@ def test_higgs_model_runner_marks_sampler_finish() -> None:
     data = SimpleNamespace(
         req=req,
         output_codes=[],
+        output_action_masks=[],
         output_logprobs=[],
         return_omni_rollout=False,
         return_logprob=False,
@@ -560,6 +562,7 @@ def test_higgs_model_runner_emits_latched_stream_metadata() -> None:
     runner.model = SimpleNamespace(
         _rid_to_row={"req": 0},
         _output_codes={"req": [torch.tensor([EOC_ID, 1, 2])]},
+        _output_action_masks={"req": [torch.tensor([True, True, True])]},
         _sampler_pool=SimpleNamespace(generation_done=torch.tensor([True])),
     )
     req = SimpleNamespace(
@@ -570,6 +573,7 @@ def test_higgs_model_runner_emits_latched_stream_metadata() -> None:
     data = SimpleNamespace(
         req=req,
         output_codes=[],
+        output_action_masks=[],
         output_logprobs=[],
         return_omni_rollout=False,
         return_logprob=False,
@@ -639,12 +643,14 @@ def test_higgs_model_runner_marks_sampler_finish_cg() -> None:
         _cg_active_step_count=torch.zeros(1, dtype=torch.long),
         _cg_was_done=torch.tensor([False]),
         _cg_codes_BN=torch.tensor([[EOC_ID, 1, 2]]),
-        _cg_collect_staging=torch.zeros((1, 3 + 2), dtype=torch.long),
+        _cg_action_mask_BN=torch.ones((1, 3), dtype=torch.bool),
+        _cg_collect_staging=torch.zeros((1, 2 * 3 + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(1, dtype=torch.int32),
             eoc_countdown=torch.zeros(1, dtype=torch.int32),
             generation_done=torch.zeros(1, dtype=torch.bool),
             last_codes=torch.zeros((1, 3), dtype=torch.long),
+            last_action_mask=torch.zeros((1, 3), dtype=torch.bool),
             step_count=torch.zeros(1, dtype=torch.long),
         ),
     )
@@ -652,6 +658,7 @@ def test_higgs_model_runner_marks_sampler_finish_cg() -> None:
     data = SimpleNamespace(
         req=req,
         output_codes=[],
+        output_action_masks=[],
         output_logprobs=[],
         return_omni_rollout=False,
         return_logprob=False,
@@ -692,13 +699,15 @@ def test_higgs_model_runner_collect_cg_mixed_batch() -> None:
         _cg_active_step_count=torch.zeros(n, dtype=torch.long),
         _cg_was_done=torch.tensor([False, True, False, False]),
         _cg_codes_BN=torch.tensor([[1, 1, 1], [7, 8, 9], [20, 1, 2], [EOC_ID, 3, 4]]),
-        _cg_collect_staging=torch.zeros((n, k + 2), dtype=torch.long),
+        _cg_action_mask_BN=torch.ones((n, k), dtype=torch.bool),
+        _cg_collect_staging=torch.zeros((n, 2 * k + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(n, dtype=torch.int32),
             eoc_countdown=torch.zeros(n, dtype=torch.int32),
             generation_done=torch.zeros(n, dtype=torch.bool),
             step_count=torch.zeros(n, dtype=torch.long),
             last_codes=torch.zeros((n, k), dtype=torch.long),
+            last_action_mask=torch.zeros((n, k), dtype=torch.bool),
         ),
     )
     # row0 chunked, row1 was-done, row2 active (not done), row3 active (EOC done).
@@ -712,6 +721,7 @@ def test_higgs_model_runner_collect_cg_mixed_batch() -> None:
         SimpleNamespace(
             req=r,
             output_codes=[],
+            output_action_masks=[],
             output_logprobs=[],
             return_omni_rollout=False,
             return_logprob=False,
@@ -763,19 +773,22 @@ def test_higgs_model_runner_collects_rollout_logprobs_only_when_requested() -> N
         _cg_active_step_count=torch.zeros(n, dtype=torch.long),
         _cg_was_done=torch.tensor([False]),
         _cg_codes_BN=torch.tensor([[2, 3, 4]]),
-        _cg_collect_staging=torch.zeros((n, k + 2), dtype=torch.long),
+        _cg_action_mask_BN=torch.tensor([[True, False, True]]),
+        _cg_collect_staging=torch.zeros((n, 2 * k + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(n, dtype=torch.int32),
             eoc_countdown=torch.zeros(n, dtype=torch.int32),
             generation_done=torch.zeros(n, dtype=torch.bool),
             step_count=torch.zeros(n, dtype=torch.long),
             last_codes=torch.zeros((n, k), dtype=torch.long),
+            last_action_mask=torch.zeros((n, k), dtype=torch.bool),
         ),
     )
     req = SimpleNamespace(is_chunked=0, finished_reason=None, finished=lambda: False)
     data = SimpleNamespace(
         req=req,
         output_codes=[],
+        output_action_masks=[],
         output_logprobs=[],
         output_token_logprobs=[],
         return_omni_rollout=True,
@@ -799,7 +812,9 @@ def test_higgs_model_runner_collects_rollout_logprobs_only_when_requested() -> N
         -1, torch.tensor([[[2], [3], [4]]])
     )
     assert len(data.output_logprobs) == 1
-    assert torch.allclose(data.output_logprobs[0], expected.squeeze(-1)[0])
+    expected_masked = expected.squeeze(-1)[0]
+    expected_masked[1] = 0.0
+    assert torch.allclose(data.output_logprobs[0], expected_masked)
     assert len(data.output_token_logprobs) == 1
     raw_cb0_logprob, cb0_token = data.output_token_logprobs[0]
     assert raw_cb0_logprob == pytest.approx(float(expected[0, 0, 0].item()))
@@ -813,6 +828,7 @@ def test_higgs_model_runner_skips_already_finished_eager_request() -> None:
     runner.model = SimpleNamespace(
         _rid_to_row={"req": 0},
         _output_codes={"req": [torch.tensor([EOC_ID, 1, 2])]},
+        _output_action_masks={"req": [torch.tensor([True, True, True])]},
         _sampler_pool=SimpleNamespace(generation_done=torch.tensor([True])),
     )
     req = SimpleNamespace(
