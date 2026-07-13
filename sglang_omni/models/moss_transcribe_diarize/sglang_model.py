@@ -94,6 +94,7 @@ class MossTranscribeDiarizeForConditionalGeneration(nn.Module):
         self._encoder_graph_runner = None
         self._compiled_encoder = None
         self._compiled_chunk_buckets: frozenset[int] = frozenset()
+        self._compiled_input_feature_len = 0
 
     def init_encoder_cache(self, max_bytes: int) -> None:
         self._encoder_cache = (
@@ -132,6 +133,13 @@ class MossTranscribeDiarizeForConditionalGeneration(nn.Module):
         self._encoder_graph_runner = runner
 
     def compile_encoder(self, chunk_buckets, input_feature_len: int) -> None:
+        """torch.compile(reduce-overhead) the Whisper encoder, warming one
+        specialization per chunk-count bucket.
+
+        Mutually exclusive with ``init_encoder_graphs``. ``dynamic=False``
+        matches shape exactly, so an off-bucket chunk count or frame length --
+        or a bucket whose warmup fails -- falls back to eager.
+        """
         buckets = sorted({int(b) for b in (chunk_buckets or []) if int(b) >= 1})
         if not buckets:
             return
@@ -139,18 +147,34 @@ class MossTranscribeDiarizeForConditionalGeneration(nn.Module):
         self._compiled_encoder = torch.compile(
             self.whisper_encoder, dynamic=False, mode="reduce-overhead"
         )
-        self._compiled_chunk_buckets = frozenset(buckets)
+        self._compiled_input_feature_len = int(input_feature_len)
         p = next(self.whisper_encoder.parameters())
         frames = int(input_feature_len)
         num_mel_bins = int(self.config.audio_config.num_mel_bins)
         pos = torch.arange((frames - 1) // 2 + 1, device=p.device, dtype=torch.long)
+        warmed: list[int] = []
         with torch.no_grad():
             for n in buckets:
                 feats = torch.zeros(
                     n, num_mel_bins, frames, device=p.device, dtype=p.dtype
                 )
-                for _ in range(3):
-                    self._compiled_encoder(feats, pos, None)
+                try:
+                    for _ in range(3):
+                        self._compiled_encoder(feats, pos, None)
+                except Exception as exc:
+                    logger.warning(
+                        "MOSS-TD encoder torch.compile warmup failed for "
+                        "chunks=%d: %s; that chunk count will run eager",
+                        n,
+                        exc,
+                    )
+                    continue
+                warmed.append(n)
+        self._compiled_chunk_buckets = frozenset(warmed)
+        logger.info(
+            "MOSS-TD encoder torch.compile(reduce-overhead) warmed buckets=%s",
+            warmed,
+        )
 
     def time_merge(self, features: torch.Tensor) -> torch.Tensor:
         batch_size, seq_len, hidden_size = features.shape
@@ -249,6 +273,7 @@ class MossTranscribeDiarizeForConditionalGeneration(nn.Module):
             if (
                 self._compiled_encoder is not None
                 and batched_features.shape[0] in self._compiled_chunk_buckets
+                and batched_features.shape[-1] == self._compiled_input_feature_len
             ):
                 features = self._compiled_encoder(
                     batched_features, encoder_position_ids, forward_batch

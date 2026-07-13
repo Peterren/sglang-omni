@@ -90,9 +90,121 @@ def test_compile_encoder_sets_runner_and_warms_each_bucket(
 
     assert model._compiled_encoder is runner
     assert model._compiled_chunk_buckets == frozenset({1, 2})
+    assert model._compiled_input_feature_len == 6
     assert len(warmups) == 6
     assert {shape[0] for shape in warmups} == {1, 2}
     assert all(shape[1:] == (4, 6) for shape in warmups)
+
+
+def test_compile_encoder_drops_bucket_whose_warmup_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    from sglang_omni.models.moss_transcribe_diarize.sglang_model import (
+        MossTranscribeDiarizeForConditionalGeneration as Model,
+    )
+
+    monkeypatch.setattr(
+        "sglang_omni.models.moss_transcribe_diarize.sglang_model.set_torch_compile_config",
+        lambda: None,
+    )
+
+    def runner(feats, pos, forward_batch):
+        if feats.shape[0] == 2:
+            raise RuntimeError("simulated OOM during warmup")
+
+    monkeypatch.setattr(torch, "compile", lambda module, **kwargs: runner)
+
+    model = SimpleNamespace(
+        whisper_encoder=torch.nn.Linear(4, 4),
+        _compiled_encoder=None,
+        _compiled_chunk_buckets=frozenset(),
+        _compiled_input_feature_len=0,
+        config=SimpleNamespace(audio_config=SimpleNamespace(num_mel_bins=4)),
+    )
+
+    Model.compile_encoder(model, [1, 2], input_feature_len=6)
+
+    assert model._compiled_chunk_buckets == frozenset({1})
+
+
+def _stub_factory_env(monkeypatch: pytest.MonkeyPatch, *, want_cuda_graph: bool):
+    from types import SimpleNamespace
+
+    from sglang_omni.models.moss_transcribe_diarize import stages
+
+    calls = {
+        "init_device_graphs": 0,
+        "compile_encoder": [],
+        "init_encoder_graphs": [],
+    }
+    model = SimpleNamespace(
+        compile_encoder=lambda buckets, feat_len: calls["compile_encoder"].append(
+            (list(buckets), feat_len)
+        ),
+        init_encoder_graphs=lambda buckets, feat_len: calls[
+            "init_encoder_graphs"
+        ].append((list(buckets), feat_len)),
+        init_encoder_cache=lambda n: None,
+    )
+
+    def _bump_init_device_graphs() -> None:
+        calls["init_device_graphs"] += 1
+
+    model_runner = SimpleNamespace(
+        model=model, init_device_graphs=_bump_init_device_graphs
+    )
+    model_worker = SimpleNamespace(model_runner=model_runner)
+    infra = (want_cuda_graph, (model_worker, None, None, None, None, None, None))
+
+    processor = SimpleNamespace(
+        tokenizer=object(),
+        feature_extractor=SimpleNamespace(nb_max_frames=3000),
+    )
+
+    monkeypatch.setattr(
+        stages,
+        "AutoProcessor",
+        SimpleNamespace(from_pretrained=lambda *a, **k: processor),
+    )
+    monkeypatch.setattr(stages, "_default_max_new_tokens", lambda path: 100)
+    monkeypatch.setattr(stages, "_default_context_length", lambda path: 4096)
+    monkeypatch.setattr(stages, "build_generation_batch_overrides", lambda **k: {})
+    monkeypatch.setattr(stages, "build_sglang_server_args", lambda *a, **k: object())
+    monkeypatch.setattr(stages, "validate_generation_batch_policy", lambda **k: None)
+    monkeypatch.setattr(
+        stages, "create_sglang_infrastructure_defer_cuda_graph", lambda *a, **k: infra
+    )
+    monkeypatch.setattr(stages, "init_mm_embedding_cache", lambda n: None)
+    monkeypatch.setattr(
+        stages,
+        "make_moss_transcribe_diarize_scheduler_adapters",
+        lambda **k: (object(), object()),
+    )
+    monkeypatch.setattr(
+        stages,
+        "make_moss_transcribe_diarize_stream_output_builder",
+        lambda **k: object(),
+    )
+    monkeypatch.setattr(stages, "SGLangOutputProcessor", lambda **k: object())
+    monkeypatch.setattr(stages, "ModelRunner", lambda *a, **k: object())
+    monkeypatch.setattr(stages, "OmniScheduler", lambda **k: SimpleNamespace())
+    return calls
+
+
+def test_factory_compiles_encoder_and_skips_cuda_graph_when_flag_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = _stub_factory_env(monkeypatch, want_cuda_graph=True)
+
+    create_sglang_moss_transcribe_diarize_executor(
+        "OpenMOSS-Team/MOSS-Transcribe-Diarize", encoder_torch_compile=True
+    )
+
+    assert len(calls["compile_encoder"]) == 1
+    assert calls["init_encoder_graphs"] == []
+    assert calls["init_device_graphs"] == 1
 
 
 def _repo_not_found(url: str) -> RepositoryNotFoundError:
