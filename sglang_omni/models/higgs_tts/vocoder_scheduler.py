@@ -268,6 +268,13 @@ class HiggsStreamingVocoderScheduler(StreamingVocoderBase[_HiggsStreamState, Non
             final_data["omni_rollout"] = final_state.omni_rollout
         if final_state.weight_version is not None:
             final_data["weight_version"] = final_state.weight_version
+        if final_state.return_logprob or final_state.return_omni_rollout:
+            final_data["processed_input"] = {
+                "input_ids": list(final_state.prompt_token_ids),
+                "model_input_metadata": {
+                    "reference_codes_delayed": final_state.reference_codes_delayed,
+                },
+            }
         return final_data
 
     @staticmethod
@@ -401,6 +408,13 @@ class HiggsStreamingVocoderScheduler(StreamingVocoderBase[_HiggsStreamState, Non
             data["omni_rollout"] = state.omni_rollout
         if state.weight_version is not None:
             data["weight_version"] = state.weight_version
+        if state.return_logprob or state.return_omni_rollout:
+            data["processed_input"] = {
+                "input_ids": list(state.prompt_token_ids),
+                "model_input_metadata": {
+                    "reference_codes_delayed": state.reference_codes_delayed,
+                },
+            }
         payload.data = data
         return payload
 

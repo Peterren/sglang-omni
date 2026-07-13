@@ -22,8 +22,6 @@ def validate_higgs_rollout_sampling(params: dict[str, Any] | None) -> None:
         return
 
     expected = {
-        "temperature": (1.0, None),
-        "top_p": (1.0, None),
         "min_p": (0.0, None),
         "repetition_penalty": (1.0, None),
     }
@@ -31,12 +29,9 @@ def validate_higgs_rollout_sampling(params: dict[str, Any] | None) -> None:
     for name, allowed in expected.items():
         if params.get(name) not in allowed:
             invalid.append(f"{name} must be {allowed[0]}")
-    top_k = params.get("top_k")
-    if top_k is not None and top_k > 0:
-        invalid.append("top_k must be absent or non-positive")
     if invalid:
         raise ValueError(
-            "Higgs action logprobs currently require neutral sampling: "
+            "Higgs action logprobs do not support this sampling transform: "
             + "; ".join(invalid)
         )
 

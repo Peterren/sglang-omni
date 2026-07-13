@@ -62,17 +62,14 @@ def test_build_pretokenized_state_uses_ids_verbatim() -> None:
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("temperature", 0.7),
-        ("top_p", 0.9),
-        ("top_k", 20),
         ("min_p", 0.1),
         ("repetition_penalty", 1.1),
     ],
 )
-def test_build_pretokenized_state_rejects_filtered_action_logprobs(
+def test_build_pretokenized_state_rejects_unsupported_action_logprobs(
     field, value
 ) -> None:
-    with pytest.raises(ValueError, match="neutral sampling"):
+    with pytest.raises(ValueError, match="support this sampling transform"):
         build_pretokenized_state(
             [5, 6, 7],
             {
@@ -81,6 +78,23 @@ def test_build_pretokenized_state_rejects_filtered_action_logprobs(
                 field: value,
             },
         )
+
+
+def test_build_pretokenized_state_accepts_exact_filtered_action_logprobs() -> None:
+    state = build_pretokenized_state(
+        [5, 6, 7],
+        {
+            "return_logprob": True,
+            "return_omni_rollout": True,
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "top_k": 20,
+        },
+    )
+
+    assert state.temperature == 0.7
+    assert state.top_p == 0.9
+    assert state.top_k == 20
 
 
 def test_build_pretokenized_state_defaults_and_roundtrip() -> None:

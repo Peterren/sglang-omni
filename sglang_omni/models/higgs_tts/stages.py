@@ -180,6 +180,16 @@ def create_preprocessing_executor(
         params = payload.request.params or {}
         validate_higgs_rollout_sampling(params)
 
+        if isinstance(raw_inputs, dict):
+            unsupported_media = [
+                key for key in ("images", "audios", "videos") if raw_inputs.get(key)
+            ]
+            if unsupported_media:
+                raise ValueError(
+                    "Higgs TTS does not support /generate input media: "
+                    + ", ".join(unsupported_media)
+                )
+
         if is_pretokenized_prompt(raw_inputs):
             state = build_pretokenized_state(
                 raw_inputs,

@@ -17,7 +17,6 @@ from sglang_omni.models.higgs_tts.config import HiggsTtsPipelineConfig
 from sglang_omni.models.higgs_tts.model_runner import HiggsTTSModelRunner
 from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
 from sglang_omni.models.higgs_tts.request_builders import build_higgs_stream_metadata
-from sglang_omni.models.higgs_tts.sampler import K_MAX
 from sglang_omni.models.higgs_tts.utils import EOC_ID, apply_delay_pattern
 from sglang_omni.models.higgs_tts.vocoder_scheduler import (
     HiggsStreamingVocoderScheduler,
@@ -519,6 +518,31 @@ def test_higgs_preprocessing_url_refs_use_decoded_content_key(monkeypatch) -> No
     assert first_state.reference_code_cache_key == second_state.reference_code_cache_key
 
 
+def test_higgs_preprocessing_rejects_unsupported_generate_media(monkeypatch) -> None:
+    monkeypatch.setattr(stages, "resolve_checkpoint", lambda model_path: model_path)
+    monkeypatch.setattr(stages.Tokenizer, "from_file", lambda _path: object())
+    monkeypatch.setattr(
+        stages,
+        "PreTrainedTokenizerFast",
+        lambda tokenizer_object: object(),
+    )
+    monkeypatch.setattr(stages, "HiggsTokenizerAdapter", lambda _tokenizer: object())
+    preprocess = stages.create_preprocessing_executor("ckpt")._fn
+    payload = StagePayload(
+        request_id="unsupported-media",
+        request=OmniRequest(
+            inputs={
+                "messages": [{"role": "user", "content": "speak"}],
+                "audios": ["input.wav"],
+            }
+        ),
+        data={},
+    )
+
+    with pytest.raises(ValueError, match="does not support /generate input media"):
+        preprocess(payload)
+
+
 def test_higgs_model_runner_marks_sampler_finish() -> None:
     runner = object.__new__(HiggsTTSModelRunner)
     runner._outbox = None
@@ -646,6 +670,7 @@ def test_higgs_model_runner_marks_sampler_finish_cg() -> None:
         _cg_was_done=torch.tensor([False]),
         _cg_codes_BN=torch.tensor([[EOC_ID, 1, 2]]),
         _cg_action_mask_BN=torch.ones((1, 3), dtype=torch.bool),
+        _cg_logprobs_BN=torch.zeros((1, 3), dtype=torch.float32),
         _cg_collect_staging=torch.zeros((1, 2 * 3 + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(1, dtype=torch.int32),
@@ -653,6 +678,7 @@ def test_higgs_model_runner_marks_sampler_finish_cg() -> None:
             generation_done=torch.zeros(1, dtype=torch.bool),
             last_codes=torch.zeros((1, 3), dtype=torch.long),
             last_action_mask=torch.zeros((1, 3), dtype=torch.bool),
+            last_logprobs=torch.zeros((1, 3), dtype=torch.float32),
             step_count=torch.zeros(1, dtype=torch.long),
         ),
     )
@@ -702,6 +728,7 @@ def test_higgs_model_runner_collect_cg_mixed_batch() -> None:
         _cg_was_done=torch.tensor([False, True, False, False]),
         _cg_codes_BN=torch.tensor([[1, 1, 1], [7, 8, 9], [20, 1, 2], [EOC_ID, 3, 4]]),
         _cg_action_mask_BN=torch.ones((n, k), dtype=torch.bool),
+        _cg_logprobs_BN=torch.zeros((n, k), dtype=torch.float32),
         _cg_collect_staging=torch.zeros((n, 2 * k + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(n, dtype=torch.int32),
@@ -710,6 +737,7 @@ def test_higgs_model_runner_collect_cg_mixed_batch() -> None:
             step_count=torch.zeros(n, dtype=torch.long),
             last_codes=torch.zeros((n, k), dtype=torch.long),
             last_action_mask=torch.zeros((n, k), dtype=torch.bool),
+            last_logprobs=torch.zeros((n, k), dtype=torch.float32),
         ),
     )
     # row0 chunked, row1 was-done, row2 active (not done), row3 active (EOC done).
@@ -754,20 +782,15 @@ def test_higgs_model_runner_collect_cg_mixed_batch() -> None:
 
 
 def test_higgs_model_runner_collects_rollout_logprobs_only_when_requested() -> None:
-    n, k, vocab = 1, 3, 8
+    n, k = 1, 3
     runner = object.__new__(HiggsTTSModelRunner)
     runner._outbox = None
     runner._vocoder_target = "vocoder"
-    logits = torch.randn(n, k, vocab)
+    sampled_logprobs = torch.tensor([[-0.25, 0.0, -1.5]])
 
     runner.model = SimpleNamespace(
-        modality_head=SimpleNamespace(
-            generate=lambda hidden: logits[: hidden.shape[0]]
-        ),
         _num_codebooks=k,
         _cg_row_indices=torch.arange(n),
-        _cg_temperature=torch.ones(n),
-        _cg_top_k_buf=torch.full((n,), K_MAX, dtype=torch.long),
         _cg_active_delay_count=torch.zeros(n, dtype=torch.int32),
         _cg_active_eoc_countdown=torch.zeros(n, dtype=torch.int32),
         _cg_active_generation_done=torch.tensor([False]),
@@ -776,6 +799,7 @@ def test_higgs_model_runner_collects_rollout_logprobs_only_when_requested() -> N
         _cg_was_done=torch.tensor([False]),
         _cg_codes_BN=torch.tensor([[2, 3, 4]]),
         _cg_action_mask_BN=torch.tensor([[True, False, True]]),
+        _cg_logprobs_BN=sampled_logprobs,
         _cg_collect_staging=torch.zeros((n, 2 * k + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(n, dtype=torch.int32),
@@ -784,6 +808,7 @@ def test_higgs_model_runner_collects_rollout_logprobs_only_when_requested() -> N
             step_count=torch.zeros(n, dtype=torch.long),
             last_codes=torch.zeros((n, k), dtype=torch.long),
             last_action_mask=torch.zeros((n, k), dtype=torch.bool),
+            last_logprobs=torch.zeros((n, k), dtype=torch.float32),
         ),
     )
     req = SimpleNamespace(is_chunked=0, finished_reason=None, finished=lambda: False)
@@ -809,13 +834,11 @@ def test_higgs_model_runner_collects_rollout_logprobs_only_when_requested() -> N
         [SimpleNamespace(request_id="req", data=data)],
     )
 
-    expected = torch.log_softmax(logits, dim=-1).gather(
-        -1, torch.tensor([[[2], [3], [4]]])
-    )
     assert len(data.output_logprobs) == 1
-    expected_masked = expected.squeeze(-1)[0]
+    expected_masked = sampled_logprobs[0].clone()
     expected_masked[1] = 0.0
     assert torch.allclose(data.output_logprobs[0], expected_masked)
+    assert torch.equal(runner.model._sampler_pool.last_logprobs, sampled_logprobs)
 
 
 def test_higgs_model_runner_skips_already_finished_eager_request() -> None:

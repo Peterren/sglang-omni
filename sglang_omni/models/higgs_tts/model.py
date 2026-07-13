@@ -170,6 +170,7 @@ class HiggsTTSModel(nn.Module):
         )
         self._output_codes: dict[str, list[torch.Tensor]] = {}
         self._output_action_masks: dict[str, list[torch.Tensor]] = {}
+        self._output_logprobs: dict[str, list[torch.Tensor]] = {}
         cg_device = self.backbone.model.embed_tokens.weight.device
         self._cg_row_indices = torch.zeros(
             pool_size, dtype=torch.long, device=cg_device
@@ -189,6 +190,9 @@ class HiggsTTSModel(nn.Module):
         )
         self._cg_action_mask_BN = torch.zeros(
             pool_size, num_codebooks, dtype=torch.bool, device=cg_device
+        )
+        self._cg_logprobs_BN = torch.zeros(
+            pool_size, num_codebooks, dtype=torch.float32, device=cg_device
         )
         # Packs codes | action mask | was_done | generation_done for one D2H copy.
         self._cg_collect_staging = torch.zeros(
@@ -268,6 +272,7 @@ class HiggsTTSModel(nn.Module):
             self._free_rows.append(row)
         self._output_codes.pop(req_id, None)
         self._output_action_masks.pop(req_id, None)
+        self._output_logprobs.pop(req_id, None)
 
     def reset_request(self, req_id: str) -> None:
         self.release_row(req_id)
@@ -352,6 +357,9 @@ class HiggsTTSModel(nn.Module):
             self._output_action_masks.setdefault(req_ids[b], []).append(
                 self._sampler_pool.last_action_mask[row_indices[b]].clone()
             )
+            self._output_logprobs.setdefault(req_ids[b], []).append(
+                self._sampler_pool.last_logprobs[row_indices[b]].clone()
+            )
 
         text_vocab_size = self.backbone.config.vocab_size
         return torch.zeros(
@@ -392,6 +400,7 @@ class HiggsTTSModel(nn.Module):
             new_last_codes_BN,
             new_step_count_B,
             action_mask_BN,
+            logprobs_BN,
         ) = batched_step_direct(
             logits_BNV,
             delay_count_B,
@@ -415,6 +424,7 @@ class HiggsTTSModel(nn.Module):
         self._cg_active_last_codes[:batch_size] = new_last_codes_BN
         self._cg_codes_BN[:batch_size] = codes_BN
         self._cg_action_mask_BN[:batch_size] = action_mask_BN
+        self._cg_logprobs_BN[:batch_size] = logprobs_BN
 
         text_vocab_size = self.backbone.config.vocab_size
         return torch.zeros(

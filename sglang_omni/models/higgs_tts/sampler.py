@@ -38,6 +38,7 @@ class HiggsSamplerState:
     generation_done: bool = False
     last_codes: torch.Tensor | None = None
     last_action_mask: torch.Tensor | None = None
+    last_logprobs: torch.Tensor | None = None
 
 
 class HiggsBatchedSamplerState:
@@ -86,6 +87,12 @@ class HiggsBatchedSamplerState:
             dtype=torch.bool,
             device=self.device,
         )
+        self.last_logprobs = torch.zeros(
+            self.max_batch_size,
+            self.num_codebooks,
+            dtype=torch.float32,
+            device=self.device,
+        )
         # Per-request seed (``NO_SEED`` = unseeded) and monotonic AR step, used
         # to seed each ``(step, codebook)`` draw reproducibly.
         self.seeds = torch.full(
@@ -102,6 +109,7 @@ class HiggsBatchedSamplerState:
         self.generation_done[row] = False
         self.last_codes[row].zero_()
         self.last_action_mask[row].zero_()
+        self.last_logprobs[row].zero_()
         self.seeds[row] = NO_SEED
         self.step_count[row] = 0
 
@@ -118,6 +126,7 @@ class HiggsBatchedSamplerState:
             generation_done=bool(self.generation_done[row].item()),
             last_codes=None if delay == 0 else self.last_codes[row],
             last_action_mask=None if delay == 0 else self.last_action_mask[row],
+            last_logprobs=None if delay == 0 else self.last_logprobs[row],
         )
 
     def write_row(self, row: int, state: HiggsSamplerState) -> None:
@@ -133,21 +142,26 @@ class HiggsBatchedSamplerState:
             self.last_action_mask[row].copy_(
                 state.last_action_mask.to(self.last_action_mask.dtype)
             )
+        if state.last_logprobs is not None:
+            self.last_logprobs[row].copy_(
+                state.last_logprobs.to(self.last_logprobs.dtype)
+            )
 
 
 _GREEDY_TEMP_THRESHOLD = 1e-5
 
 
-def _sample_independent(
+def _sample_independent_with_logprobs(
     logits_NV: torch.Tensor,
     *,
     temperature: float,
     top_p: float | None,
     top_k: int | None,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     # Short-circuit greedy to dodge the inf/NaN from logits / tiny_temperature.
-    if temperature <= _GREEDY_TEMP_THRESHOLD:
-        return logits_NV.argmax(dim=-1)
+    if temperature <= _GREEDY_TEMP_THRESHOLD or top_k == 1:
+        codes = logits_NV.argmax(dim=-1)
+        return codes, torch.zeros_like(codes, dtype=torch.float32)
 
     logits = logits_NV / temperature
 
@@ -168,7 +182,24 @@ def _sample_independent(
         logits = torch.where(scatter, float("-inf"), logits)
 
     probs = logits.softmax(dim=-1)
-    return probs.multinomial(num_samples=1).squeeze(-1)
+    codes = probs.multinomial(num_samples=1).squeeze(-1)
+    logprobs = probs.gather(-1, codes.unsqueeze(-1)).squeeze(-1).log()
+    return codes, logprobs
+
+
+def _sample_independent(
+    logits_NV: torch.Tensor,
+    *,
+    temperature: float,
+    top_p: float | None,
+    top_k: int | None,
+) -> torch.Tensor:
+    return _sample_independent_with_logprobs(
+        logits_NV,
+        temperature=temperature,
+        top_p=top_p,
+        top_k=top_k,
+    )[0]
 
 
 def step(
@@ -204,14 +235,18 @@ def step(
         state.last_action_mask = torch.zeros(
             N, dtype=torch.bool, device=logits_NV.device
         )
+        state.last_logprobs = torch.zeros(
+            N, dtype=torch.float32, device=logits_NV.device
+        )
         return torch.full((N,), STOP_CODE, dtype=torch.long, device=logits_NV.device)
 
-    sampled_N = _sample_independent(
+    sampled_N, sampled_logprobs_N = _sample_independent_with_logprobs(
         logits_NV,
         temperature=temperature,
         top_p=top_p,
         top_k=top_k,
-    ).to(torch.long)
+    )
+    sampled_N = sampled_N.to(torch.long)
 
     codes_N = sampled_N.clone()
     cb_idx = torch.arange(N, device=logits_NV.device)
@@ -251,6 +286,11 @@ def step(
         state.delay_count += 1
 
     state.last_action_mask = action_mask_N.clone()
+    state.last_logprobs = torch.where(
+        action_mask_N,
+        sampled_logprobs_N.to(torch.float32),
+        torch.zeros_like(sampled_logprobs_N, dtype=torch.float32),
+    )
 
     if not state.generation_done:
         state.last_codes = codes_N.clone()
@@ -258,35 +298,18 @@ def step(
     return codes_N
 
 
-def _sample_independent_batched(
+def _filtered_probs_batched(
     logits_BNV: torch.Tensor,
     *,
     temperature: torch.Tensor,
     top_p: torch.Tensor | None,
     top_k_buf: torch.Tensor | None = None,
-    seeds_B: torch.Tensor | None = None,
-    step_B: torch.Tensor | None = None,
-) -> torch.Tensor:
-    """Batched ``[B, N, V] → [B, N]`` sampler.
-
-    Greedy rows short-circuit to ``argmax`` over the raw logits — mirroring the
-    per-row :func:`_sample_independent` — so they are RNG-free and reproducible.
-    A row is greedy when ``temperature <= _GREEDY_TEMP_THRESHOLD`` (or
-    ``top_k == 1``). Without this, multinomial on the near-one-hot distribution
-    that ``temperature≈0`` produces breaks near-ties differently run-to-run,
-    making ``temperature=0`` decode non-deterministic. The selection is
-    branchless (compute both, then ``torch.where``) because this runs inside the
-    captured CUDA graph, where data-dependent host control flow is illegal.
-    """
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return flattened filtered probabilities and the per-row greedy mask."""
     B, N, V = logits_BNV.shape
-
-    # Per-row greedy mask (broadcast over codebooks). argmax over RAW logits,
-    # exactly as _sample_independent does.
     greedy_B1 = (temperature <= _GREEDY_TEMP_THRESHOLD).view(B, 1)
     if top_k_buf is not None:
         greedy_B1 = greedy_B1 | (top_k_buf == 1).view(B, 1)
-    argmax_BN = logits_BNV.argmax(dim=-1)
-
     safe_temp = temperature.clamp(min=_GREEDY_TEMP_THRESHOLD).view(B, 1, 1)
     logits = logits_BNV / safe_temp
 
@@ -305,6 +328,27 @@ def _sample_independent_batched(
     if top_p is not None:
         tp = top_p.view(B, 1).expand(B, N).reshape(B * N).to(torch.float32).contiguous()
         probs = _fused_top_p_renorm(probs, tp)
+    return probs, greedy_B1
+
+
+def _sample_independent_batched_with_logprobs(
+    logits_BNV: torch.Tensor,
+    *,
+    temperature: torch.Tensor,
+    top_p: torch.Tensor | None,
+    top_k_buf: torch.Tensor | None = None,
+    seeds_B: torch.Tensor | None = None,
+    step_B: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Sample ``[B, N]`` actions and return exact behavior logprobs."""
+    B, N, _ = logits_BNV.shape
+    probs, greedy_B1 = _filtered_probs_batched(
+        logits_BNV,
+        temperature=temperature,
+        top_p=top_p,
+        top_k_buf=top_k_buf,
+    )
+    argmax_BN = logits_BNV.argmax(dim=-1)
 
     codes_flat = probs.multinomial(num_samples=1).squeeze(-1)
     if seeds_B is not None:
@@ -319,8 +363,33 @@ def _sample_independent_batched(
         has_seed = (seeds_B >= 0).view(B, 1).expand(B, N).reshape(B * N)
         codes_flat = torch.where(has_seed, seeded_flat, codes_flat)
     sampled_BN = codes_flat.view(B, N)
+    codes_BN = torch.where(greedy_B1, argmax_BN, sampled_BN).to(torch.long)
+    selected_probs = probs.gather(-1, codes_flat.unsqueeze(-1)).squeeze(-1).view(B, N)
+    logprobs_BN = torch.where(
+        greedy_B1,
+        torch.zeros_like(selected_probs),
+        selected_probs.log(),
+    )
+    return codes_BN, logprobs_BN
 
-    return torch.where(greedy_B1, argmax_BN, sampled_BN).to(torch.long)
+
+def _sample_independent_batched(
+    logits_BNV: torch.Tensor,
+    *,
+    temperature: torch.Tensor,
+    top_p: torch.Tensor | None,
+    top_k_buf: torch.Tensor | None = None,
+    seeds_B: torch.Tensor | None = None,
+    step_B: torch.Tensor | None = None,
+) -> torch.Tensor:
+    return _sample_independent_batched_with_logprobs(
+        logits_BNV,
+        temperature=temperature,
+        top_p=top_p,
+        top_k_buf=top_k_buf,
+        seeds_B=seeds_B,
+        step_B=step_B,
+    )[0]
 
 
 def selected_token_logprobs(
@@ -328,22 +397,21 @@ def selected_token_logprobs(
     codes_BN: torch.Tensor,
     *,
     temperature: torch.Tensor,
+    top_p: torch.Tensor | None = None,
     top_k_buf: torch.Tensor | None = None,
 ) -> torch.Tensor:
-    """Selected-action log-prob ``[B, N]`` of the sampled codes"""
-    B = logits_BNV.shape[0]
-    logits = logits_BNV.float()
-
-    greedy_B1 = (temperature <= _GREEDY_TEMP_THRESHOLD).view(B, 1)
-    if top_k_buf is not None:
-        greedy_B1 = greedy_B1 | (top_k_buf == 1).view(B, 1)
-
-    safe_temp = temperature.clamp(min=_GREEDY_TEMP_THRESHOLD).view(B, 1, 1)
-    eff_temp = torch.where(
-        greedy_B1.unsqueeze(-1), torch.ones_like(safe_temp), safe_temp
+    """Evaluate selected actions under the exact filtered behavior distribution."""
+    B, N, _ = logits_BNV.shape
+    probs, greedy_B1 = _filtered_probs_batched(
+        logits_BNV,
+        temperature=temperature,
+        top_p=top_p,
+        top_k_buf=top_k_buf,
     )
-    logprobs_full = torch.log_softmax(logits / eff_temp, dim=-1)
-    return logprobs_full.gather(-1, codes_BN.long().unsqueeze(-1)).squeeze(-1)
+    selected = (
+        probs.gather(-1, codes_BN.reshape(B * N, 1).long()).squeeze(-1).view(B, N)
+    )
+    return torch.where(greedy_B1, torch.zeros_like(selected), selected.log())
 
 
 def batched_step(
@@ -378,6 +446,7 @@ def batched_step(
         new_last_codes,
         new_step_count,
         action_mask_BN,
+        logprobs_BN,
     ) = batched_step_direct(
         logits_BNV,
         delay_count,
@@ -398,6 +467,7 @@ def batched_step(
     state.generation_done[row_indices] = new_generation_done
     state.last_codes[row_indices] = new_last_codes
     state.last_action_mask[row_indices] = action_mask_BN
+    state.last_logprobs[row_indices] = logprobs_BN
     state.step_count[row_indices] = new_step_count
 
     return out_codes
@@ -425,6 +495,7 @@ def batched_step_direct(
     torch.Tensor,
     torch.Tensor,
     torch.Tensor,
+    torch.Tensor,
 ]:
     """CG-friendly state machine: state in/out as direct ``[B, ...]`` tensors,
     no ``state``/``row_indices`` indirection. Caller persists the returned
@@ -439,7 +510,7 @@ def batched_step_direct(
     delay_count = delay_count.to(torch.long)
     eoc_countdown = eoc_countdown.to(torch.long)
 
-    sampled_BN = _sample_independent_batched(
+    sampled_BN, sampled_logprobs_BN = _sample_independent_batched_with_logprobs(
         logits_BNV,
         temperature=temperature,
         top_p=top_p,
@@ -506,6 +577,11 @@ def batched_step_direct(
     stop = torch.full_like(codes_BN, STOP_CODE)
     out_codes = torch.where(generation_done.unsqueeze(-1), stop, codes_BN)
     action_mask_BN = action_mask_BN & active.unsqueeze(-1)
+    logprobs_BN = torch.where(
+        action_mask_BN,
+        sampled_logprobs_BN.to(torch.float32),
+        torch.zeros_like(sampled_logprobs_BN, dtype=torch.float32),
+    )
     return (
         out_codes,
         new_delay_count,
@@ -514,6 +590,7 @@ def batched_step_direct(
         new_last_codes,
         new_step_count,
         action_mask_BN,
+        logprobs_BN,
     )
 
 

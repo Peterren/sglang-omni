@@ -18,7 +18,7 @@ from sglang.srt.managers.schedule_batch import FINISH_MATCHED_TOKEN
 
 from sglang_omni.model_runner.base import ModelRunner
 from sglang_omni.models.higgs_tts.model import _flat_sampling_attr
-from sglang_omni.models.higgs_tts.sampler import K_MAX, selected_token_logprobs
+from sglang_omni.models.higgs_tts.sampler import K_MAX
 from sglang_omni.models.higgs_tts.text_tokenizer import AUDIO_PLACEHOLDER_ID
 from sglang_omni.models.higgs_tts.utils import EOC_ID
 from sglang_omni.scheduling.messages import OutgoingMessage
@@ -290,6 +290,7 @@ class HiggsTTSModelRunner(ModelRunner):
         pool.generation_done[rows_t] = model._cg_active_generation_done[:n_real]
         pool.last_codes[rows_t] = model._cg_active_last_codes[:n_real]
         pool.last_action_mask[rows_t] = model._cg_action_mask_BN[:n_real]
+        pool.last_logprobs[rows_t] = model._cg_logprobs_BN[:n_real]
         pool.step_count[rows_t] = model._cg_active_step_count[:n_real]
 
         # Pack codes, action masks, and terminal flags into one D2H transfer.
@@ -488,67 +489,32 @@ class HiggsTTSModelRunner(ModelRunner):
         return any(self._request_captures_rollout_logprobs(req) for req in requests)
 
     def _decode_step_logprob_bundle(self, result: Any, n_real: int) -> torch.Tensor:
-        model = self.model
-        hidden_states = result.logits_output.hidden_states
-        if hidden_states.ndim == 3:
-            hidden_states = hidden_states[:, -1, :]
-        logits_BNV = model.modality_head.generate(hidden_states[:n_real]).to(
-            torch.float32
-        )
-        codes_BN = model._cg_codes_BN[:n_real].clamp_min(0)
-        scaled_logprobs = selected_token_logprobs(
-            logits_BNV,
-            codes_BN,
-            temperature=model._cg_temperature[:n_real],
-            top_k_buf=model._cg_top_k_buf[:n_real],
-        )
-        return scaled_logprobs
+        del result
+        return self.model._cg_logprobs_BN[:n_real]
 
     def _prefill_step_logprob_bundle(
         self, result: Any, requests: list, forward_batch: Any | None
     ) -> torch.Tensor:
-        del forward_batch
+        del result, forward_batch
         model = self.model
-        hidden_states = result.logits_output.hidden_states
-        if hidden_states.ndim == 3:
-            hidden_states = hidden_states[:, -1, :]
-        logits_BNV = model.modality_head.generate(hidden_states[: len(requests)]).to(
-            torch.float32
-        )
-        codes = []
-        temps = []
-        top_ks = []
+        logprob_rows = []
         for sched_req in requests:
             rid = sched_req.request_id
-            codes_log = model._output_codes.get(rid)
-            if codes_log:
-                codes.append(codes_log[-1])
+            logprobs = model._output_logprobs.get(rid)
+            if logprobs:
+                logprob_rows.append(logprobs[-1])
             else:
-                codes.append(
+                logprob_rows.append(
                     torch.zeros(
                         model._num_codebooks,
-                        dtype=torch.long,
-                        device=logits_BNV.device,
+                        dtype=torch.float32,
+                        device=model._cg_logprobs_BN.device,
                     )
                 )
-            sp = sched_req.data.req.sampling_params
-            temps.append(float(getattr(sp, "temperature", 1.0)))
-            top_k = getattr(sp, "top_k", None)
-            top_ks.append(
-                int(top_k) if (top_k is not None and int(top_k) > 0) else K_MAX
-            )
-        codes_BN = torch.stack(
-            [c.to(device=logits_BNV.device, dtype=torch.long) for c in codes]
+        return torch.stack(
+            [row.to(torch.float32) for row in logprob_rows],
+            dim=0,
         )
-        temperature = torch.tensor(temps, dtype=torch.float32, device=logits_BNV.device)
-        top_k_buf = torch.tensor(top_ks, dtype=torch.long, device=logits_BNV.device)
-        scaled_logprobs = selected_token_logprobs(
-            logits_BNV,
-            codes_BN.clamp_min(0),
-            temperature=temperature,
-            top_k_buf=top_k_buf,
-        )
-        return scaled_logprobs
 
     @staticmethod
     def _mark_sampler_finished(req: Any, generation_done: bool) -> None:

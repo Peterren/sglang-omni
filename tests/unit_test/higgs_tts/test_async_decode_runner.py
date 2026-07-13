@@ -74,6 +74,7 @@ def _build_runner(
         _cg_was_done=torch.tensor(was_done),
         _cg_codes_BN=torch.tensor(codes_BN),
         _cg_action_mask_BN=torch.tensor(action_mask_BN, dtype=torch.bool),
+        _cg_logprobs_BN=torch.zeros((n, n_codebooks), dtype=torch.float32),
         _cg_collect_staging=torch.zeros((n, 2 * n_codebooks + 2), dtype=torch.long),
         _sampler_pool=SimpleNamespace(
             delay_count=torch.zeros(n, dtype=torch.int32),
@@ -81,6 +82,7 @@ def _build_runner(
             generation_done=torch.zeros(n, dtype=torch.bool),
             last_codes=torch.zeros((n, n_codebooks), dtype=torch.long),
             last_action_mask=torch.zeros((n, n_codebooks), dtype=torch.bool),
+            last_logprobs=torch.zeros((n, n_codebooks), dtype=torch.float32),
             step_count=torch.zeros(n, dtype=torch.long),
         ),
     )
@@ -376,6 +378,7 @@ def test_async_real_pinned_path_matches_sync():
                 [[1, 1, 1], [7, 8, 9], [20, 1, 2], [EOC_ID, 3, 4]], device=dev
             ),
             _cg_action_mask_BN=torch.ones((n, 3), dtype=torch.bool, device=dev),
+            _cg_logprobs_BN=torch.zeros((n, 3), dtype=torch.float32, device=dev),
             _cg_collect_staging=torch.zeros(
                 (n, 2 * 3 + 2), dtype=torch.long, device=dev
             ),
@@ -385,6 +388,7 @@ def test_async_real_pinned_path_matches_sync():
                 generation_done=torch.zeros(n, dtype=torch.bool, device=dev),
                 last_codes=torch.zeros((n, 3), dtype=torch.long, device=dev),
                 last_action_mask=torch.zeros((n, 3), dtype=torch.bool, device=dev),
+                last_logprobs=torch.zeros((n, 3), dtype=torch.float32, device=dev),
                 step_count=torch.zeros(n, dtype=torch.long, device=dev),
             ),
         )

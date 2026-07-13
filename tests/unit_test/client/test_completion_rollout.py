@@ -70,6 +70,28 @@ def test_completion_surfaces_omni_rollout() -> None:
     assert out.omni_rollout == omni_rollout
 
 
+def test_completion_surfaces_processed_input() -> None:
+    processed_input = {
+        "input_ids": [1, 101, 101, 2],
+        "model_input_metadata": {"image": {"image_grid_thw": [[1, 2, 4]]}},
+    }
+    client = Client(
+        _SubmitStubCoordinator(
+            {
+                "text": "hello",
+                "finish_reason": "stop",
+                "processed_input": processed_input,
+            }
+        )
+    )
+
+    out = asyncio.run(
+        client.completion(GenerateRequest(prompt="hi", stream=False), request_id="r1")
+    )
+
+    assert out.processed_input == processed_input
+
+
 def test_completion_without_logprobs_leaves_fields_none() -> None:
     result = {"text": "hello", "finish_reason": "stop"}
     client = Client(_SubmitStubCoordinator(result))
