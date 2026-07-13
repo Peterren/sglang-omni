@@ -16,6 +16,12 @@ tests/
 └── unit_test/
     ├── benchmarks/
     │   └── test_dataset_regressions.py
+    ├── test_tune_ci_thresholds.py
+    ├── quantization/
+    │   ├── test_autoround.py
+    │   ├── test_fp8.py
+    │   ├── test_integration.py
+    │   └── test_weight_preprocess.py
     ├── fixtures/
     │   ├── fish_fakes.py
     │   ├── pipeline_fakes.py
@@ -47,7 +53,6 @@ tests/
     │   ├── test_example_launcher.py
     │   ├── test_logit_shaping.py
     │   ├── test_pipeline.py
-    │   ├── test_quantization.py
     │   ├── test_sglang_ar_budget.py
     │   ├── test_streaming.py
     │   ├── test_talker.py
@@ -104,7 +109,8 @@ tests/
     ├── scheduling/
     │   ├── test_engine_factory.py
     │   ├── test_pipeline_state.py
-    │   └── test_reference_encoder.py
+    │   ├── test_reference_encoder.py
+    │   └── test_streaming_vocoder.py
     ├── fishaudio_s2_pro/
     │   ├── test_pipeline.py
     │   ├── test_streaming_vocoder.py
@@ -291,6 +297,17 @@ that happened to contain an older version of the test.
   - scheduler callable contracts, including sync wrappers and callable objects
     that return awaitables.
 - `unit_test/benchmarks/`: Benchmark dataset/loading regression tests.
+- `unit_test/test_tune_ci_thresholds.py`: Unit tests for
+  `.claude/skills/tune-ci-thresholds/tune.py` calibration tooling — sample-scope
+  discovery (`CONCURRENCY` must not be treated as a sample count), GPU cleanup
+  scoping for concurrent calibration groups, metric dispersion/outlier reporting,
+  Wilson accuracy intervals, and `merge-runs` validation for disjoint strict-ready
+  partitions. Run with the rest of the fast suite:
+
+  ```bash
+  pytest tests/unit_test/test_tune_ci_thresholds.py -q
+  ```
+
 - `unit_test/utils/`: Shared utility tests:
   - audio loading helpers for data URIs, file URIs, HTTP URLs, timeout fallback,
     and mono/channel preservation.
@@ -428,6 +445,23 @@ that happened to contain an older version of the test.
   - concurrent emit safety under multiple threads
   - lifecycle (start / stop / run_id mismatch / stage substitution)
   - timeline reconstruction, stage breakdown, hop breakdown, malformed-line tolerance.
+
+- `unit_test/quantization/`: Tests for the compatibility layer on top of
+  SGLang's native quantization (`sglang_omni/quantization.py`):
+  - `resolve_quant_config` discovery from root/nested sub-configs and
+    `compression_config`, plus edge cases (missing/empty quantization_config)
+  - FP8 detection (with/without weight_block_size), weight_scale_inv reciprocal
+    conversion, and error handling (empty/zero/non-finite/non-float scale tensors)
+  - AutoRound stage-prefix normalization for block_name_to_quantize (string
+    input is rejoined as a string; list input is normalized in place and
+    stays a list) and extra_config regex keys via `normalize_quant_config`
+  - `get_weight_preprocessor` contract: identity by default (native block-FP8,
+    AutoRound), FP8 reciprocal preprocessor only when `fp8_scale_inverted=True`,
+    nested config traversal
+  - model_worker integration: `_apply_omni_quantization_adapters` triggers
+    stage-local normalization from hf_config and nested text_config only when
+    needed
+
 
 - `unit_test/fixtures/`: Shared fakes. Single-test
   helpers should stay local until a second test needs them.
