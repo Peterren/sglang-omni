@@ -37,12 +37,9 @@ def test_build_pretokenized_state_uses_ids_verbatim() -> None:
         [5, 6, 7],
         {
             "max_new_tokens": 64,
-            "temperature": 0.8,
-            "top_p": 0.9,
-            "top_k": 50,
+            "temperature": 1.0,
             "seed": 1,
             "return_logprob": True,
-            "return_omni_rollout": True,
         },
     )
 
@@ -53,12 +50,31 @@ def test_build_pretokenized_state_uses_ids_verbatim() -> None:
     assert state.target_text is None
     assert state.reference_text is None
     assert state.max_new_tokens == 64
-    assert state.temperature == 0.8
-    assert state.top_p == 0.9
-    assert state.top_k == 50
+    assert state.temperature == 1.0
+    assert state.top_p is None
+    assert state.top_k is None
     assert state.seed == 1
     assert state.return_logprob is True
-    assert state.return_omni_rollout is True
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("temperature", 0.7),
+        ("top_p", 0.9),
+        ("top_k", 20),
+        ("min_p", 0.1),
+        ("repetition_penalty", 1.1),
+    ],
+)
+def test_build_pretokenized_state_rejects_filtered_action_logprobs(
+    field, value
+) -> None:
+    with pytest.raises(ValueError, match="neutral sampling"):
+        build_pretokenized_state(
+            [5, 6, 7],
+            {"return_logprob": True, field: value},
+        )
 
 
 def test_build_pretokenized_state_defaults_and_roundtrip() -> None:

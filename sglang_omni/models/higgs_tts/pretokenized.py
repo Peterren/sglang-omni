@@ -8,6 +8,32 @@ from typing import Any
 from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
 
 
+def validate_higgs_rollout_sampling(params: dict[str, Any] | None) -> None:
+    """Reject sampling transforms whose behavior logprobs are not implemented."""
+    params = params or {}
+    if not bool(params.get("return_logprob", False)):
+        return
+
+    expected = {
+        "temperature": (1.0, None),
+        "top_p": (1.0, None),
+        "min_p": (0.0, None),
+        "repetition_penalty": (1.0, None),
+    }
+    invalid = []
+    for name, allowed in expected.items():
+        if params.get(name) not in allowed:
+            invalid.append(f"{name} must be {allowed[0]}")
+    top_k = params.get("top_k")
+    if top_k is not None and top_k > 0:
+        invalid.append("top_k must be absent or non-positive")
+    if invalid:
+        raise ValueError(
+            "Higgs action logprobs currently require neutral sampling: "
+            + "; ".join(invalid)
+        )
+
+
 def is_pretokenized_prompt(inputs: Any) -> bool:
     """Return true for the ``/generate input_ids`` rollout shape."""
     return (
@@ -26,6 +52,7 @@ def build_pretokenized_state(
 ) -> HiggsTtsState:
     """Build a Higgs state that uses caller-provided prompt ids verbatim."""
     params = params or {}
+    validate_higgs_rollout_sampling(params)
     return HiggsTtsState(
         prompt_token_ids=list(token_ids),
         reference_codes_delayed=None,
@@ -43,8 +70,11 @@ def build_pretokenized_state(
         top_k=params.get("top_k"),
         seed=params.get("seed"),
         return_logprob=bool(params.get("return_logprob", False)),
-        return_omni_rollout=bool(params.get("return_omni_rollout", False)),
     )
 
 
-__all__ = ["build_pretokenized_state", "is_pretokenized_prompt"]
+__all__ = [
+    "build_pretokenized_state",
+    "is_pretokenized_prompt",
+    "validate_higgs_rollout_sampling",
+]

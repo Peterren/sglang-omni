@@ -1135,9 +1135,6 @@ _ADMIN_PATHS_THAT_NEED_AUTH = [
     ("POST", "/model_info"),
     ("POST", "/pause_generation"),
     ("POST", "/continue_generation"),
-    ("GET", "/flush_cache"),
-    ("POST", "/begin_weight_update"),
-    ("POST", "/end_weight_update"),
     ("POST", "/update_weights_from_disk"),
     ("POST", "/update_weights_from_tensor"),
     ("POST", "/update_weights_from_distributed"),
@@ -1168,21 +1165,6 @@ def test_admin_routes_open_when_no_key_configured() -> None:
 
     resp = client.post("/pause_generation", json={})
     assert resp.status_code == 200
-
-
-def test_sglang_compatibility_control_routes() -> None:
-    admin = AdminClient()
-    client = TestClient(create_app(admin, model_name="qwen3-omni"))
-
-    assert client.get("/health_generate").status_code == 200
-    flush = client.get("/flush_cache")
-    begin = client.post("/begin_weight_update", json={})
-    end = client.post("/end_weight_update", json={})
-
-    assert flush.status_code == 200
-    assert begin.json()["data"]["session_required"] is False
-    assert end.json()["data"]["session_required"] is False
-    assert admin.calls == [("flush_cache", {}, None, 60.0)]
 
 
 def test_admin_routes_require_bearer_token_when_key_configured() -> None:

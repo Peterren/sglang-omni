@@ -21,17 +21,6 @@ class _SubmitStubCoordinator:
         return self._result
 
 
-class _CapturingSubmitCoordinator(_SubmitStubCoordinator):
-    def __init__(self, result: Any) -> None:
-        super().__init__(result)
-        self.request = None
-
-    async def submit(self, request_id: str, omni_request: Any) -> Any:
-        del request_id
-        self.request = omni_request
-        return self._result
-
-
 class _StreamStubCoordinator:
     """Streaming coordinator stub: yields the given StreamMessages in order."""
 
@@ -49,7 +38,6 @@ def test_completion_surfaces_logprobs_and_weight_version() -> None:
         "text": "hello",
         "finish_reason": "stop",
         "output_token_logprobs": [[-0.1, 11], [-0.2, 22], [-0.3, 33]],
-        "output_codebook_tokens": [[11, 1], [22, 2], [33, 3]],
         "weight_version": "v7",
         "completion_tokens": 3,
     }
@@ -60,49 +48,18 @@ def test_completion_surfaces_logprobs_and_weight_version() -> None:
     )
 
     assert out.output_token_logprobs == [[-0.1, 11], [-0.2, 22], [-0.3, 33]]
-    assert out.output_codebook_tokens == [[11, 1], [22, 2], [33, 3]]
     assert out.weight_version == "v7"
 
 
-def test_completion_combines_pretokenized_ids_and_media() -> None:
-    coordinator = _CapturingSubmitCoordinator({"text": "ok", "finish_reason": "stop"})
-    client = Client(coordinator)
-
-    asyncio.run(
-        client.completion(
-            GenerateRequest(
-                prompt_token_ids=[5, 6, 7],
-                images=["data:image/png;base64,SU1H"],
-                audios=["data:audio/wav;base64,QVVESU8="],
-                videos=["https://example.test/video.mp4"],
-                video_fps=2.0,
-                stream=False,
-            ),
-            request_id="r-mm",
-        )
-    )
-
-    assert coordinator.request.inputs == {
-        "input_ids": [5, 6, 7],
-        "images": ["data:image/png;base64,SU1H"],
-        "audios": ["data:audio/wav;base64,QVVESU8="],
-        "videos": ["https://example.test/video.mp4"],
-        "video_fps": 2.0,
-    }
-
-
-def test_completion_surfaces_omni_rollout() -> None:
-    rollout = {
+def test_completion_surfaces_action_trace() -> None:
+    action_trace = {
         "version": 1,
-        "model_family": "qwen3_omni",
-        "stages": ["talker"],
-        "total_action_count": 1,
-        "action_streams": [],
+        "streams": [],
     }
     result = {
         "text": "hello",
         "finish_reason": "stop",
-        "omni_rollout": rollout,
+        "action_trace": action_trace,
     }
     client = Client(_SubmitStubCoordinator(result))
 
@@ -110,7 +67,7 @@ def test_completion_surfaces_omni_rollout() -> None:
         client.completion(GenerateRequest(prompt="hi", stream=False), request_id="r1")
     )
 
-    assert out.omni_rollout == rollout
+    assert out.action_trace == action_trace
 
 
 def test_completion_without_logprobs_leaves_fields_none() -> None:
@@ -122,9 +79,8 @@ def test_completion_without_logprobs_leaves_fields_none() -> None:
     )
 
     assert out.output_token_logprobs is None
-    assert out.output_codebook_tokens is None
     assert out.weight_version is None
-    assert out.omni_rollout is None
+    assert out.action_trace is None
 
 
 def test_completion_preserves_empty_logprob_list() -> None:
@@ -148,9 +104,8 @@ def test_completion_surfaces_rollout_from_multiterminal_decode() -> None:
             "text": "hi",
             "finish_reason": "stop",
             "output_token_logprobs": [[-0.5, 9]],
-            "output_codebook_tokens": [[9, 1]],
             "weight_version": "v9",
-            "omni_rollout": {"version": 1, "action_streams": []},
+            "action_trace": {"version": 1, "streams": []},
         },
         "code2wav": {"audio_data": [0.0, 0.1, -0.1], "sample_rate": 24000},
     }
@@ -163,9 +118,8 @@ def test_completion_surfaces_rollout_from_multiterminal_decode() -> None:
     assert out.text == "hi"
     assert out.audio is not None
     assert out.output_token_logprobs == [[-0.5, 9]]
-    assert out.output_codebook_tokens == [[9, 1]]
     assert out.weight_version == "v9"
-    assert out.omni_rollout == {"version": 1, "action_streams": []}
+    assert out.action_trace == {"version": 1, "streams": []}
 
 
 def test_completion_concatenates_streamed_logprobs() -> None:
@@ -178,7 +132,6 @@ def test_completion_concatenates_streamed_logprobs() -> None:
             chunk={
                 "text": "he",
                 "output_token_logprobs": [[-0.1, 11], [-0.2, 22]],
-                "output_codebook_tokens": [[11, 1], [22, 2]],
                 "weight_version": "v7",
             },
             stage_name="decode",
@@ -190,10 +143,9 @@ def test_completion_concatenates_streamed_logprobs() -> None:
             chunk={
                 "text": "llo",
                 "output_token_logprobs": [[-0.3, 33]],
-                "output_codebook_tokens": [[33, 3]],
                 "finish_reason": "stop",
                 "weight_version": "v7",
-                "omni_rollout": {"version": 1, "action_streams": []},
+                "action_trace": {"version": 1, "streams": []},
             },
             stage_name="decode",
             modality="text",
@@ -207,6 +159,5 @@ def test_completion_concatenates_streamed_logprobs() -> None:
 
     assert out.text == "hello"
     assert out.output_token_logprobs == [[-0.1, 11], [-0.2, 22], [-0.3, 33]]
-    assert out.output_codebook_tokens == [[11, 1], [22, 2], [33, 3]]
     assert out.weight_version == "v7"
-    assert out.omni_rollout == {"version": 1, "action_streams": []}
+    assert out.action_trace == {"version": 1, "streams": []}

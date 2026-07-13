@@ -36,7 +36,6 @@ from sglang_omni.profiler.event_recorder import get_active_stage as _get_active_
 from sglang_omni.proto.admin import (
     ADMIN_CONTINUE_GENERATION,
     ADMIN_DESTROY_WEIGHTS_UPDATE_GROUP,
-    ADMIN_FLUSH_CACHE,
     ADMIN_INIT_WEIGHTS_UPDATE_GROUP,
     ADMIN_MODEL_INFO,
     ADMIN_PAUSE_GENERATION,
@@ -1154,8 +1153,6 @@ class OmniScheduler:
         payload = dict(payload or {})
         if action == ADMIN_MODEL_INFO:
             return self._admin_model_info()
-        if action == ADMIN_FLUSH_CACHE:
-            return self._admin_flush_cache()
         if action == ADMIN_PAUSE_GENERATION:
             return self._admin_pause_generation(payload)
         if action == ADMIN_CONTINUE_GENERATION:
@@ -1208,16 +1205,6 @@ class OmniScheduler:
             }
         )
         return {"success": True, "message": "ok", "data": info}
-
-    def _admin_flush_cache(self) -> dict[str, Any]:
-        with self._admin_lock:
-            success = bool(self.flush_cache())
-        return {
-            "success": success,
-            "message": "cache flushed" if success else "cache flush failed",
-            "data": {"flush_cache": success},
-            "error": None if success else "cache flush failed",
-        }
 
     def _admin_pause_generation(self, payload: dict[str, Any]) -> dict[str, Any]:
         mode = str(payload.get("mode") or "abort")

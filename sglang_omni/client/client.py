@@ -94,9 +94,7 @@ class Client:
         finish_reason: str | None = None
         logprobs_parts: list[Any] = []
         saw_output_token_logprobs = False
-        codebook_parts: list[Any] = []
-        saw_output_codebook_tokens = False
-        omni_rollout: dict[str, Any] | None = None
+        action_trace: dict[str, Any] | None = None
         weight_version: str | None = None
 
         async for chunk in self.generate(request, request_id=request_id):
@@ -112,11 +110,8 @@ class Client:
             if chunk.output_token_logprobs is not None:
                 saw_output_token_logprobs = True
                 logprobs_parts.extend(chunk.output_token_logprobs)
-            if chunk.output_codebook_tokens is not None:
-                saw_output_codebook_tokens = True
-                codebook_parts.extend(chunk.output_codebook_tokens)
-            if chunk.omni_rollout is not None:
-                omni_rollout = chunk.omni_rollout
+            if chunk.action_trace is not None:
+                action_trace = chunk.action_trace
             if chunk.weight_version is not None:
                 weight_version = chunk.weight_version
 
@@ -155,10 +150,7 @@ class Client:
             output_token_logprobs=(
                 logprobs_parts if saw_output_token_logprobs else None
             ),
-            output_codebook_tokens=(
-                codebook_parts if saw_output_codebook_tokens else None
-            ),
-            omni_rollout=omni_rollout,
+            action_trace=action_trace,
             weight_version=weight_version,
         )
 
@@ -485,12 +477,9 @@ class Client:
                 output_token_logprobs = decode_result.get("output_token_logprobs")
                 if output_token_logprobs is not None:
                     chunk.output_token_logprobs = output_token_logprobs
-                output_codebook_tokens = decode_result.get("output_codebook_tokens")
-                if output_codebook_tokens is not None:
-                    chunk.output_codebook_tokens = output_codebook_tokens
-                omni_rollout = decode_result.get("omni_rollout")
-                if omni_rollout is not None:
-                    chunk.omni_rollout = omni_rollout
+                action_trace = decode_result.get("action_trace")
+                if action_trace is not None:
+                    chunk.action_trace = action_trace
                 weight_version = decode_result.get("weight_version")
                 if weight_version is not None:
                     chunk.weight_version = weight_version
@@ -513,12 +502,9 @@ class Client:
             output_token_logprobs = result.get("output_token_logprobs")
             if output_token_logprobs is not None:
                 chunk.output_token_logprobs = output_token_logprobs
-            output_codebook_tokens = result.get("output_codebook_tokens")
-            if output_codebook_tokens is not None:
-                chunk.output_codebook_tokens = output_codebook_tokens
-            omni_rollout = result.get("omni_rollout")
-            if omni_rollout is not None:
-                chunk.omni_rollout = omni_rollout
+            action_trace = result.get("action_trace")
+            if action_trace is not None:
+                chunk.action_trace = action_trace
             weight_version = result.get("weight_version")
             if weight_version is not None:
                 chunk.weight_version = weight_version
@@ -572,12 +558,9 @@ class Client:
             output_token_logprobs = data.get("output_token_logprobs")
             if output_token_logprobs is not None:
                 chunk.output_token_logprobs = output_token_logprobs
-            output_codebook_tokens = data.get("output_codebook_tokens")
-            if output_codebook_tokens is not None:
-                chunk.output_codebook_tokens = output_codebook_tokens
-            omni_rollout = data.get("omni_rollout")
-            if omni_rollout is not None:
-                chunk.omni_rollout = omni_rollout
+            action_trace = data.get("action_trace")
+            if action_trace is not None:
+                chunk.action_trace = action_trace
             weight_version = data.get("weight_version")
             if weight_version is not None:
                 chunk.weight_version = weight_version
@@ -617,52 +600,35 @@ def _extract_inputs(request: GenerateRequest) -> Any:
             "GenerateRequest requires exactly one input: "
             "prompt, prompt_token_ids, or messages."
         )
-    # Media is model input, not request metadata. Keep metadata fallbacks for
-    # existing chat-completion callers while /generate migrates to typed fields.
-    audios = request.audios or request.metadata.get("audios")
-    images = request.images or request.metadata.get("images")
-    videos = request.videos or request.metadata.get("videos")
-    has_media = bool(audios or images or videos)
-
     if request.prompt is not None:
-        if has_media:
-            raise ValueError(
-                "prompt with media is not supported; use messages or prompt_token_ids"
-            )
         return request.prompt
-
     if request.prompt_token_ids is not None:
-        if not has_media:
-            return list(request.prompt_token_ids)
-        result: dict[str, Any] = {"input_ids": list(request.prompt_token_ids)}
-    else:
-        messages = [msg.to_dict() for msg in request.messages or []]
-        if not has_media:
-            return messages
-        result = {"messages": messages}
+        return list(request.prompt_token_ids)
 
-    if has_media:
+    messages = [msg.to_dict() for msg in request.messages or []]
+    audios = request.metadata.get("audios")
+    images = request.metadata.get("images")
+    videos = request.metadata.get("videos")
+    if audios or images or videos:
+        result = {"messages": messages}
         if images:
             result["images"] = images
         if audios:
             result["audios"] = audios
         if videos:
             result["videos"] = videos
-        for key, typed_value in (
-            ("video_fps", request.video_fps),
-            ("video_max_frames", request.video_max_frames),
-            ("video_min_pixels", request.video_min_pixels),
-            ("video_max_pixels", request.video_max_pixels),
-            ("video_total_pixels", request.video_total_pixels),
+        for key in (
+            "video_fps",
+            "video_max_frames",
+            "video_min_pixels",
+            "video_max_pixels",
+            "video_total_pixels",
         ):
-            value = (
-                typed_value if typed_value is not None else request.metadata.get(key)
-            )
+            value = request.metadata.get(key)
             if value is not None:
                 result[key] = value
         return result
-
-    raise AssertionError("unreachable input shape")
+    return messages
 
 
 def _build_params(request: GenerateRequest) -> dict[str, Any]:

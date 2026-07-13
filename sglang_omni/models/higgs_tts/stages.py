@@ -37,6 +37,7 @@ from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
 from sglang_omni.models.higgs_tts.pretokenized import (
     build_pretokenized_state,
     is_pretokenized_prompt,
+    validate_higgs_rollout_sampling,
 )
 from sglang_omni.models.higgs_tts.text_tokenizer import HiggsTokenizerAdapter
 from sglang_omni.models.higgs_tts.utils import (
@@ -177,6 +178,7 @@ def create_preprocessing_executor(
     def _preprocess(payload: StagePayload) -> StagePayload:
         raw_inputs = payload.request.inputs
         params = payload.request.params or {}
+        validate_higgs_rollout_sampling(params)
 
         if is_pretokenized_prompt(raw_inputs):
             state = build_pretokenized_state(
@@ -309,7 +311,6 @@ def create_preprocessing_executor(
             top_k=params.get("top_k"),
             seed=params.get("seed"),
             return_logprob=bool(params.get("return_logprob", False)),
-            return_omni_rollout=bool(params.get("return_omni_rollout", False)),
         )
         payload.data = state.to_dict()
         return payload

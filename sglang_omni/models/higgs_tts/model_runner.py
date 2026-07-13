@@ -363,12 +363,6 @@ class HiggsTTSModelRunner(ModelRunner):
                         torch.zeros(num_codebooks, dtype=torch.float32),
                     )
                 )
-                data.output_token_logprobs.append(
-                    [
-                        float(logprobs_cpu[b, num_codebooks].item()),
-                        int(codes_N[0].item()),
-                    ]
-                )
             data.generation_done = bool(gen_done_after_cpu[b])
             self._emit_code_chunk(sched_req, codes_N)
             self._mark_sampler_finished(req, data.generation_done)
@@ -474,12 +468,6 @@ class HiggsTTSModelRunner(ModelRunner):
                     .cpu()
                     .clone()
                 )
-                data.output_token_logprobs.append(
-                    [
-                        float(logprob_bundle[b, model._num_codebooks].item()),
-                        int(codes_N[0].item()),
-                    ]
-                )
             data.generation_done = bool(model._sampler_pool.generation_done[row].item())
             self._emit_code_chunk(sched_req, data.output_codes[-1])
             self._mark_sampler_finished(req, data.generation_done)
@@ -514,7 +502,7 @@ class HiggsTTSModelRunner(ModelRunner):
             temperature=model._cg_temperature[:n_real],
             top_k_buf=model._cg_top_k_buf[:n_real],
         )
-        return self._pack_logprob_bundle(logits_BNV, codes_BN, scaled_logprobs)
+        return scaled_logprobs
 
     def _prefill_step_logprob_bundle(
         self, result: Any, requests: list, forward_batch: Any | None
@@ -560,18 +548,7 @@ class HiggsTTSModelRunner(ModelRunner):
             temperature=temperature,
             top_k_buf=top_k_buf,
         )
-        return self._pack_logprob_bundle(
-            logits_BNV, codes_BN.clamp_min(0), scaled_logprobs
-        )
-
-    @staticmethod
-    def _pack_logprob_bundle(
-        logits_BNV: torch.Tensor, codes_BN: torch.Tensor, scaled_logprobs: torch.Tensor
-    ) -> torch.Tensor:
-        cb0_logits = logits_BNV[:, 0, :]
-        cb0_idx = codes_BN[:, 0:1].clamp(0, cb0_logits.shape[-1] - 1)
-        cb0_raw_logprobs = torch.log_softmax(cb0_logits, dim=-1).gather(1, cb0_idx)
-        return torch.cat([scaled_logprobs, cb0_raw_logprobs], dim=1)
+        return scaled_logprobs
 
     @staticmethod
     def _mark_sampler_finished(req: Any, generation_done: bool) -> None:

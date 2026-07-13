@@ -200,31 +200,9 @@ class RolloutGenerateRequest(BaseModel):
     stage_params: dict[str, dict[str, Any]] | None = None
     output_modalities: list[str] | None = None
 
-    # Canonical media names match ChatCompletionRequest and the internal
-    # preprocessors. The *_data aliases keep existing Miles/SGLang payloads
-    # wire-compatible while callers migrate to the canonical names.
-    images: list[str] | None = Field(
-        default=None,
-        validation_alias=AliasChoices("images", "image_data"),
-    )
-    audios: list[str] | None = Field(
-        default=None,
-        validation_alias=AliasChoices("audios", "audio_data"),
-    )
-    videos: list[str] | None = Field(
-        default=None,
-        validation_alias=AliasChoices("videos", "video_data"),
-    )
-    video_fps: float | None = None
-    video_max_frames: int | None = None
-    video_min_pixels: int | None = None
-    video_max_pixels: int | None = None
-    video_total_pixels: int | None = None
-
     metadata: dict[str, Any] | None = None
 
     return_logprob: bool = True
-    return_omni_rollout: bool = False
     return_routed_experts: bool = False
     return_indexer_topk: bool = False
 
@@ -245,49 +223,39 @@ class GenerateAudio(BaseModel):
     sample_rate: int | None = None
 
 
-class MultiDiscreteActionStream(BaseModel):
-    """One aligned time-by-codebook policy action stream."""
+class ActionStream(BaseModel):
+    """One aligned time-by-channel policy action stream."""
 
     model_config = ConfigDict(extra="forbid")
 
-    name: str
     stage: str
     modality: str
-    action_type: Literal["multi_discrete"]
-    layout: Literal["time_codebook"]
-    shape: list[StrictInt]
     vocab_size: StrictInt = Field(gt=0)
     actions: list[list[StrictInt]]
-    policy_logprobs: list[list[StrictFloat]]
+    logprobs: list[list[StrictFloat]]
     action_mask: list[list[StrictBool]]
-    codec_content_mask: list[list[StrictBool]] | None = None
-    channel_ids: list[StrictInt]
 
     @model_validator(mode="after")
-    def validate_lattice(self) -> "MultiDiscreteActionStream":
-        if len(self.shape) != 2:
-            raise ValueError("action stream shape must be [time, codebooks]")
-        length, channels = self.shape
-        if length < 0 or channels <= 0:
-            raise ValueError("action stream dimensions must be non-negative")
-        if self.channel_ids != list(range(channels)):
-            raise ValueError("channel_ids must be the ordered codebook indices")
-
+    def validate_lattice(self) -> "ActionStream":
+        if not self.actions or not self.actions[0]:
+            raise ValueError("action stream must have non-empty [time, channel] shape")
+        length = len(self.actions)
+        channels = len(self.actions[0])
         matrices = {
             "actions": self.actions,
-            "policy_logprobs": self.policy_logprobs,
+            "logprobs": self.logprobs,
             "action_mask": self.action_mask,
         }
-        if self.codec_content_mask is not None:
-            matrices["codec_content_mask"] = self.codec_content_mask
         for name, matrix in matrices.items():
             if len(matrix) != length or any(len(row) != channels for row in matrix):
-                raise ValueError(f"{name} must have declared shape {self.shape}")
+                raise ValueError(
+                    f"{name} must match actions shape [{length}, {channels}]"
+                )
 
         for row in range(length):
             for channel in range(channels):
                 action = self.actions[row][channel]
-                logprob = self.policy_logprobs[row][channel]
+                logprob = self.logprobs[row][channel]
                 sampled = self.action_mask[row][channel]
                 if action < 0 or action >= self.vocab_size:
                     raise ValueError("action is outside the declared vocabulary")
@@ -298,27 +266,13 @@ class MultiDiscreteActionStream(BaseModel):
         return self
 
 
-class OmniRolloutTrace(BaseModel):
+class ActionTrace(BaseModel):
     """Versioned structured policy trace returned by ``POST /generate``."""
 
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal[2]
-    model_family: str
-    total_action_count: StrictInt = Field(ge=0)
-    action_streams: list[MultiDiscreteActionStream] = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def validate_action_count(self) -> "OmniRolloutTrace":
-        count = sum(
-            int(sampled)
-            for stream in self.action_streams
-            for row in stream.action_mask
-            for sampled in row
-        )
-        if count != self.total_action_count:
-            raise ValueError("total_action_count does not match action masks")
-        return self
+    version: Literal[1]
+    streams: list[ActionStream] = Field(min_length=1)
 
 
 class GenerateMetaInfo(BaseModel):
@@ -331,8 +285,7 @@ class GenerateMetaInfo(BaseModel):
     weight_version: str | None = None
     request_metadata: dict[str, Any] | None = None
     output_token_logprobs: list[Any] | None = None
-    output_codebook_tokens: list[Any] | None = None
-    omni_rollout: OmniRolloutTrace | None = None
+    action_trace: ActionTrace | None = None
 
 
 class GenerateResponse(BaseModel):

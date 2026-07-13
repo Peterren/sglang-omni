@@ -201,12 +201,8 @@ class HiggsStreamingVocoderScheduler(StreamingSimpleScheduler):
         usage = build_usage(final_state)
         if usage is not None:
             final_data["usage"] = usage
-        if final_state.output_token_logprobs is not None:
-            final_data["output_token_logprobs"] = final_state.output_token_logprobs
-        if final_state.output_codes_delayed is not None:
-            final_data["output_codebook_tokens"] = final_state.output_codes_delayed
-        if final_state.omni_rollout is not None:
-            final_data["omni_rollout"] = final_state.omni_rollout
+        if final_state.action_trace is not None:
+            final_data["action_trace"] = final_state.action_trace
         if final_state.weight_version is not None:
             final_data["weight_version"] = final_state.weight_version
         messages.append(
@@ -495,12 +491,8 @@ class HiggsStreamingVocoderScheduler(StreamingSimpleScheduler):
         usage = build_usage(state)
         if usage is not None:
             data["usage"] = usage
-        if state.output_token_logprobs is not None:
-            data["output_token_logprobs"] = state.output_token_logprobs
-        if state.output_codes_delayed is not None:
-            data["output_codebook_tokens"] = state.output_codes_delayed
-        if state.omni_rollout is not None:
-            data["omni_rollout"] = state.omni_rollout
+        if state.action_trace is not None:
+            data["action_trace"] = state.action_trace
         if state.weight_version is not None:
             data["weight_version"] = state.weight_version
         payload.data = data

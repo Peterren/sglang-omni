@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import inspect
 from types import SimpleNamespace
 
@@ -280,128 +279,6 @@ def test_qwen_preprocess_pretokenized_builds_thinker_state_from_ids() -> None:
     assert state.prompt["attention_mask"].tolist() == [1, 1, 1]
     assert state.encoder_inputs["image_encoder"]["_skip"] is True
     assert state.encoder_inputs["audio_encoder"]["_skip"] is True
-
-
-def test_qwen_pretokenized_media_validates_placeholder_counts() -> None:
-    from sglang_omni.models.qwen3_omni.components.preprocessor import (
-        _validate_pretokenized_media_tokens,
-    )
-
-    tokenizer = SimpleNamespace(
-        convert_tokens_to_ids=lambda token: {
-            "<image>": 101,
-            "<audio>": 102,
-            "<video>": 103,
-        }[token]
-    )
-    processor = SimpleNamespace(
-        tokenizer=tokenizer,
-        image_token="<image>",
-        audio_token="<audio>",
-        video_token="<video>",
-    )
-    processed = torch.tensor([101, 101, 102, 103, 103, 103])
-
-    _validate_pretokenized_media_tokens(
-        processor,
-        torch.tensor([7, 101, 101, 8, 102, 103, 103, 103]),
-        processed,
-    )
-
-    with pytest.raises(ValueError, match="audio token count"):
-        _validate_pretokenized_media_tokens(
-            processor,
-            torch.tensor([7, 101, 101, 8, 103, 103, 103]),
-            processed,
-        )
-
-
-def test_qwen_pretokenized_media_preserves_ids_and_builds_encoders(
-    monkeypatch,
-) -> None:
-    import sglang_omni.models.qwen3_omni.components.preprocessor as preprocessor_mod
-
-    class _Tokenizer:
-        @staticmethod
-        def convert_tokens_to_ids(token):
-            return {"<image>": 101, "<audio>": 102, "<video>": 103}[token]
-
-    class _Processor:
-        tokenizer = _Tokenizer()
-        image_token = "<image>"
-        audio_token = "<audio>"
-        video_token = "<video>"
-
-        def apply_chat_template(self, *args, **kwargs):
-            del args, kwargs
-            return "synthetic-media-prompt"
-
-        def __call__(self, **kwargs):
-            del kwargs
-            return {
-                "input_ids": torch.tensor([[101, 101, 102, 103, 103, 103]]),
-                "attention_mask": torch.ones((1, 6), dtype=torch.long),
-                "pixel_values": torch.ones((2, 3)),
-                "image_grid_thw": torch.tensor([[1, 2, 4]]),
-                "input_features": torch.ones((1, 4, 5)),
-                "feature_attention_mask": torch.ones((1, 5), dtype=torch.long),
-                "pixel_values_videos": torch.ones((3, 3)),
-                "video_grid_thw": torch.tensor([[1, 3, 4]]),
-                "video_second_per_grid": [0.5],
-            }
-
-    async def _images(raw):
-        return list(raw or [])
-
-    async def _audios(raw, *, target_sr):
-        del target_sr
-        return list(raw or [])
-
-    async def _videos(raw, **kwargs):
-        del kwargs
-        return list(raw or []), [2.0], []
-
-    monkeypatch.setattr(preprocessor_mod, "ensure_image_list_async", _images)
-    monkeypatch.setattr(preprocessor_mod, "ensure_audio_list_async", _audios)
-    monkeypatch.setattr(preprocessor_mod, "ensure_video_list_async", _videos)
-
-    pre = object.__new__(preprocessor_mod.Qwen3OmniPreprocessor)
-    pre.processor = _Processor()
-    pre.max_seq_len = None
-    pre.default_video_fps = None
-    pre.default_video_max_frames = None
-    pre.default_video_min_pixels = None
-    pre.default_video_max_pixels = None
-    pre.default_video_total_pixels = None
-    payload = StagePayload(
-        request_id="req-mm",
-        request=OmniRequest(
-            inputs={
-                "input_ids": [7, 101, 101, 102, 103, 103, 103, 8],
-                "images": ["image"],
-                "audios": ["audio"],
-                "videos": ["video"],
-            },
-            params={"max_new_tokens": 16},
-        ),
-        data={},
-    )
-
-    out = asyncio.run(pre._call_impl(payload))
-    state = Qwen3OmniPipelineState.from_dict(out.data)
-
-    assert state.prompt["input_ids"].tolist() == [
-        7,
-        101,
-        101,
-        102,
-        103,
-        103,
-        103,
-        8,
-    ]
-    assert state.encoder_inputs["image_encoder"].get("_skip") is not True
-    assert state.encoder_inputs["audio_encoder"].get("_skip") is not True
 
 
 def test_qwen_talker_to_code2wav_projection_keeps_only_request_latch() -> None:

@@ -290,11 +290,7 @@ def _sample_independent_batched(
     safe_temp = temperature.clamp(min=_GREEDY_TEMP_THRESHOLD).view(B, 1, 1)
     logits = logits_BNV / safe_temp
 
-    # PR-D: fused top-k/top-p renormalization replaces full-vocab torch.sort +
-    # logit masking. Numerically equivalent to the sort path (max prob diff ~5e-7,
-    # identical support across temp/top_k/top_p sweeps); only differs from the prior
-    # code at an exact cumsum==top_p boundary, where it uses the standard nucleus
-    # convention. Inputs MUST be contiguous fp32 for the flashinfer renorm kernels.
+    # FlashInfer's renormalization kernels require contiguous fp32 inputs.
     probs = logits.float().softmax(dim=-1).reshape(B * N, V).contiguous()
     if top_k_buf is not None:
         tk = (

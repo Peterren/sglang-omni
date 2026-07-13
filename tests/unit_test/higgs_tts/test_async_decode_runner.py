@@ -96,8 +96,6 @@ def _build_runner(
             output_codes=[],
             output_action_masks=[],
             output_logprobs=[],
-            output_token_logprobs=[],
-            return_omni_rollout=False,
             return_logprob=False,
             generation_done=False,
         )
@@ -119,7 +117,6 @@ def _snapshot(reqs, datas, result):
             [m.tolist() for m in d.output_action_masks] for d in datas
         ],
         "output_logprobs": [[lp.tolist() for lp in d.output_logprobs] for d in datas],
-        "output_token_logprobs": [d.output_token_logprobs for d in datas],
         "generation_done": [d.generation_done for d in datas],
         "finished_reason": [
             None if r.finished_reason is None else r.finished_reason.to_json()
@@ -298,7 +295,6 @@ def test_async_preserves_code_mask_logprob_request_association(monkeypatch):
         result.logits_output.hidden_states = torch.zeros(2, 4)
         for data in datas:
             data.return_logprob = True
-            data.return_omni_rollout = True
         return runner, sched, result, fb, reqs, datas
 
     sync = configure(False)
@@ -321,8 +317,6 @@ def test_async_preserves_code_mask_logprob_request_association(monkeypatch):
     assert sync_snapshot["output_logprobs"][0][0][1] == 0.0
     assert sync_snapshot["output_logprobs"][1][0][0] == 0.0
     assert sync_snapshot["output_logprobs"][1][0][2] == 0.0
-    assert sync_snapshot["output_token_logprobs"][0][0][1] == 2
-    assert sync_snapshot["output_token_logprobs"][1][0][1] == 5
 
 
 def _pick_free_cuda_device(min_free_mib: int = 512) -> str | None:
@@ -402,8 +396,6 @@ def test_async_real_pinned_path_matches_sync():
                 output_codes=[],
                 output_action_masks=[],
                 output_logprobs=[],
-                output_token_logprobs=[],
-                return_omni_rollout=False,
                 return_logprob=False,
                 generation_done=False,
             )

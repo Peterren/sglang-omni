@@ -14,31 +14,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _nccl_version_string() -> str:
-    import torch
-
-    version = torch.cuda.nccl.version()
-    if isinstance(version, tuple):
-        return ".".join(str(part) for part in version)
-    return str(version)
-
-
-def _distributed_weight_update_transport(model_runner: Any) -> dict[str, Any] | None:
-    required_methods = (
-        "init_weights_update_group",
-        "update_weights_from_distributed",
-        "destroy_weights_update_group",
-    )
-    if not all(hasattr(model_runner, method) for method in required_methods):
-        return None
-    return {
-        "protocol_version": 1,
-        "backend": "nccl",
-        "nccl_version": _nccl_version_string(),
-        "nccl_cumem_enable": os.environ.get("NCCL_CUMEM_ENABLE", "default"),
-    }
-
-
 @dataclass
 class ModelWorkerConfig:
     model_arch_override: str | None = None
@@ -247,9 +222,6 @@ class ModelWorker:
         return batch_result
 
     def model_info(self) -> dict[str, Any]:
-        distributed_weight_update = _distributed_weight_update_transport(
-            self.model_runner
-        )
         return {
             "model_path": self.server_args.model_path,
             "load_format": self.server_args.load_format,
@@ -260,10 +232,6 @@ class ModelWorker:
             "supports_weight_update": hasattr(
                 self.model_runner, "update_weights_from_disk"
             ),
-            "supports_distributed_weight_update": (
-                distributed_weight_update is not None
-            ),
-            "distributed_weight_update": distributed_weight_update,
             "supports_weight_checker": True,
         }
 
