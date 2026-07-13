@@ -421,6 +421,7 @@
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#deploy">Deploy</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-we-found-this">How We Found This</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#common-questions">Common questions</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reproduce-the-results">Reproduce the results</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prepare-the-baseline">Prepare the baseline</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#evaluate">Evaluate</a></li>
@@ -446,6 +447,7 @@
 </div></blockquote>
 <p>A common data-parallel deployment assigns one GPU to each replica. When a tuned replica still leaves substantial GPU headroom, colocating multiple replicas on the same GPU can improve per-GPU throughput.</p>
 <p>Same-GPU data parallelism runs several complete serving replicas on one GPU and lets <a class="reference external" href="https://docs.nvidia.com/deploy/mps/index.html">CUDA MPS</a> share the GPU between them. This is a conditional and ongoing optimization. We are excited to share it and call for the community to join the exploration.</p>
+<p><img alt="Multiple host chains plus CUDA MPS filling the idle GPU" src="../_images/same-gpu-dp-mps.svg" /></p>
 <section id="deploy">
 <h2>Deploy<a class="headerlink" href="#deploy" title="Link to this heading">#</a></h2>
 <p>The steps below are one continuous flow. We provide <code class="docutils literal notranslate"><span class="pre">examples/mps_dp/launch.sh</span></code> to manage the private MPS daemon and serving replicas for one run. It records replica processes, ports, and logs, starts replicas sequentially, verifies their KV capacity and MPS attachment, and tears down only the run it recorded. Detailed instructions are as follows:</p>
@@ -470,6 +472,7 @@ numactl<span class="w"> </span>-H<span class="w"> </span><span class="p">|</span
 <p>The command above is the validated H100 Higgs DP3 recipe. The launcher uses three replicas by default, resolves the GPU’s NUMA node, assigns one local port per replica, starts a private MPS daemon, waits for each replica’s health check before starting the next, and verifies MPS attachment. The CPU blocks are specific to the tested host; derive the correct blocks for your own CPU topology.</p>
 <p>The example leaves <code class="docutils literal notranslate"><span class="pre">--mem-fraction-static</span></code> unset and uses the model’s existing default. Launching replicas sequentially avoids overlapping memory profiling and CUDA-graph capture during startup.</p>
 <p>Identical <code class="docutils literal notranslate"><span class="pre">--mem-fraction-static</span></code> flags do <strong>not</strong> mean identical KV capacity. <code class="docutils literal notranslate"><span class="pre">--mem-fraction-static</span></code> budgets model weights and the KV pool against the GPU memory available when each replica starts. Roughly, the profiled KV memory is the requested fraction of free memory measured before model loading, minus model and fixed runtime allocations. It is a per-replica budget, not an additive share of the card. Because replicas start sequentially, earlier ones have already reserved memory, so later ones see a smaller free pool and allocate fewer KV tokens even when every flag is the same (in one run, three sequential <code class="docutils literal notranslate"><span class="pre">mf=0.27</span></code> replicas received 97,503 / 53,149 / 20,961 KV tokens).</p>
+<p><img alt="What same-GPU DP spends in VRAM and what it reclaims" src="../_images/same-gpu-dp-vram.svg" /></p>
 <p>Memory profiling does not coordinate KV allocation across independent replica processes. For <code class="docutils literal notranslate"><span class="pre">N</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>, the launcher therefore requires one common <code class="docutils literal notranslate"><span class="pre">MAX_TOTAL_TOKENS</span></code> value and passes it to every replica as <code class="docutils literal notranslate"><span class="pre">--max-total-tokens</span></code>. SGLang treats this value as an upper bound; the launcher rejects startup unless every replica resolves exactly that capacity. The cap is independent of the request-level <code class="docutils literal notranslate"><span class="pre">max_new_tokens</span></code> limit and does not distribute requests between replicas.</p>
 <p>The validated H100 Higgs DP3 cap is <code class="docutils literal notranslate"><span class="pre">100000</span></code> tokens per replica. This value is a starting point for the tested configuration, not a universal hardware default. Recalculate the cap after changing the model, GPU, runtime, replica count, memory settings, or CUDA-graph settings. If a replica cannot allocate the common cap, lower it or reduce the replica count.</p>
 <ol class="arabic simple" start="3">
@@ -521,6 +524,7 @@ numactl<span class="w"> </span>-H<span class="w"> </span><span class="p">|</span
 <section id="how-we-found-this">
 <h2>How We Found This<a class="headerlink" href="#how-we-found-this" title="Link to this heading">#</a></h2>
 <p>This recipe grew out of the serving profiling in <a class="reference external" href="https://github.com/sgl-project/sglang-omni/issues/907">#907</a>. Our profiling found substantial unused GPU capacity across several omni serving workloads, with strong host-dispatch-bound evidence in the tested ASR setup. From there we ran same-GPU DP experiments on <a class="reference external" href="https://sgl-project.github.io/sglang-omni/cookbook/higgs_tts.html">Higgs</a> and <a class="reference external" href="https://sgl-project.github.io/sglang-omni/cookbook/moss_tts_local.html">Moss</a> TTS models.</p>
+<p><img alt="The bottleneck is host-side dispatch, not GPU compute" src="../_images/same-gpu-dp-host-bound.svg" /></p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Experiment</p></th>
@@ -559,6 +563,13 @@ numactl<span class="w"> </span>-H<span class="w"> </span><span class="p">|</span
 </table>
 </div>
 <p>ASR is the strongest host-bound evidence. Higgs started as a gray zone but clearly leaves GPU headroom at a tuned single replica. Running several replicas as separate processes changes host execution, scheduling, and long-tail behavior, and it is not the same as enlarging one replica’s batch. Without MPS the CUDA contexts mostly time-slice and recover only part of the idle; MPS lets kernels from different processes run concurrently when resources permit, and the later MPS-enabled saturated runs produced the largest gains observed in the pinned tests.</p>
+</section>
+<section id="common-questions">
+<h2>Common questions<a class="headerlink" href="#common-questions" title="Link to this heading">#</a></h2>
+<p><strong>Throughput has plateaued, so why is the GPU still idle?</strong></p>
+<p>Serving throughput depends on more than the GPU’s peak compute. It also depends on how much parallel work a single replica exposes per step, how fast the host side handles scheduling and stage handoffs, and the request-length and batching distribution. A single Higgs replica can have a full request queue and still sit at about 29% SM Active; adding a second independent replica improves GPU idle and throughput together. So one process’s serving path is not keeping the card fed, but the cause is not a single CPU function: multiple host execution paths, batching behavior, and a latency-bounded decode shape can all contribute.</p>
+<p><strong>Replicating the weights costs VRAM. What does that buy?</strong></p>
+<p>Same-GPU DP does not save VRAM; it spends more of it. It copies the weights per replica and gives each replica its own, smaller KV pool. What it buys is the otherwise idle compute, reclaimed. That trade pays off only when a tuned single replica leaves the GPU idle (so there are idle SMs to fill) and the model is small enough that its weights are a modest slice of the card, so two or three full replicas still fit. On a compute-bound model, or one too large to hold several weight copies, extra replicas buy little.</p>
 </section>
 <section id="reproduce-the-results">
 <h2>Reproduce the results<a class="headerlink" href="#reproduce-the-results" title="Link to this heading">#</a></h2>
@@ -710,6 +721,7 @@ nsys<span class="w"> </span>profile<span class="w"> </span>--gpu-metrics-devices
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#deploy">Deploy</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-we-found-this">How We Found This</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#common-questions">Common questions</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reproduce-the-results">Reproduce the results</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prepare-the-baseline">Prepare the baseline</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#evaluate">Evaluate</a></li>
