@@ -365,8 +365,7 @@ async def _send_voice_upload_too_large(
 
 
 def _register_health(app: FastAPI) -> None:
-    @app.get("/health")
-    async def health() -> JSONResponse:
+    async def health_response() -> JSONResponse:
         """Health check endpoint (includes filesystem browse info)."""
         client: Client = app.state.client
         info = client.health()
@@ -379,6 +378,9 @@ def _register_health(app: FastAPI) -> None:
             },
             status_code=status_code,
         )
+
+    app.add_api_route("/health", health_response, methods=["GET"])
+    app.add_api_route("/health_generate", health_response, methods=["GET"])
 
 
 def _register_models(app: FastAPI) -> None:
@@ -438,6 +440,31 @@ def _register_admin(app: FastAPI, admin_api_key: str | None = None) -> None:
                 stages=req.stages,
                 timeout_s=_timeout_or_default(req.timeout_s, 60.0),
             )
+        )
+
+    @app.get("/flush_cache", dependencies=[Depends(_auth)])
+    async def flush_cache() -> JSONResponse:
+        client: Client = app.state.client
+        return _admin_response(await client.admin("flush_cache", timeout_s=60.0))
+
+    @app.post("/begin_weight_update", dependencies=[Depends(_auth)])
+    async def begin_weight_update() -> JSONResponse:
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Omni weight updates are atomic per update request",
+                "data": {"session_required": False},
+            }
+        )
+
+    @app.post("/end_weight_update", dependencies=[Depends(_auth)])
+    async def end_weight_update() -> JSONResponse:
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Omni weight update request completed atomically",
+                "data": {"session_required": False},
+            }
         )
 
     @app.post("/update_weights_from_disk", dependencies=[Depends(_auth)])
@@ -989,6 +1016,7 @@ def _register_generate(app: FastAPI) -> None:
                 status_code=400,
                 detail="stream=true is not supported by /generate yet",
             )
+        _validate_structured_rollout_sampling(req)
 
         request_id = str(uuid.uuid4())
         audio_format = "wav"
@@ -1012,8 +1040,48 @@ def _register_generate(app: FastAPI) -> None:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-        response = _build_generate_response(req, result, audio_format)
+        try:
+            response = _build_generate_response(req, result, audio_format)
+        except HTTPException:
+            raise
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"backend returned an invalid structured rollout: {exc}",
+            ) from exc
         return JSONResponse(content=response.model_dump())
+
+
+def _validate_structured_rollout_sampling(req: RolloutGenerateRequest) -> None:
+    """Keep policy and behavior logprobs identical for the initial v2 trace."""
+    if not req.return_omni_rollout:
+        return
+    if not req.return_logprob:
+        raise HTTPException(
+            status_code=400,
+            detail="return_omni_rollout=true requires return_logprob=true",
+        )
+
+    profiles = [("sampling_params", req.sampling_params)]
+    if req.stage_sampling is not None:
+        profiles.extend(req.stage_sampling.items())
+    for name, params in profiles:
+        invalid: list[str] = []
+        if params.temperature is not None and params.temperature != 1.0:
+            invalid.append("temperature must be 1.0")
+        if params.top_p is not None and params.top_p != 1.0:
+            invalid.append("top_p must be 1.0")
+        if params.top_k is not None and params.top_k > 0:
+            invalid.append("top_k must be absent or non-positive")
+        if params.min_p is not None and params.min_p != 0.0:
+            invalid.append("min_p must be 0.0")
+        if params.repetition_penalty is not None and params.repetition_penalty != 1.0:
+            invalid.append("repetition_penalty must be 1.0")
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"structured rollout {name}: " + "; ".join(invalid),
+            )
 
 
 def _rollout_sampling_to_client(params: RolloutSamplingParams) -> SamplingParams:
@@ -1080,6 +1148,14 @@ def _build_rollout_generate_request(req: RolloutGenerateRequest) -> GenerateRequ
         output_modalities=(
             req.output_modalities if req.output_modalities is not None else ["text"]
         ),
+        images=req.images,
+        audios=req.audios,
+        videos=req.videos,
+        video_fps=req.video_fps,
+        video_max_frames=req.video_max_frames,
+        video_min_pixels=req.video_min_pixels,
+        video_max_pixels=req.video_max_pixels,
+        video_total_pixels=req.video_total_pixels,
         metadata=metadata,
     )
 
@@ -1135,7 +1211,11 @@ def _build_generate_response(
         )
     audio: GenerateAudio | None = None
     if result.audio is not None:
-        audio = GenerateAudio(data=result.audio.data, format=audio_format)
+        audio = GenerateAudio(
+            data=result.audio.data,
+            format=result.audio.format or audio_format,
+            sample_rate=result.audio.sample_rate,
+        )
 
     meta_info = GenerateMetaInfo(
         finish_reason=finish_reason,
@@ -1149,6 +1229,45 @@ def _build_generate_response(
         output_codebook_tokens=result.output_codebook_tokens,
         omni_rollout=result.omni_rollout if req.return_omni_rollout else None,
     )
+    if meta_info.omni_rollout is not None:
+        first_stream = meta_info.omni_rollout.action_streams[0]
+        if completion_tokens != first_stream.shape[0]:
+            raise HTTPException(
+                status_code=500,
+                detail="completion_tokens does not match structured action length",
+            )
+        if (
+            result.output_codebook_tokens is not None
+            and result.output_codebook_tokens != first_stream.actions
+        ):
+            raise HTTPException(
+                status_code=500,
+                detail="output_codebook_tokens does not match structured actions",
+            )
+        structured_audio = any(
+            stream.modality == "audio"
+            for stream in meta_info.omni_rollout.action_streams
+        )
+        if structured_audio:
+            if first_stream.shape[0] == 0:
+                raise HTTPException(
+                    status_code=500,
+                    detail="structured audio rollout contains no emitted action rows",
+                )
+            if (
+                result.audio is None
+                or not result.audio.data
+                or result.audio.format != "wav"
+                or result.audio.sample_rate is None
+                or result.audio.sample_rate <= 0
+            ):
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "structured audio rollout requires a nonempty WAV waveform "
+                        "with a positive sample_rate"
+                    ),
+                )
     return GenerateResponse(text=result.text, audio=audio, meta_info=meta_info)
 
 

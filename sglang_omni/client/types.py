@@ -97,6 +97,14 @@ class GenerateRequest:
 
     # Multi-modal support
     output_modalities: list[str] | None = None
+    images: list[str] | None = None
+    audios: list[str] | None = None
+    videos: list[str] | None = None
+    video_fps: float | None = None
+    video_max_frames: int | None = None
+    video_min_pixels: int | None = None
+    video_max_pixels: int | None = None
+    video_total_pixels: int | None = None
 
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -117,6 +125,14 @@ class GenerateRequest:
             "stream": self.stream,
             "max_tokens": self.max_tokens,
             "output_modalities": self.output_modalities,
+            "images": self.images,
+            "audios": self.audios,
+            "videos": self.videos,
+            "video_fps": self.video_fps,
+            "video_max_frames": self.video_max_frames,
+            "video_min_pixels": self.video_min_pixels,
+            "video_max_pixels": self.video_max_pixels,
+            "video_total_pixels": self.video_total_pixels,
             "metadata": dict(self.metadata),
         }
 
@@ -191,6 +207,8 @@ class CompletionAudio:
     id: str
     data: str  # base64
     transcript: str | None = None
+    format: str = "wav"
+    sample_rate: int | None = None
 
 
 @dataclass

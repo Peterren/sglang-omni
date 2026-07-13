@@ -1,84 +1,106 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Tests for :func:`build_omni_rollout_trace` (meta_info.omni_rollout builder).
-
-Mask geometry itself is covered by ``test_action_mask``; here we pin the schema /
-action count and the fail-loud input guards.
-"""
+"""Version-2 Higgs rollout trace validation and serialization."""
 
 from __future__ import annotations
 
 import pytest
 import torch
+from pydantic import ValidationError
 
 from sglang_omni.models.higgs_tts.rollout_trace import (
     OMNI_ROLLOUT_VERSION,
     build_omni_rollout_trace,
 )
-from sglang_omni.models.higgs_tts.utils import apply_delay_pattern
+from sglang_omni.models.higgs_tts.utils import (
+    apply_delay_pattern,
+    delay_pattern_codec_content_mask,
+)
+from sglang_omni.serve.protocol import OmniRolloutTrace
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 N = 8
 V = 1026
 
 
-def _delayed(t_raw: int, n: int = N) -> torch.Tensor:
-    return apply_delay_pattern(torch.randint(0, 1024, (t_raw, n), device=DEVICE))
+def _inputs(t_raw: int = 4):
+    codes = apply_delay_pattern(torch.randint(0, 1024, (t_raw, N)))
+    mask = delay_pattern_codec_content_mask(codes)
+    mask[t_raw, 0] = True  # sampled terminating EOC is an action, not content
+    logprobs = torch.randn(codes.shape)
+    return codes, mask, logprobs
 
 
-def test_schema_actions_logprobs_and_action_count():
-    torch.manual_seed(0)
-    t_raw = 10
-    delayed = _delayed(t_raw)
-    lp = torch.randn(*delayed.shape, device=DEVICE)
-
+def test_schema_uses_explicit_sample_time_mask():
+    codes, mask, logprobs = _inputs()
     trace = build_omni_rollout_trace(
-        delayed, num_codebooks=N, codebook_vocab_size=V, delayed_logprobs=lp
+        codes,
+        num_codebooks=N,
+        codebook_vocab_size=V,
+        policy_logprobs=logprobs,
+        action_mask=mask,
     )
 
-    assert trace["version"] == OMNI_ROLLOUT_VERSION
-    assert trace["model_family"] == "higgs_tts"
-    s = trace["action_streams"][0]
-    assert (s["name"], s["layout"], s["action_type"]) == (
-        "higgs_codes",
-        "codebook_2d",
-        "discrete",
+    parsed = OmniRolloutTrace.model_validate(trace)
+    assert parsed.version == OMNI_ROLLOUT_VERSION == 2
+    stream = trace["action_streams"][0]
+    assert (stream["action_type"], stream["layout"]) == (
+        "multi_discrete",
+        "time_codebook",
     )
-    assert s["shape"] == list(delayed.shape)
-    assert s["channel_ids"] == list(range(N))
-    # actions / logprobs serialize verbatim and aligned.
-    assert s["actions"] == delayed.to(torch.long).tolist()
-    assert torch.allclose(torch.tensor(s["logprobs"], device=DEVICE), lp, atol=1e-5)
-    # total_action_count == sum(mask) == T*N.
-    assert trace["total_action_count"] == sum(sum(row) for row in s["action_mask"])
-    assert trace["total_action_count"] == t_raw * N
+    assert stream["actions"] == codes.tolist()
+    assert stream["action_mask"] == mask.tolist()
+    assert (
+        stream["codec_content_mask"] == delay_pattern_codec_content_mask(codes).tolist()
+    )
+    assert trace["total_action_count"] == int(mask.sum())
+    serialized_lp = torch.tensor(stream["policy_logprobs"])
+    assert torch.all(serialized_lp[~mask] == 0)
+    assert torch.allclose(serialized_lp[mask], logprobs[mask])
 
 
-def test_input_guards():
-    delayed = _delayed(6)
-
+def test_input_guards_and_nonfinite_masking():
+    codes, mask, logprobs = _inputs()
+    kwargs = dict(
+        num_codebooks=N,
+        codebook_vocab_size=V,
+        policy_logprobs=logprobs,
+        action_mask=mask,
+    )
     with pytest.raises(ValueError, match="codebooks"):
-        build_omni_rollout_trace(delayed, num_codebooks=N + 1, codebook_vocab_size=V)
+        build_omni_rollout_trace(codes, **{**kwargs, "num_codebooks": N + 1})
+    with pytest.raises(ValueError, match="action_mask shape"):
+        build_omni_rollout_trace(codes, **{**kwargs, "action_mask": mask[:-1]})
+    with pytest.raises(ValueError, match="policy_logprobs shape"):
+        build_omni_rollout_trace(codes, **{**kwargs, "policy_logprobs": logprobs[:-1]})
 
-    with pytest.raises(ValueError, match="shape"):
-        build_omni_rollout_trace(
-            delayed,
-            num_codebooks=N,
-            codebook_vocab_size=V,
-            delayed_logprobs=torch.randn(delayed.shape[0] + 1, N, device=DEVICE),
-        )
-
-    # NaN on a real-action cell (3, 0) fails loud...
-    lp = torch.randn(*delayed.shape, device=DEVICE)
-    lp[3, 0] = float("nan")
+    row, channel = mask.nonzero()[0]
+    logprobs[row, channel] = float("nan")
     with pytest.raises(ValueError, match="non-finite"):
-        build_omni_rollout_trace(
-            delayed, num_codebooks=N, codebook_vocab_size=V, delayed_logprobs=lp
-        )
+        build_omni_rollout_trace(codes, **kwargs)
+    codes[0, 0] = V
+    with pytest.raises(ValueError, match="vocabulary"):
+        build_omni_rollout_trace(codes, **kwargs)
 
-    # ...but a non-finite value on a masked (BOC scaffolding) cell is harmless.
-    lp = torch.randn(*delayed.shape, device=DEVICE)
-    lp[0, N - 1] = float("-inf")
+
+def test_wire_schema_rejects_integer_masks_and_unknown_fields():
+    codes, mask, logprobs = _inputs()
     trace = build_omni_rollout_trace(
-        delayed, num_codebooks=N, codebook_vocab_size=V, delayed_logprobs=lp
+        codes,
+        num_codebooks=N,
+        codebook_vocab_size=V,
+        policy_logprobs=logprobs,
+        action_mask=mask,
     )
-    assert trace["total_action_count"] > 0
+    trace["action_streams"][0]["action_mask"][0][0] = 1
+    with pytest.raises(ValidationError):
+        OmniRolloutTrace.model_validate(trace)
+
+    trace = build_omni_rollout_trace(
+        codes,
+        num_codebooks=N,
+        codebook_vocab_size=V,
+        policy_logprobs=logprobs,
+        action_mask=mask,
+    )
+    trace["action_streams"][0]["unexpected"] = "must fail closed"
+    with pytest.raises(ValidationError):
+        OmniRolloutTrace.model_validate(trace)

@@ -37,6 +37,7 @@ class HiggsSamplerState:
     eoc_countdown: int | None = None
     generation_done: bool = False
     last_codes: torch.Tensor | None = None
+    last_action_mask: torch.Tensor | None = None
 
 
 class HiggsBatchedSamplerState:
@@ -46,7 +47,7 @@ class HiggsBatchedSamplerState:
 
     - ``delay_count[i]``: how many AR steps row ``i`` has produced so far.
       While ``delay_count < num_codebooks`` we're in the delay window.
-    - ``eoc_countdown[i]``: ``-1`` when cb0 hasn't emitted EOC yet, else
+    - ``eoc_countdown[i]``: ``-1`` before an active codebook emits EOC, else
       remaining wind-down steps. Once it hits ``0`` we set
       ``generation_done[i] = True``.
     - ``generation_done[i]``: terminal flag; the model runner reads this
@@ -79,6 +80,12 @@ class HiggsBatchedSamplerState:
             dtype=torch.long,
             device=self.device,
         )
+        self.last_action_mask = torch.zeros(
+            self.max_batch_size,
+            self.num_codebooks,
+            dtype=torch.bool,
+            device=self.device,
+        )
         # Per-request seed (``NO_SEED`` = unseeded) and monotonic AR step, used
         # to seed each ``(step, codebook)`` draw reproducibly.
         self.seeds = torch.full(
@@ -94,6 +101,7 @@ class HiggsBatchedSamplerState:
         self.eoc_countdown[row] = -1
         self.generation_done[row] = False
         self.last_codes[row].zero_()
+        self.last_action_mask[row].zero_()
         self.seeds[row] = NO_SEED
         self.step_count[row] = 0
 
@@ -109,6 +117,7 @@ class HiggsBatchedSamplerState:
             eoc_countdown=None if eoc < 0 else eoc,
             generation_done=bool(self.generation_done[row].item()),
             last_codes=None if delay == 0 else self.last_codes[row],
+            last_action_mask=None if delay == 0 else self.last_action_mask[row],
         )
 
     def write_row(self, row: int, state: HiggsSamplerState) -> None:
@@ -120,6 +129,10 @@ class HiggsBatchedSamplerState:
         self.generation_done[row] = state.generation_done
         if state.last_codes is not None:
             self.last_codes[row].copy_(state.last_codes.to(self.last_codes.dtype))
+        if state.last_action_mask is not None:
+            self.last_action_mask[row].copy_(
+                state.last_action_mask.to(self.last_action_mask.dtype)
+            )
 
 
 _GREEDY_TEMP_THRESHOLD = 1e-5
@@ -188,29 +201,56 @@ def step(
         )
 
     if state.generation_done:
+        state.last_action_mask = torch.zeros(
+            N, dtype=torch.bool, device=logits_NV.device
+        )
         return torch.full((N,), STOP_CODE, dtype=torch.long, device=logits_NV.device)
 
-    codes_N = _sample_independent(
+    sampled_N = _sample_independent(
         logits_NV,
         temperature=temperature,
         top_p=top_p,
         top_k=top_k,
     ).to(torch.long)
 
-    if state.delay_count < N:
-        next_cb = state.delay_count + 1
-        if next_cb < N:
-            codes_N[next_cb:] = boc_id
-        state.delay_count += 1
-    elif state.eoc_countdown is not None:
+    codes_N = sampled_N.clone()
+    cb_idx = torch.arange(N, device=logits_NV.device)
+    delay_forced = (state.delay_count < N) & (cb_idx > state.delay_count)
+
+    if state.eoc_countdown is not None:
+        # If EOC first appeared at codebook k, the next row has completed
+        # codebooks 0..k. Each wind-down row grows that forced-EOC prefix by one.
+        eoc_through = N - 1 - state.eoc_countdown
+        eoc_forced = cb_idx <= eoc_through
+        codes_N[delay_forced] = boc_id
+        codes_N[eoc_forced] = eoc_id
+        action_mask_N = ~(delay_forced | eoc_forced)
+
         state.eoc_countdown -= 1
         if state.eoc_countdown <= 0:
             state.generation_done = True
-    elif int(codes_N[0].item()) == eoc_id:
-        if N <= 2:
-            state.generation_done = True
+    else:
+        sampled_mask = ~delay_forced
+        codes_N[delay_forced] = boc_id
+        eoc_positions = (sampled_N == eoc_id) & sampled_mask
+        if bool(eoc_positions.any()):
+            first_eoc = int(eoc_positions.nonzero(as_tuple=False)[0].item())
+            forced_prefix = cb_idx < first_eoc
+            codes_N[forced_prefix] = eoc_id
+            action_mask_N = sampled_mask & ~forced_prefix
+
+            # Local codec tensors have length T + N - 1. An EOC at codebook k
+            # therefore needs N-k-2 subsequent rows (the EOC row is included).
+            state.eoc_countdown = max(N - first_eoc - 2, 0)
+            if state.eoc_countdown == 0:
+                state.generation_done = True
         else:
-            state.eoc_countdown = N - 2
+            action_mask_N = sampled_mask
+
+    if state.delay_count < N:
+        state.delay_count += 1
+
+    state.last_action_mask = action_mask_N.clone()
 
     if not state.generation_done:
         state.last_codes = codes_N.clone()
@@ -341,6 +381,7 @@ def batched_step(
         new_generation_done,
         new_last_codes,
         new_step_count,
+        action_mask_BN,
     ) = batched_step_direct(
         logits_BNV,
         delay_count,
@@ -360,6 +401,7 @@ def batched_step(
     state.eoc_countdown[row_indices] = new_eoc_countdown.to(state.eoc_countdown.dtype)
     state.generation_done[row_indices] = new_generation_done
     state.last_codes[row_indices] = new_last_codes
+    state.last_action_mask[row_indices] = action_mask_BN
     state.step_count[row_indices] = new_step_count
 
     return out_codes
@@ -386,6 +428,7 @@ def batched_step_direct(
     torch.Tensor,
     torch.Tensor,
     torch.Tensor,
+    torch.Tensor,
 ]:
     """CG-friendly state machine: state in/out as direct ``[B, ...]`` tensors,
     no ``state``/``row_indices`` indirection. Caller persists the returned
@@ -400,7 +443,7 @@ def batched_step_direct(
     delay_count = delay_count.to(torch.long)
     eoc_countdown = eoc_countdown.to(torch.long)
 
-    codes_BN = _sample_independent_batched(
+    sampled_BN = _sample_independent_batched(
         logits_BNV,
         temperature=temperature,
         top_p=top_p,
@@ -408,34 +451,55 @@ def batched_step_direct(
         seeds_B=seeds,
         step_B=step_count,
     )
-    cb_idx = torch.arange(N, device=device).unsqueeze(0).expand(B, N)
-    in_delay = (delay_count < N).unsqueeze(-1)
-    delay_mask = in_delay & (cb_idx > delay_count.unsqueeze(-1))
-    codes_BN = torch.where(delay_mask, torch.full_like(codes_BN, boc_id), codes_BN)
-
     active = ~generation_done
-    in_delay_active = active & (delay_count < N)
-    in_winddown_active = active & (eoc_countdown >= 0) & (~in_delay_active)
-    cb0_eoc_now_active = (
-        active & (~in_delay_active) & (~in_winddown_active) & (codes_BN[:, 0] == eoc_id)
+    cb_idx = torch.arange(N, device=device).unsqueeze(0).expand(B, N)
+    delay_forced = (
+        active.unsqueeze(-1)
+        & (delay_count < N).unsqueeze(-1)
+        & (cb_idx > delay_count.unsqueeze(-1))
+    )
+    in_winddown_active = active & (eoc_countdown >= 0)
+    normal_active = active & ~in_winddown_active
+    normal_sampled_mask = normal_active.unsqueeze(-1) & ~delay_forced
+
+    eoc_candidates = normal_sampled_mask & (sampled_BN == eoc_id)
+    first_eoc_idx = torch.where(
+        eoc_candidates, cb_idx, torch.full_like(cb_idx, N)
+    ).amin(dim=1)
+    eoc_now_active = first_eoc_idx < N
+    termination_prefix = eoc_now_active.unsqueeze(-1) & (
+        cb_idx < first_eoc_idx.unsqueeze(-1)
     )
 
-    new_delay_count = torch.where(in_delay_active, delay_count + 1, delay_count)
+    winddown_eoc_through = N - 1 - eoc_countdown
+    winddown_eoc_forced = in_winddown_active.unsqueeze(-1) & (
+        cb_idx <= winddown_eoc_through.unsqueeze(-1)
+    )
 
-    if N > 2:
-        new_eoc_countdown = torch.where(
-            cb0_eoc_now_active,
-            torch.full_like(eoc_countdown, N - 2),
-            torch.where(in_winddown_active, eoc_countdown - 1, eoc_countdown),
-        )
-        done_this_step = in_winddown_active & (new_eoc_countdown <= 0)
-    else:
-        new_eoc_countdown = torch.where(
-            in_winddown_active, eoc_countdown - 1, eoc_countdown
-        )
-        done_this_step = cb0_eoc_now_active | (
-            in_winddown_active & (new_eoc_countdown <= 0)
-        )
+    codes_BN = torch.where(
+        delay_forced, torch.full_like(sampled_BN, boc_id), sampled_BN
+    )
+    codes_BN = torch.where(
+        termination_prefix | winddown_eoc_forced,
+        torch.full_like(codes_BN, eoc_id),
+        codes_BN,
+    )
+    action_mask_BN = (normal_sampled_mask & ~termination_prefix) | (
+        in_winddown_active.unsqueeze(-1) & ~delay_forced & ~winddown_eoc_forced
+    )
+
+    advance_delay = active & (delay_count < N)
+    new_delay_count = torch.where(advance_delay, delay_count + 1, delay_count)
+
+    remaining_after_eoc = (N - first_eoc_idx - 2).clamp_min(0)
+    new_eoc_countdown = torch.where(
+        eoc_now_active,
+        remaining_after_eoc,
+        torch.where(in_winddown_active, eoc_countdown - 1, eoc_countdown),
+    )
+    done_this_step = (eoc_now_active & (remaining_after_eoc <= 0)) | (
+        in_winddown_active & (new_eoc_countdown <= 0)
+    )
     new_generation_done = generation_done | done_this_step
 
     update_codes = (active & (~done_this_step)).unsqueeze(-1)
@@ -445,6 +509,7 @@ def batched_step_direct(
 
     stop = torch.full_like(codes_BN, STOP_CODE)
     out_codes = torch.where(generation_done.unsqueeze(-1), stop, codes_BN)
+    action_mask_BN = action_mask_BN & active.unsqueeze(-1)
     return (
         out_codes,
         new_delay_count,
@@ -452,6 +517,7 @@ def batched_step_direct(
         new_generation_done,
         new_last_codes,
         new_step_count,
+        action_mask_BN,
     )
 
 

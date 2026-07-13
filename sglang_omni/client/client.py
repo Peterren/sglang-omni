@@ -142,6 +142,8 @@ class Client:
                 id=f"audio-{request_id}",
                 data=audio_b64,
                 transcript=full_text if full_text else None,
+                format=audio_format,
+                sample_rate=sample_rate or DEFAULT_SAMPLE_RATE,
             )
 
         return CompletionResult(
@@ -615,41 +617,52 @@ def _extract_inputs(request: GenerateRequest) -> Any:
             "GenerateRequest requires exactly one input: "
             "prompt, prompt_token_ids, or messages."
         )
+    # Media is model input, not request metadata. Keep metadata fallbacks for
+    # existing chat-completion callers while /generate migrates to typed fields.
+    audios = request.audios or request.metadata.get("audios")
+    images = request.images or request.metadata.get("images")
+    videos = request.videos or request.metadata.get("videos")
+    has_media = bool(audios or images or videos)
+
     if request.prompt is not None:
+        if has_media:
+            raise ValueError(
+                "prompt with media is not supported; use messages or prompt_token_ids"
+            )
         return request.prompt
+
     if request.prompt_token_ids is not None:
-        return list(request.prompt_token_ids)
-
-    # Build messages list
-    messages = [msg.to_dict() for msg in request.messages or []]
-
-    # Check if we have audios, images, or videos in metadata
-    audios = request.metadata.get("audios")
-    images = request.metadata.get("images")
-    videos = request.metadata.get("videos")
-
-    # If we have any media, return a dict with messages and media
-    # Otherwise, return just the messages list (for backward compatibility)
-    if audios or images or videos:
+        if not has_media:
+            return list(request.prompt_token_ids)
+        result: dict[str, Any] = {"input_ids": list(request.prompt_token_ids)}
+    else:
+        messages = [msg.to_dict() for msg in request.messages or []]
+        if not has_media:
+            return messages
         result = {"messages": messages}
+
+    if has_media:
         if images:
             result["images"] = images
         if audios:
             result["audios"] = audios
         if videos:
             result["videos"] = videos
-        for key in (
-            "video_fps",
-            "video_max_frames",
-            "video_min_pixels",
-            "video_max_pixels",
-            "video_total_pixels",
+        for key, typed_value in (
+            ("video_fps", request.video_fps),
+            ("video_max_frames", request.video_max_frames),
+            ("video_min_pixels", request.video_min_pixels),
+            ("video_max_pixels", request.video_max_pixels),
+            ("video_total_pixels", request.video_total_pixels),
         ):
-            value = request.metadata.get(key)
+            value = (
+                typed_value if typed_value is not None else request.metadata.get(key)
+            )
             if value is not None:
                 result[key] = value
         return result
-    return messages
+
+    raise AssertionError("unreachable input shape")
 
 
 def _build_params(request: GenerateRequest) -> dict[str, Any]:

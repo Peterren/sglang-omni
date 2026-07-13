@@ -289,14 +289,20 @@ class HiggsTTSModelRunner(ModelRunner):
         pool.eoc_countdown[rows_t] = model._cg_active_eoc_countdown[:n_real]
         pool.generation_done[rows_t] = model._cg_active_generation_done[:n_real]
         pool.last_codes[rows_t] = model._cg_active_last_codes[:n_real]
+        pool.last_action_mask[rows_t] = model._cg_action_mask_BN[:n_real]
         pool.step_count[rows_t] = model._cg_active_step_count[:n_real]
 
-        # Note(Jiaxin): pack the 3 tensors so a single D2H pulls them all back.
+        # Pack codes, action masks, and terminal flags into one D2H transfer.
         num_codebooks = model._cg_codes_BN.shape[1]
         staging = model._cg_collect_staging
         staging[:n_real, :num_codebooks] = model._cg_codes_BN[:n_real]
-        staging[:n_real, num_codebooks] = model._cg_was_done[:n_real]
-        staging[:n_real, num_codebooks + 1] = model._cg_active_generation_done[:n_real]
+        staging[:n_real, num_codebooks : 2 * num_codebooks] = model._cg_action_mask_BN[
+            :n_real
+        ]
+        staging[:n_real, 2 * num_codebooks] = model._cg_was_done[:n_real]
+        staging[:n_real, 2 * num_codebooks + 1] = model._cg_active_generation_done[
+            :n_real
+        ]
         return staging
 
     def _decode_collect_host(
@@ -321,8 +327,9 @@ class HiggsTTSModelRunner(ModelRunner):
         model = self.model
         num_codebooks = model._cg_codes_BN.shape[1]
         codes_BN_cpu = combined_cpu[:, :num_codebooks]
-        was_done_cpu = combined_cpu[:, num_codebooks].bool().tolist()
-        gen_done_after_cpu = combined_cpu[:, num_codebooks + 1].bool().tolist()
+        action_mask_BN_cpu = combined_cpu[:, num_codebooks : 2 * num_codebooks].bool()
+        was_done_cpu = combined_cpu[:, 2 * num_codebooks].bool().tolist()
+        gen_done_after_cpu = combined_cpu[:, 2 * num_codebooks + 1].bool().tolist()
         cb0_per_row: list[int] = []
         for b, sched_req in enumerate(requests):
             data = sched_req.data
@@ -343,12 +350,18 @@ class HiggsTTSModelRunner(ModelRunner):
                 cb0_per_row.append(0)
                 continue
             codes_N = codes_BN_cpu[b].to(torch.long).clone()
+            action_mask_N = action_mask_BN_cpu[b].clone()
             data.output_codes.append(codes_N)
+            data.output_action_masks.append(action_mask_N)
             if logprobs_cpu is not None and self._request_captures_rollout_logprobs(
                 sched_req
             ):
                 data.output_logprobs.append(
-                    logprobs_cpu[b, :num_codebooks].to(torch.float32).clone()
+                    torch.where(
+                        action_mask_N,
+                        logprobs_cpu[b, :num_codebooks].to(torch.float32),
+                        torch.zeros(num_codebooks, dtype=torch.float32),
+                    )
                 )
                 data.output_token_logprobs.append(
                     [
@@ -434,16 +447,32 @@ class HiggsTTSModelRunner(ModelRunner):
             rid = sched_req.request_id
             row = model._rid_to_row.get(rid)
             codes_log = model._output_codes.get(rid)
-            if req.is_chunked > 0 or row is None or not codes_log or req.finished():
+            action_mask_log = model._output_action_masks.get(rid)
+            if (
+                req.is_chunked > 0
+                or row is None
+                or not codes_log
+                or not action_mask_log
+                or req.finished()
+            ):
                 cb0_per_row.append(0)
                 continue
             codes_N = codes_log[-1]
+            action_mask_N = action_mask_log[-1]
             data.output_codes.append(codes_N.detach().cpu().clone())
+            data.output_action_masks.append(action_mask_N.detach().cpu().clone())
             if logprob_bundle is not None and self._request_captures_rollout_logprobs(
                 sched_req
             ):
                 data.output_logprobs.append(
-                    logprob_bundle[b, : model._num_codebooks].detach().cpu().clone()
+                    torch.where(
+                        action_mask_N,
+                        logprob_bundle[b, : model._num_codebooks],
+                        torch.zeros_like(logprob_bundle[b, : model._num_codebooks]),
+                    )
+                    .detach()
+                    .cpu()
+                    .clone()
                 )
                 data.output_token_logprobs.append(
                     [

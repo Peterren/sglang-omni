@@ -10,7 +10,10 @@ import torch
 
 from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
 from sglang_omni.models.higgs_tts.request_builders import apply_higgs_result
-from sglang_omni.models.higgs_tts.utils import apply_delay_pattern
+from sglang_omni.models.higgs_tts.utils import (
+    apply_delay_pattern,
+    delay_pattern_codec_content_mask,
+)
 
 N = 8
 V = 1026
@@ -22,8 +25,11 @@ def _fake_data(*, return_omni_rollout, return_logprob, t_raw=6):
         [float(-100.0 - i), int(code[0].item())]
         for i, code in enumerate(delayed.unbind(0))
     ]
+    action_mask = delay_pattern_codec_content_mask(delayed)
+    action_mask[t_raw, 0] = True
     return SimpleNamespace(
         output_codes=list(delayed.unbind(0)),
+        output_action_masks=list(action_mask.unbind(0)),
         output_logprobs=list(torch.randn(*delayed.shape).unbind(0)),
         output_token_logprobs=cb0_logprobs,
         num_codebooks=N,
@@ -31,6 +37,7 @@ def _fake_data(*, return_omni_rollout, return_logprob, t_raw=6):
         return_omni_rollout=return_omni_rollout,
         return_logprob=return_logprob,
         input_ids=list(range(5)),
+        weight_version="7",
     )
 
 
@@ -42,11 +49,14 @@ def test_omni_rollout_built_and_roundtrips():
 
     stream = state.omni_rollout["action_streams"][0]
     assert stream["name"] == "higgs_codes"
-    assert stream["logprobs"] is not None
-    assert state.omni_rollout["total_action_count"] == 6 * N
+    assert stream["policy_logprobs"] is not None
+    assert state.omni_rollout["version"] == 2
+    assert state.omni_rollout["total_action_count"] == 6 * N + 1
     assert state.output_token_logprobs == data.output_token_logprobs
+    assert state.weight_version == "7"
     # Survives the StagePayload dict round-trip the client reads from.
     assert HiggsTtsState.from_dict(state.to_dict()).omni_rollout == state.omni_rollout
+    assert HiggsTtsState.from_dict(state.to_dict()).weight_version == "7"
     assert (
         HiggsTtsState.from_dict(state.to_dict()).output_token_logprobs
         == state.output_token_logprobs
@@ -62,13 +72,12 @@ def test_flag_gating():
     assert "omni_rollout" not in off.to_dict()
     assert off.output_token_logprobs is not None
 
-    # rollout but no logprob flag -> trace without logprobs.
+    # A structured rollout without full policy logprobs is invalid.
     no_lp = HiggsTtsState(num_codebooks=N, codebook_size=V)
-    apply_higgs_result(
-        no_lp, _fake_data(return_omni_rollout=True, return_logprob=False)
-    )
-    assert no_lp.omni_rollout["action_streams"][0]["logprobs"] is None
-    assert no_lp.output_token_logprobs is None
+    with pytest.raises(ValueError, match="missing aligned"):
+        apply_higgs_result(
+            no_lp, _fake_data(return_omni_rollout=True, return_logprob=False)
+        )
 
 
 def test_cb0_output_logprobs_do_not_require_omni_rollout():

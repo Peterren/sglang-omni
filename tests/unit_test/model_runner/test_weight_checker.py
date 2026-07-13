@@ -7,7 +7,10 @@ from typing import Any
 import pytest
 import torch
 
-from sglang_omni.model_runner.model_worker import ModelWorker
+from sglang_omni.model_runner.model_worker import (
+    ModelWorker,
+    _distributed_weight_update_transport,
+)
 from sglang_omni.model_runner.weight_checker import StrictWeightChecker, _tensor_bytes
 
 
@@ -69,6 +72,47 @@ def test_tensor_bytes_supports_float8_fallback_path() -> None:
 
     assert isinstance(raw, bytes)
     assert len(raw) == tensor.numel() * tensor.element_size()
+
+
+def test_distributed_weight_update_transport_advertises_process_nccl_mode(
+    monkeypatch,
+) -> None:
+    runner = SimpleNamespace(
+        init_weights_update_group=lambda: None,
+        update_weights_from_distributed=lambda: None,
+        destroy_weights_update_group=lambda: None,
+    )
+    monkeypatch.setenv("NCCL_CUMEM_ENABLE", "1")
+    monkeypatch.setattr(torch.cuda.nccl, "version", lambda: (2, 28, 9))
+
+    assert _distributed_weight_update_transport(runner) == {
+        "protocol_version": 1,
+        "backend": "nccl",
+        "nccl_version": "2.28.9",
+        "nccl_cumem_enable": "1",
+    }
+
+
+def test_distributed_weight_update_transport_reports_default_nccl_mode(
+    monkeypatch,
+) -> None:
+    runner = SimpleNamespace(
+        init_weights_update_group=lambda: None,
+        update_weights_from_distributed=lambda: None,
+        destroy_weights_update_group=lambda: None,
+    )
+    monkeypatch.delenv("NCCL_CUMEM_ENABLE", raising=False)
+    monkeypatch.setattr(torch.cuda.nccl, "version", lambda: (2, 28, 9))
+
+    assert _distributed_weight_update_transport(runner)["nccl_cumem_enable"] == (
+        "default"
+    )
+
+
+def test_distributed_weight_update_transport_requires_complete_refit_surface() -> None:
+    runner = SimpleNamespace(update_weights_from_distributed=lambda: None)
+
+    assert _distributed_weight_update_transport(runner) is None
 
 
 def test_model_worker_update_weights_from_disk_updates_visible_model_info() -> None:
