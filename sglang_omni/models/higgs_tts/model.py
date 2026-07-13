@@ -120,6 +120,10 @@ class HiggsTTSModel(nn.Module):
             quant_config=quant_config,
             prefix=prefix + "backbone" if prefix else "backbone",
         )
+        # SGLang's piecewise-CUDA-graph capture locates the decoder stack via
+        # the top-level ``.model`` attribute; alias the Qwen3 backbone so the
+        # LM prefill path is capturable while the audio head stays eager.
+        self.model = self.backbone.model
 
         enc_cfg = config.audio_encoder_config or {}
         encoder_type = enc_cfg.get("encoder_type", "discrete")
@@ -157,17 +161,29 @@ class HiggsTTSModel(nn.Module):
             )
 
         self._sampler_pool_max_running_requests = _resolve_max_running_requests()
-        pool_size = self._sampler_pool_max_running_requests + 1
+        # The sampler pool must cover every request that holds sampler state at
+        # once: the running (decode) set PLUS requests still in prefill. A row
+        # is acquired at before_prefill and released only at finish, but
+        # SGLang admission (pp_max_micro_batch_size == max_running_requests //
+        # pp_size) bounds only the running set; the chunked-prefill bypass and
+        # mixed-chunk batching admit prefill-in-flight rows on top of a
+        # near-full running set. Sizing the pool to exactly max_running_requests
+        # therefore exhausts under piecewise-CUDA-graph prefill batching. Add a
+        # headroom equal to the running cap to cover a full concurrent prefill
+        # wave; each row is a handful of small per-request tensors.
+        self._sampler_pool_headroom = self._sampler_pool_max_running_requests
+        acquirable_rows = (
+            self._sampler_pool_max_running_requests + self._sampler_pool_headroom
+        )
+        pool_size = acquirable_rows + 1
         self._sampler_pool = HiggsBatchedSamplerState(
             max_batch_size=pool_size,
             num_codebooks=num_codebooks,
             device=self.backbone.model.embed_tokens.weight.device,
         )
-        self._padding_row = self._sampler_pool_max_running_requests
+        self._padding_row = acquirable_rows
         self._rid_to_row: dict[str, int] = {}
-        self._free_rows: list[int] = list(
-            range(self._sampler_pool_max_running_requests)
-        )
+        self._free_rows: list[int] = list(range(acquirable_rows))
         self._output_codes: dict[str, list[torch.Tensor]] = {}
         cg_device = self.backbone.model.embed_tokens.weight.device
         self._cg_row_indices = torch.zeros(

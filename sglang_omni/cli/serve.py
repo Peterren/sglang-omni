@@ -33,6 +33,12 @@ _ASYNC_DECODE_FACTORIES = frozenset(
 _ASYNC_DECODE_SUPPORTED_MODELS = (
     "Higgs TTS, MOSS-TTS-Local, and MOSS-Transcribe-Diarize"
 )
+_PIECEWISE_CUDA_GRAPH_FACTORIES = frozenset(
+    {
+        "sglang_omni.models.higgs_tts.stages.create_sglang_tts_engine_executor",
+    }
+)
+_PIECEWISE_CUDA_GRAPH_SUPPORTED_MODELS = "Higgs TTS"
 _QWEN_PARTIAL_START_TALKER_FACTORY = (
     "sglang_omni.models.qwen3_omni.stages.create_talker_ar_executor_from_config"
 )
@@ -852,6 +858,33 @@ def apply_decode_mode_cli_overrides(
     return pipeline_config
 
 
+def apply_piecewise_cuda_graph_cli_overrides(
+    pipeline_config: PipelineConfig,
+    *,
+    piecewise_cuda_graph: bool | None,
+) -> PipelineConfig:
+    """Toggle piecewise prefill CUDA graph on the supported generation stage."""
+    if piecewise_cuda_graph is None:
+        return pipeline_config
+    matching_stages = [
+        stage
+        for stage in pipeline_config.stages
+        if stage.factory in _PIECEWISE_CUDA_GRAPH_FACTORIES
+    ]
+    if not matching_stages:
+        raise typer.BadParameter(
+            "--piecewise-cuda-graph currently supports only "
+            f"{_PIECEWISE_CUDA_GRAPH_SUPPORTED_MODELS}; no stage in this "
+            "pipeline uses a supported factory"
+        )
+    _apply_factory_args_updates(
+        pipeline_config,
+        matching_stages,
+        {"enable_piecewise_cuda_graph": piecewise_cuda_graph},
+    )
+    return pipeline_config
+
+
 def apply_torch_compile_cli_overrides(
     pipeline_config: PipelineConfig,
     *,
@@ -1163,6 +1196,19 @@ def serve(
             ),
         ),
     ] = None,
+    piecewise_cuda_graph: Annotated[
+        bool | None,
+        typer.Option(
+            "--piecewise-cuda-graph/--no-piecewise-cuda-graph",
+            "--piecewise_cuda_graph/--no_piecewise_cuda_graph",
+            help=(
+                "Capture the LM prefill path with SGLang's piecewise CUDA "
+                "graph (audio encoding and multimodal embedding stay eager). "
+                "Omit to use the pipeline config default (off). Available "
+                f"for {_PIECEWISE_CUDA_GRAPH_SUPPORTED_MODELS}."
+            ),
+        ),
+    ] = None,
     max_running_requests: Annotated[
         int | None,
         typer.Option(
@@ -1262,6 +1308,10 @@ def serve(
         merged_config,
         decode_mode=decode_mode,
         async_lookahead_min_batch_size=async_lookahead_min_batch_size,
+    )
+    merged_config = apply_piecewise_cuda_graph_cli_overrides(
+        merged_config,
+        piecewise_cuda_graph=piecewise_cuda_graph,
     )
     generation_server_args_overrides: dict[str, object] = {}
     if max_running_requests is not None:

@@ -15,6 +15,11 @@ from sglang_omni.scheduling.engine_factory import TtsEngineBuilder
 class HiggsTtsEngineBuilder(TtsEngineBuilder):
     model_name = "Higgs TTS"
     context_length = 4096
+    # Largest token bucket captured for piecewise prefill graphs. Higgs
+    # voice-clone prompts (ref-audio codes + text) stay well under this, so
+    # 2048 covers real prefill chunks without paying capture time for buckets
+    # the workload never hits.
+    piecewise_cuda_graph_max_tokens = 2048
 
     def __init__(
         self,
@@ -26,6 +31,7 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
         async_decode_min_batch_size: int,
         prefill_coalesce_requests: int = 0,
         prefill_coalesce_wait_ms: float = 60.0,
+        enable_piecewise_cuda_graph: bool = False,
     ) -> None:
         self.max_new_tokens = max_new_tokens
         self.max_running_requests = max_running_requests
@@ -34,6 +40,7 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
         self.async_decode_min_batch_size = async_decode_min_batch_size
         self.prefill_coalesce_requests = prefill_coalesce_requests
         self.prefill_coalesce_wait_ms = prefill_coalesce_wait_ms
+        self.enable_piecewise_cuda_graph = enable_piecewise_cuda_graph
         self.model: Any | None = None
 
     def resolve_checkpoint(self, model_path: str) -> str:
@@ -60,6 +67,20 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
 
     def customize_server_args(self, server_args: Any) -> None:
         server_args.disable_overlap_schedule = True
+        if self.enable_piecewise_cuda_graph:
+            # ServerArgs.__post_init__ has already run at this point and its
+            # blanket multimodal gate turned piecewise CUDA graph off (and left
+            # the token buckets ungenerated). Higgs does audio-code embedding
+            # outside the Qwen3 backbone forward, so the LM prefill path is
+            # safe to capture: re-enable PCG and rebuild the buckets here.
+            server_args.enforce_piecewise_cuda_graph = True
+            server_args.disable_piecewise_cuda_graph = False
+            server_args.piecewise_cuda_graph_max_tokens = (
+                self.piecewise_cuda_graph_max_tokens
+            )
+            server_args.piecewise_cuda_graph_tokens = (
+                server_args._generate_piecewise_cuda_graph_tokens()
+            )
 
     def setup_model(
         self,

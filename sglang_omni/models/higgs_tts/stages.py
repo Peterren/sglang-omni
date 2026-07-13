@@ -395,6 +395,7 @@ def create_sglang_tts_engine_executor(
     async_decode_min_batch_size: int = 2,
     prefill_coalesce_requests: int = 0,
     prefill_coalesce_wait_ms: float = 60.0,
+    enable_piecewise_cuda_graph: bool = False,
 ):
     """sglang-backed AR engine for Higgs TTS."""
     from sglang_omni.models.higgs_tts.engine_builder import HiggsTtsEngineBuilder
@@ -407,6 +408,7 @@ def create_sglang_tts_engine_executor(
         async_decode_min_batch_size=async_decode_min_batch_size,
         prefill_coalesce_requests=prefill_coalesce_requests,
         prefill_coalesce_wait_ms=prefill_coalesce_wait_ms,
+        enable_piecewise_cuda_graph=enable_piecewise_cuda_graph,
     ).build(
         model_path,
         device=device,
