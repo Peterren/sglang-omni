@@ -97,6 +97,7 @@ def _build_runner(
             output_action_masks=[],
             output_logprobs=[],
             return_logprob=False,
+            return_omni_rollout=False,
             generation_done=False,
         )
         for i in range(n)
@@ -295,6 +296,7 @@ def test_async_preserves_code_mask_logprob_request_association(monkeypatch):
         result.logits_output.hidden_states = torch.zeros(2, 4)
         for data in datas:
             data.return_logprob = True
+            data.return_omni_rollout = True
         return runner, sched, result, fb, reqs, datas
 
     sync = configure(False)
@@ -397,6 +399,7 @@ def test_async_real_pinned_path_matches_sync():
                 output_action_masks=[],
                 output_logprobs=[],
                 return_logprob=False,
+                return_omni_rollout=False,
                 generation_done=False,
             )
             for i in range(n)

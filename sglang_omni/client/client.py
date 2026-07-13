@@ -94,7 +94,7 @@ class Client:
         finish_reason: str | None = None
         logprobs_parts: list[Any] = []
         saw_output_token_logprobs = False
-        action_trace: dict[str, Any] | None = None
+        omni_rollout: dict[str, Any] | None = None
         weight_version: str | None = None
 
         async for chunk in self.generate(request, request_id=request_id):
@@ -110,8 +110,8 @@ class Client:
             if chunk.output_token_logprobs is not None:
                 saw_output_token_logprobs = True
                 logprobs_parts.extend(chunk.output_token_logprobs)
-            if chunk.action_trace is not None:
-                action_trace = chunk.action_trace
+            if chunk.omni_rollout is not None:
+                omni_rollout = chunk.omni_rollout
             if chunk.weight_version is not None:
                 weight_version = chunk.weight_version
 
@@ -150,7 +150,7 @@ class Client:
             output_token_logprobs=(
                 logprobs_parts if saw_output_token_logprobs else None
             ),
-            action_trace=action_trace,
+            omni_rollout=omni_rollout,
             weight_version=weight_version,
         )
 
@@ -477,9 +477,9 @@ class Client:
                 output_token_logprobs = decode_result.get("output_token_logprobs")
                 if output_token_logprobs is not None:
                     chunk.output_token_logprobs = output_token_logprobs
-                action_trace = decode_result.get("action_trace")
-                if action_trace is not None:
-                    chunk.action_trace = action_trace
+                omni_rollout = decode_result.get("omni_rollout")
+                if omni_rollout is not None:
+                    chunk.omni_rollout = omni_rollout
                 weight_version = decode_result.get("weight_version")
                 if weight_version is not None:
                     chunk.weight_version = weight_version
@@ -502,9 +502,9 @@ class Client:
             output_token_logprobs = result.get("output_token_logprobs")
             if output_token_logprobs is not None:
                 chunk.output_token_logprobs = output_token_logprobs
-            action_trace = result.get("action_trace")
-            if action_trace is not None:
-                chunk.action_trace = action_trace
+            omni_rollout = result.get("omni_rollout")
+            if omni_rollout is not None:
+                chunk.omni_rollout = omni_rollout
             weight_version = result.get("weight_version")
             if weight_version is not None:
                 chunk.weight_version = weight_version
@@ -558,9 +558,9 @@ class Client:
             output_token_logprobs = data.get("output_token_logprobs")
             if output_token_logprobs is not None:
                 chunk.output_token_logprobs = output_token_logprobs
-            action_trace = data.get("action_trace")
-            if action_trace is not None:
-                chunk.action_trace = action_trace
+            omni_rollout = data.get("omni_rollout")
+            if omni_rollout is not None:
+                chunk.omni_rollout = omni_rollout
             weight_version = data.get("weight_version")
             if weight_version is not None:
                 chunk.weight_version = weight_version

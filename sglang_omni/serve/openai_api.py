@@ -1065,6 +1065,7 @@ def _build_rollout_generate_request(req: RolloutGenerateRequest) -> GenerateRequ
 
     extra_params: dict[str, Any] = {
         "return_logprob": req.return_logprob,
+        "return_omni_rollout": req.return_omni_rollout,
         "return_routed_experts": req.return_routed_experts,
         "return_indexer_topk": req.return_indexer_topk,
     }
@@ -1114,17 +1115,17 @@ def _build_generate_response(
         type=finish_type,
         length=completion_tokens if finish_type == "length" else None,
     )
-    if (
+    if (req.return_omni_rollout and result.omni_rollout is None) or (
         req.return_logprob
         and result.output_token_logprobs is None
-        and result.action_trace is None
+        and result.omni_rollout is None
     ):
         raise HTTPException(
             status_code=501,
             detail=(
                 "backend did not return requested logprobs; expected "
-                "output_token_logprobs for text or an action_trace for "
-                "structured output"
+                "output_token_logprobs for text or meta_info.omni_rollout for "
+                "structured output (set return_omni_rollout=true)"
             ),
         )
     if (
@@ -1157,17 +1158,33 @@ def _build_generate_response(
         output_token_logprobs=(
             result.output_token_logprobs if req.return_logprob else None
         ),
-        action_trace=result.action_trace if req.return_logprob else None,
+        omni_rollout=(result.omni_rollout if req.return_omni_rollout else None),
     )
-    if meta_info.action_trace is not None:
-        first_stream = meta_info.action_trace.streams[0]
-        if completion_tokens != len(first_stream.actions):
+    if meta_info.omni_rollout is not None:
+        streams = meta_info.omni_rollout.get("action_streams")
+        if not isinstance(streams, list) or not streams:
+            raise HTTPException(
+                status_code=500,
+                detail="omni_rollout must include at least one action stream",
+            )
+        first_stream = streams[0]
+        if not isinstance(first_stream, dict):
+            raise HTTPException(
+                status_code=500,
+                detail="omni_rollout action streams must be objects",
+            )
+        first_actions = first_stream.get("actions")
+        if not isinstance(first_actions, list) or completion_tokens != len(
+            first_actions
+        ):
             raise HTTPException(
                 status_code=500,
                 detail="completion_tokens does not match structured action length",
             )
         structured_audio = any(
-            stream.modality == "audio" for stream in meta_info.action_trace.streams
+            stream.get("modality") == "audio"
+            for stream in streams
+            if isinstance(stream, dict)
         )
         if structured_audio:
             if (

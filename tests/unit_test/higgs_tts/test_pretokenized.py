@@ -40,6 +40,7 @@ def test_build_pretokenized_state_uses_ids_verbatim() -> None:
             "temperature": 1.0,
             "seed": 1,
             "return_logprob": True,
+            "return_omni_rollout": True,
         },
     )
 
@@ -55,6 +56,7 @@ def test_build_pretokenized_state_uses_ids_verbatim() -> None:
     assert state.top_k is None
     assert state.seed == 1
     assert state.return_logprob is True
+    assert state.return_omni_rollout is True
 
 
 @pytest.mark.parametrize(
@@ -73,7 +75,11 @@ def test_build_pretokenized_state_rejects_filtered_action_logprobs(
     with pytest.raises(ValueError, match="neutral sampling"):
         build_pretokenized_state(
             [5, 6, 7],
-            {"return_logprob": True, field: value},
+            {
+                "return_logprob": True,
+                "return_omni_rollout": True,
+                field: value,
+            },
         )
 
 

@@ -482,7 +482,7 @@ class HiggsTTSModelRunner(ModelRunner):
     @staticmethod
     def _request_captures_rollout_logprobs(sched_req: Any) -> bool:
         data = sched_req.data
-        return bool(data.return_logprob)
+        return bool(data.return_omni_rollout and data.return_logprob)
 
     def _should_capture_rollout_logprobs(self, requests: list) -> bool:
         return any(self._request_captures_rollout_logprobs(req) for req in requests)

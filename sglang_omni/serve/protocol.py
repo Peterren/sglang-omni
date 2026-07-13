@@ -3,19 +3,9 @@
 
 from __future__ import annotations
 
-import math
-from typing import Any, Literal
+from typing import Any
 
-from pydantic import (
-    AliasChoices,
-    BaseModel,
-    ConfigDict,
-    Field,
-    StrictBool,
-    StrictFloat,
-    StrictInt,
-    model_validator,
-)
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class UsageResponse(BaseModel):
@@ -184,7 +174,7 @@ class RolloutGenerateRequest(BaseModel):
     """Rollout request for ``POST /generate``; set exactly one of
     ``input_ids``, ``prompt``, ``messages``."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(populate_by_name=True)
 
     model: str | None = None
 
@@ -203,6 +193,7 @@ class RolloutGenerateRequest(BaseModel):
     metadata: dict[str, Any] | None = None
 
     return_logprob: bool = True
+    return_omni_rollout: bool = False
     return_routed_experts: bool = False
     return_indexer_topk: bool = False
 
@@ -223,58 +214,6 @@ class GenerateAudio(BaseModel):
     sample_rate: int | None = None
 
 
-class ActionStream(BaseModel):
-    """One aligned time-by-channel policy action stream."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    stage: str
-    modality: str
-    vocab_size: StrictInt = Field(gt=0)
-    actions: list[list[StrictInt]]
-    logprobs: list[list[StrictFloat]]
-    action_mask: list[list[StrictBool]]
-
-    @model_validator(mode="after")
-    def validate_lattice(self) -> "ActionStream":
-        if not self.actions or not self.actions[0]:
-            raise ValueError("action stream must have non-empty [time, channel] shape")
-        length = len(self.actions)
-        channels = len(self.actions[0])
-        matrices = {
-            "actions": self.actions,
-            "logprobs": self.logprobs,
-            "action_mask": self.action_mask,
-        }
-        for name, matrix in matrices.items():
-            if len(matrix) != length or any(len(row) != channels for row in matrix):
-                raise ValueError(
-                    f"{name} must match actions shape [{length}, {channels}]"
-                )
-
-        for row in range(length):
-            for channel in range(channels):
-                action = self.actions[row][channel]
-                logprob = self.logprobs[row][channel]
-                sampled = self.action_mask[row][channel]
-                if action < 0 or action >= self.vocab_size:
-                    raise ValueError("action is outside the declared vocabulary")
-                if sampled and not math.isfinite(logprob):
-                    raise ValueError("sampled action has a non-finite policy logprob")
-                if not sampled and logprob != 0.0:
-                    raise ValueError("forced action policy logprob must be zero")
-        return self
-
-
-class ActionTrace(BaseModel):
-    """Versioned structured policy trace returned by ``POST /generate``."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal[1]
-    streams: list[ActionStream] = Field(min_length=1)
-
-
 class GenerateMetaInfo(BaseModel):
     """Rollout meta_info block."""
 
@@ -285,7 +224,7 @@ class GenerateMetaInfo(BaseModel):
     weight_version: str | None = None
     request_metadata: dict[str, Any] | None = None
     output_token_logprobs: list[Any] | None = None
-    action_trace: ActionTrace | None = None
+    omni_rollout: dict[str, Any] | None = None
 
 
 class GenerateResponse(BaseModel):

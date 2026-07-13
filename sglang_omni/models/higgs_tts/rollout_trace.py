@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Build the structured Higgs policy action trace."""
+"""Serialize Higgs actions into the issue #780 omni rollout contract."""
 
 from __future__ import annotations
 
@@ -7,17 +7,19 @@ from typing import Any
 
 import torch
 
-ACTION_TRACE_VERSION = 1
+OMNI_ROLLOUT_VERSION = 1
 
 
-def build_action_trace(
+def build_omni_rollout_trace(
     delayed_codes: torch.Tensor,
     *,
     num_codebooks: int,
     codebook_vocab_size: int,
-    policy_logprobs: torch.Tensor,
+    delayed_logprobs: torch.Tensor,
     action_mask: torch.Tensor,
+    model_family: str = "higgs_tts",
     stage: str = "tts_engine",
+    stream_name: str = "higgs_codes",
 ) -> dict[str, Any]:
     """Validate and serialize aligned sampled actions, masks, and logprobs."""
     if delayed_codes.ndim != 2:
@@ -34,9 +36,9 @@ def build_action_trace(
         raise ValueError(
             f"action_mask shape {tuple(action_mask.shape)} != codes shape {(L, N)}"
         )
-    if tuple(policy_logprobs.shape) != (L, N):
+    if tuple(delayed_logprobs.shape) != (L, N):
         raise ValueError(
-            f"policy_logprobs shape {tuple(policy_logprobs.shape)} != "
+            f"delayed_logprobs shape {tuple(delayed_logprobs.shape)} != "
             f"codes shape {(L, N)}"
         )
     action_mask = action_mask.to(torch.bool)
@@ -44,28 +46,40 @@ def build_action_trace(
         ((delayed_codes >= 0) & (delayed_codes < codebook_vocab_size)).all()
     ):
         raise ValueError("Higgs rollout action is outside the codebook vocabulary")
-    action_logprobs = policy_logprobs[action_mask]
+    action_logprobs = delayed_logprobs[action_mask]
     if action_logprobs.numel() and not bool(torch.isfinite(action_logprobs).all()):
         raise ValueError("non-finite policy logprob at a sampled action position")
 
-    policy_logprobs = torch.where(
+    delayed_logprobs = torch.where(
         action_mask,
-        policy_logprobs.to(torch.float32),
-        torch.zeros_like(policy_logprobs, dtype=torch.float32),
+        delayed_logprobs.to(torch.float32),
+        torch.zeros_like(delayed_logprobs, dtype=torch.float32),
     )
     stream: dict[str, Any] = {
+        "name": stream_name,
         "stage": stage,
         "modality": "audio",
+        "action_type": "discrete",
+        "layout": "codebook_2d",
+        "flatten_order": "time_major",
+        "shape": [int(L), int(N)],
         "vocab_size": int(codebook_vocab_size),
         "actions": delayed_codes.to(torch.long).tolist(),
-        "logprobs": policy_logprobs.tolist(),
-        "action_mask": action_mask.tolist(),
+        "logprobs": delayed_logprobs.tolist(),
+        "action_mask": action_mask.to(torch.int64).tolist(),
+        "deterministic_mask": None,
+        "channel_ids": list(range(N)),
+        "channel_roles": [f"codebook_{channel}" for channel in range(N)],
     }
 
     return {
-        "version": ACTION_TRACE_VERSION,
-        "streams": [stream],
+        "version": OMNI_ROLLOUT_VERSION,
+        "model_family": model_family,
+        "stages": [stage],
+        "total_action_count": int(action_mask.sum().item()),
+        "action_streams": [stream],
+        "non_action_outputs": [],
     }
 
 
-__all__ = ["ACTION_TRACE_VERSION", "build_action_trace"]
+__all__ = ["OMNI_ROLLOUT_VERSION", "build_omni_rollout_trace"]

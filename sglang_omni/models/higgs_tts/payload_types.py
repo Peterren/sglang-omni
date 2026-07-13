@@ -42,10 +42,11 @@ class HiggsTtsState(PipelineStateBase):
 
     # RL rollout controls
     return_logprob: bool = False
+    return_omni_rollout: bool = False
 
     # tts_engine
     output_codes_delayed: list[list[int]] | None = None
-    action_trace: dict[str, Any] | None = None
+    omni_rollout: dict[str, Any] | None = None
     weight_version: str | None = None
 
     # vocoder
@@ -77,12 +78,13 @@ class HiggsTtsState(PipelineStateBase):
             value = getattr(self, key)
             if value is not None:
                 data[key] = value
-        if self.return_logprob:
-            data["return_logprob"] = True
+        for key in ("return_logprob", "return_omni_rollout"):
+            if getattr(self, key):
+                data[key] = True
         if self.output_codes_delayed is not None:
             data["output_codes_delayed"] = self.output_codes_delayed
-        if self.action_trace is not None:
-            data["action_trace"] = self.action_trace
+        if self.omni_rollout is not None:
+            data["omni_rollout"] = self.omni_rollout
         if self.weight_version is not None:
             data["weight_version"] = self.weight_version
         self.append_usage_fields(data)
@@ -110,8 +112,9 @@ class HiggsTtsState(PipelineStateBase):
             top_k=data.get("top_k"),
             seed=data.get("seed"),
             return_logprob=data.get("return_logprob", False),
+            return_omni_rollout=data.get("return_omni_rollout", False),
             output_codes_delayed=data.get("output_codes_delayed"),
-            action_trace=data.get("action_trace"),
+            omni_rollout=data.get("omni_rollout"),
             weight_version=data.get("weight_version"),
             prompt_tokens=data.get("prompt_tokens", 0),
             completion_tokens=data.get("completion_tokens", 0),

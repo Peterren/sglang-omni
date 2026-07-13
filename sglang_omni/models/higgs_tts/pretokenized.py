@@ -11,7 +11,14 @@ from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
 def validate_higgs_rollout_sampling(params: dict[str, Any] | None) -> None:
     """Reject sampling transforms whose behavior logprobs are not implemented."""
     params = params or {}
-    if not bool(params.get("return_logprob", False)):
+    if bool(params.get("return_omni_rollout", False)) and not bool(
+        params.get("return_logprob", False)
+    ):
+        raise ValueError("Higgs return_omni_rollout requires return_logprob=true")
+    if not (
+        bool(params.get("return_logprob", False))
+        and bool(params.get("return_omni_rollout", False))
+    ):
         return
 
     expected = {
@@ -70,6 +77,7 @@ def build_pretokenized_state(
         top_k=params.get("top_k"),
         seed=params.get("seed"),
         return_logprob=bool(params.get("return_logprob", False)),
+        return_omni_rollout=bool(params.get("return_omni_rollout", False)),
     )
 
 

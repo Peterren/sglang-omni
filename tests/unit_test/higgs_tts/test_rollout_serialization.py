@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Higgs action-trace serialization through pipeline state."""
+"""Higgs omni-rollout serialization through pipeline state."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ N = 8
 V = 1026
 
 
-def _fake_data(*, return_logprob, t_raw=6):
+def _fake_data(*, return_logprob, return_omni_rollout=True, t_raw=6):
     delayed = apply_delay_pattern(torch.randint(0, 1024, (t_raw, N)))
     action_mask = delay_pattern_codec_content_mask(delayed)
     action_mask[t_raw, 0] = True
@@ -30,33 +30,34 @@ def _fake_data(*, return_logprob, t_raw=6):
         num_codebooks=N,
         codebook_size=V,
         return_logprob=return_logprob,
+        return_omni_rollout=return_omni_rollout,
         input_ids=list(range(5)),
         weight_version="7",
     )
 
 
-def test_action_trace_built_and_roundtrips():
+def test_omni_rollout_built_and_roundtrips():
     torch.manual_seed(0)
     state = HiggsTtsState(num_codebooks=N, codebook_size=V)
     data = _fake_data(return_logprob=True)
     apply_higgs_result(state, data)
 
-    stream = state.action_trace["streams"][0]
+    stream = state.omni_rollout["action_streams"][0]
     assert stream["stage"] == "tts_engine"
     assert stream["logprobs"] is not None
-    assert state.action_trace["version"] == 1
+    assert state.omni_rollout["version"] == 1
     assert state.weight_version == "7"
     # Survives the StagePayload dict round-trip the client reads from.
-    assert HiggsTtsState.from_dict(state.to_dict()).action_trace == state.action_trace
+    assert HiggsTtsState.from_dict(state.to_dict()).omni_rollout == state.omni_rollout
     assert HiggsTtsState.from_dict(state.to_dict()).weight_version == "7"
 
 
 def test_flag_gating():
     torch.manual_seed(1)
     off = HiggsTtsState(num_codebooks=N, codebook_size=V)
-    apply_higgs_result(off, _fake_data(return_logprob=False))
-    assert off.action_trace is None
-    assert "action_trace" not in off.to_dict()
+    apply_higgs_result(off, _fake_data(return_logprob=False, return_omni_rollout=False))
+    assert off.omni_rollout is None
+    assert "omni_rollout" not in off.to_dict()
 
     no_lp = HiggsTtsState(num_codebooks=N, codebook_size=V)
     data = _fake_data(return_logprob=True)

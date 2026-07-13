@@ -264,8 +264,8 @@ class HiggsStreamingVocoderScheduler(StreamingVocoderBase[_HiggsStreamState, Non
         usage = build_usage(final_state)
         if usage is not None:
             final_data["usage"] = usage
-        if final_state.action_trace is not None:
-            final_data["action_trace"] = final_state.action_trace
+        if final_state.omni_rollout is not None:
+            final_data["omni_rollout"] = final_state.omni_rollout
         if final_state.weight_version is not None:
             final_data["weight_version"] = final_state.weight_version
         return final_data
@@ -397,8 +397,8 @@ class HiggsStreamingVocoderScheduler(StreamingVocoderBase[_HiggsStreamState, Non
         usage = build_usage(state)
         if usage is not None:
             data["usage"] = usage
-        if state.action_trace is not None:
-            data["action_trace"] = state.action_trace
+        if state.omni_rollout is not None:
+            data["omni_rollout"] = state.omni_rollout
         if state.weight_version is not None:
             data["weight_version"] = state.weight_version
         payload.data = data

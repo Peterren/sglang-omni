@@ -540,6 +540,7 @@ def test_higgs_model_runner_marks_sampler_finish() -> None:
         output_action_masks=[],
         output_logprobs=[],
         return_logprob=False,
+        return_omni_rollout=False,
         generation_done=False,
     )
     result = SimpleNamespace(
@@ -577,6 +578,7 @@ def test_higgs_model_runner_emits_latched_stream_metadata() -> None:
         output_action_masks=[],
         output_logprobs=[],
         return_logprob=False,
+        return_omni_rollout=False,
         generation_done=False,
         stream_metadata={
             "modality": "audio_codes",
@@ -661,6 +663,7 @@ def test_higgs_model_runner_marks_sampler_finish_cg() -> None:
         output_action_masks=[],
         output_logprobs=[],
         return_logprob=False,
+        return_omni_rollout=False,
         generation_done=False,
     )
     result = SimpleNamespace(
@@ -723,6 +726,7 @@ def test_higgs_model_runner_collect_cg_mixed_batch() -> None:
             output_action_masks=[],
             output_logprobs=[],
             return_logprob=False,
+            return_omni_rollout=False,
             generation_done=False,
         )
         for r in reqs
@@ -789,6 +793,7 @@ def test_higgs_model_runner_collects_rollout_logprobs_only_when_requested() -> N
         output_action_masks=[],
         output_logprobs=[],
         return_logprob=True,
+        return_omni_rollout=True,
         generation_done=False,
     )
     result = SimpleNamespace(
@@ -832,6 +837,7 @@ def test_higgs_model_runner_skips_already_finished_eager_request() -> None:
         req=req,
         output_codes=[],
         return_logprob=False,
+        return_omni_rollout=False,
         generation_done=True,
     )
     result = SimpleNamespace(

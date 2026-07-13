@@ -13,7 +13,7 @@ from sglang.srt.managers.schedule_batch import Req
 from sglang.srt.sampling.sampling_params import SamplingParams
 
 from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
-from sglang_omni.models.higgs_tts.rollout_trace import build_action_trace
+from sglang_omni.models.higgs_tts.rollout_trace import build_omni_rollout_trace
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.sglang_backend import SGLangARRequestData
 from sglang_omni.scheduling.streaming_vocoder import INITIAL_CODEC_CHUNK_FRAMES_PARAM
@@ -30,6 +30,7 @@ class HiggsSGLangRequestData(SGLangARRequestData):
     output_codes: list[torch.Tensor] = field(default_factory=list)
     output_action_masks: list[torch.Tensor] = field(default_factory=list)
     output_logprobs: list[torch.Tensor] = field(default_factory=list)
+    return_omni_rollout: bool = False
     generation_done: bool = False
     engine_start_s: float = 0.0
     stream_metadata: dict[str, Any] | None = None
@@ -115,6 +116,7 @@ def build_sglang_higgs_request(
         top_p=float(state.top_p) if state.top_p is not None else 1.0,
         top_k=int(state.top_k) if state.top_k is not None else -1,
         return_logprob=bool(state.return_logprob),
+        return_omni_rollout=bool(state.return_omni_rollout),
     )
 
 
@@ -178,16 +180,16 @@ def apply_higgs_result(state: HiggsTtsState, data: HiggsSGLangRequestData) -> No
     else:
         action_mask = torch.empty_like(codes, dtype=torch.bool)
 
-    if data.return_logprob:
+    if data.return_omni_rollout:
         if not data.output_action_masks or delayed_logprobs is None:
             raise ValueError(
                 "Higgs structured rollout is missing aligned action masks or policy logprobs"
             )
-        state.action_trace = build_action_trace(
+        state.omni_rollout = build_omni_rollout_trace(
             codes,
             num_codebooks=num_codebooks,
             codebook_vocab_size=int(data.codebook_size),
-            policy_logprobs=delayed_logprobs,
+            delayed_logprobs=delayed_logprobs,
             action_mask=action_mask,
         )
     state.weight_version = data.weight_version
