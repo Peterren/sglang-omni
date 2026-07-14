@@ -21,14 +21,14 @@ from sglang_omni.models.higgs_tts.model import _flat_sampling_attr
 from sglang_omni.models.higgs_tts.sampler import K_MAX, selected_token_logprobs
 from sglang_omni.models.higgs_tts.text_tokenizer import AUDIO_PLACEHOLDER_ID
 from sglang_omni.models.higgs_tts.utils import EOC_ID
-from sglang_omni.models.tts_streaming import (
+from sglang_omni.models.higgs_tts.vocoder_scheduler import (
     DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
     DEFAULT_HIGGS_STREAM_STRIDE,
     HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA,
     HIGGS_STREAM_STRIDE_METADATA,
-    INITIAL_CODEC_CHUNK_FRAMES_PARAM,
 )
 from sglang_omni.scheduling.messages import OutgoingMessage
+from sglang_omni.scheduling.streaming_vocoder import INITIAL_CODEC_CHUNK_FRAMES_PARAM
 
 logger = logging.getLogger(__name__)
 

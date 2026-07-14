@@ -43,11 +43,9 @@ from sglang_omni.models.higgs_tts.utils import (
     to_codes_TN,
 )
 from sglang_omni.models.higgs_tts.vocoder_scheduler import (
-    HiggsStreamingVocoderScheduler,
-)
-from sglang_omni.models.tts_streaming import (
     DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
     DEFAULT_HIGGS_STREAM_STRIDE,
+    HiggsStreamingVocoderScheduler,
 )
 
 # _REF_PATH_HASH_MEMO is the shared memo object, re-exported so tests can
