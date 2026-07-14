@@ -20,13 +20,11 @@ from sglang_omni.models.higgs_tts.request_builders import build_higgs_stream_met
 from sglang_omni.models.higgs_tts.sampler import K_MAX
 from sglang_omni.models.higgs_tts.utils import EOC_ID, apply_delay_pattern
 from sglang_omni.models.higgs_tts.vocoder_scheduler import (
-    HiggsStreamingVocoderScheduler,
-)
-from sglang_omni.models.tts_streaming import (
     DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
     DEFAULT_HIGGS_STREAM_STRIDE,
     HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA,
     HIGGS_STREAM_STRIDE_METADATA,
+    HiggsStreamingVocoderScheduler,
 )
 from sglang_omni.pipeline.stage.stream_queue import StreamItem
 from sglang_omni.proto import OmniRequest, StagePayload
