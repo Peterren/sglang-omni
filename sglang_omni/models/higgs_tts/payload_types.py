@@ -18,8 +18,8 @@ class HiggsTtsState(DeclarativeStateBase):
     tts_engine -> vocoder. Fields populate lazily so a deserialised state is
     valid at any stage boundary."""
 
-    # Emitted only alongside audio_samples: the rate is meaningless until the
-    # vocoder has produced a waveform.
+    # note (luojiaxuan): Emit sample_rate only alongside audio_samples because
+    # the rate is meaningless until the vocoder has produced a waveform.
     sample_rate: int = wire(24000, emit="with:audio_samples")
 
     # preprocessing / audio_encoder

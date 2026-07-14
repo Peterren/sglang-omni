@@ -90,11 +90,11 @@ def _tensor_items_from_lists(value: Any, _default: Any = None) -> Any:
     return [_tensor_from_list(item) for item in value]
 
 
-# Wire codecs: (encode, decode). Encode runs on the field value at to_dict
-# time (after the emit rule admits it); decode runs at from_dict time only
-# when the key is present in the payload — absent keys fall back to the
-# dataclass default. Decode receives the field default for the `*_or`
-# variants that treat falsy wire values as "use the default".
+# note (luojiaxuan): Wire codecs are (encode, decode). Encode runs on the
+# field value at to_dict time after the emit rule admits it; decode runs at
+# from_dict time only when the key is present in the payload, so absent keys
+# fall back to the dataclass default. Decode receives the field default for
+# star_or variants that treat falsy wire values as "use the default".
 _CODECS: dict[str, tuple[Callable[[Any], Any], Callable[[Any, Any], Any]]] = {
     "raw": (lambda v: v, lambda v, d: v),
     "int": (int, lambda v, d: int(v or 0)),
@@ -106,14 +106,15 @@ _CODECS: dict[str, tuple[Callable[[Any], Any], Callable[[Any, Any], Any]]] = {
     "bool": (bool, lambda v, d: bool(v)),
     "dict": (dict, lambda v, d: dict(v) if isinstance(v, dict) else {}),
     "list": (list, lambda v, d: list(v) if v is not None else None),
-    # Tensor kept native on the wire (payload dicts stay in-process; the
-    # relay handles tensor transport), moved to CPU and detached.
+    # note (luojiaxuan): Tensor stays native on the wire because payload dicts
+    # stay in-process and the relay handles tensor transport; detach and move it
+    # to CPU before storing.
     "tensor_cpu": (PipelineStateBase.serialize_value, lambda v, d: v),
-    # Tensor flattened to nested lists; stays a list after restore.
+    # note (luojiaxuan): Tensor flattens to nested lists and stays a list after restore.
     "tensor_list": (_tensor_to_list, lambda v, d: v),
-    # Tensor flattened to nested lists; restored back to a tensor.
+    # note (luojiaxuan): Tensor flattens to nested lists and restores back to a tensor.
     "tensor_restore": (_tensor_to_list, _tensor_from_list),
-    # List of tensors, flattened/restored element-wise.
+    # note (luojiaxuan): Lists of tensors flatten and restore element-wise.
     "tensor_items": (_tensor_items_to_lists, _tensor_items_from_lists),
 }
 
