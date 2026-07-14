@@ -407,8 +407,8 @@ def create_audio_encoder_executor(
         if waveform is None:
             return payload
 
-        # Uploaded voices stay on the versioned speaker cache (invalidated by
-        # voice re-upload); everything else rides the shared reference service.
+        # note (luojiaxuan): Uploaded voices stay on the versioned speaker cache
+        # invalidated by voice re-upload; everything else rides the shared service.
         speaker_code_cache_key = _state_uploaded_voice_cache_key(
             state,
             artifact_kind="reference_codes",
