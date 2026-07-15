@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import importlib.util
 import pathlib
 import subprocess
@@ -14,6 +15,87 @@ import pytest
 from sglang_omni.models.qwen3_omni.config import MIN_PARTIAL_START_CHUNKS
 
 _EXAMPLES_DIR = pathlib.Path(__file__).resolve().parents[3] / "examples"
+
+
+@pytest.mark.parametrize(
+    "preset",
+    [
+        "qwen3-text-server",
+        "qwen3-speech-server",
+        "qwen3-speech",
+        "ming-text-server",
+        "ming-speech-server",
+        "ming-speech",
+        "ming-text",
+    ],
+)
+def test_unified_launcher_preset_help(preset):
+    result = subprocess.run(
+        [sys.executable, str(_EXAMPLES_DIR / "run_omni.py"), preset, "--help"],
+        capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr.decode()
+
+
+def test_unified_qwen_offline_launcher_applies_stage_gpus(monkeypatch):
+    from examples import _omni_launcher as launcher
+
+    captured = {}
+
+    async def fake_run(config, **kwargs):
+        captured["config"] = config
+
+    monkeypatch.setattr(launcher, "_run_speech_request", fake_run)
+    args = launcher.parse_preset_args("qwen3-speech", ["--model-path", "dummy"])
+
+    asyncio.run(launcher.run_qwen_speech(args))
+
+    stages = {stage.name: stage for stage in captured["config"].stages}
+    assert stages["thinker"].gpu == 0
+    assert stages["talker_ar"].gpu == 1
+    assert stages["code2wav"].gpu == 0
+    assert stages["image_encoder"].gpu == 0
+    assert stages["audio_encoder"].gpu == 0
+
+
+def test_unified_ming_offline_launcher_applies_tp_and_overrides(monkeypatch):
+    from examples import _omni_launcher as launcher
+
+    captured = {}
+
+    async def fake_run(config, **kwargs):
+        captured["config"] = config
+
+    monkeypatch.setattr(launcher, "_run_speech_request", fake_run)
+    args = launcher.parse_preset_args(
+        "ming-speech",
+        [
+            "--model-path",
+            "dummy",
+            "--tp-size",
+            "2",
+            "--gpu-talker",
+            "2",
+            "--cpu-offload-gb",
+            "4",
+            "--mem-fraction-static",
+            "0.8",
+        ],
+    )
+
+    asyncio.run(launcher.run_ming_speech(args))
+
+    stages = {stage.name: stage for stage in captured["config"].stages}
+    thinker = stages["thinker"]
+    assert thinker.tp_size == 2
+    assert thinker.parallelism.tp == 2
+    assert thinker.gpu == [0, 1]
+    assert stages["talker"].gpu == 2
+    assert thinker.factory_args["server_args_overrides"] == {
+        "disable_custom_all_reduce": True,
+        "cpu_offload_gb": 4.0,
+        "mem_fraction_static": 0.8,
+    }
 
 
 @pytest.mark.parametrize(
