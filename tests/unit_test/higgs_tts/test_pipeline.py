@@ -366,7 +366,11 @@ def test_higgs_audio_encoder_uses_shared_cache_for_uploaded_voice(
 
         def encode_reference(self, waveform, sample_rate: int) -> torch.Tensor:
             self.calls += 1
-            return torch.tensor([[11, 12], [21, 22]], dtype=torch.long)
+            offset = self.calls * 100
+            return torch.tensor(
+                [[offset + 11, offset + 12], [offset + 21, offset + 22]],
+                dtype=torch.long,
+            )
 
     cache = get_speaker_artifact_cache()
     cache.clear()
@@ -429,7 +433,7 @@ def test_higgs_audio_encoder_uses_shared_cache_for_uploaded_voice(
     )
     assert (
         reuploaded.data["reference_codes_delayed"]
-        == first.data["reference_codes_delayed"]
+        != first.data["reference_codes_delayed"]
     )
 
 
