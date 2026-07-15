@@ -39,7 +39,12 @@ def test_higgs_streaming_pipeline_routes_chunks_to_vocoder() -> None:
 def test_higgs_tts_engine_enables_cuda_graph_by_default(monkeypatch) -> None:
     from sglang_omni.models.higgs_tts import model_runner as model_runner_mod
     from sglang_omni.models.higgs_tts import request_builders
-    from sglang_omni.scheduling import bootstrap, omni_scheduler, sglang_backend
+    from sglang_omni.scheduling import (
+        bootstrap,
+        engine_factory,
+        omni_scheduler,
+        sglang_backend,
+    )
 
     captured: dict[str, object] = {}
     infrastructure_saw_graph_disabled: list[bool] = []
@@ -102,7 +107,9 @@ def test_higgs_tts_engine_enables_cuda_graph_by_default(monkeypatch) -> None:
             captured["scheduler_kwargs"] = kwargs
             self.outbox = object()
 
-    monkeypatch.setattr(stages, "resolve_checkpoint", lambda model_path: model_path)
+    monkeypatch.setattr(
+        engine_factory, "_resolve_checkpoint", lambda model_path: model_path
+    )
     monkeypatch.setattr(
         sglang_backend, "build_sglang_server_args", fake_build_sglang_server_args
     )

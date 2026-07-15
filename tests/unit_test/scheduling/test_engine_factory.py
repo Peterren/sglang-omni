@@ -15,6 +15,23 @@ def test_tts_engine_builder_import_is_cpu_only() -> None:
     assert TtsEngineBuilder.__name__ == "TtsEngineBuilder"
 
 
+def test_tts_engine_builder_uses_shared_checkpoint_resolver(monkeypatch) -> None:
+    from sglang_omni.scheduling import engine_factory
+
+    calls: list[str] = []
+
+    def fake_resolve_checkpoint(model_path: str) -> str:
+        calls.append(model_path)
+        return "/resolved/checkpoint"
+
+    monkeypatch.setattr(engine_factory, "_resolve_checkpoint", fake_resolve_checkpoint)
+
+    resolved = engine_factory.TtsEngineBuilder.resolve_checkpoint(object(), "repo/id")
+
+    assert resolved == "/resolved/checkpoint"
+    assert calls == ["repo/id"]
+
+
 def test_tts_engine_builder_hook_contract_is_narrow() -> None:
     from sglang_omni.scheduling.engine_factory import TtsEngineBuilder
 
