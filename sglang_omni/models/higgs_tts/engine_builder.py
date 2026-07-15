@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 from typing import Any
 
 from sglang_omni.models.higgs_tts import request_builders
@@ -29,6 +30,8 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
         async_decode_min_batch_size: int,
         stream_stride: int = DEFAULT_HIGGS_STREAM_STRIDE,
         stream_followup_stride: int = DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
+        prefill_coalesce_requests: int = 0,
+        prefill_coalesce_wait_ms: float = 60.0,
     ) -> None:
         self.max_new_tokens = max_new_tokens
         self.max_running_requests = max_running_requests
@@ -37,6 +40,8 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
         self.async_decode_min_batch_size = async_decode_min_batch_size
         self.stream_stride = stream_stride
         self.stream_followup_stride = stream_followup_stride
+        self.prefill_coalesce_requests = prefill_coalesce_requests
+        self.prefill_coalesce_wait_ms = prefill_coalesce_wait_ms
         self.model: Any | None = None
 
     def generation_defaults(
@@ -100,6 +105,8 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
         return {
             "enable_async_decode": self.enable_async_decode,
             "async_decode_min_batch_size": self.async_decode_min_batch_size,
+            "prefill_coalesce_requests": self.prefill_coalesce_requests,
+            "prefill_coalesce_wait_ms": self.prefill_coalesce_wait_ms,
         }
 
     def post_scheduler_setup(self, scheduler: Any, model_runner: Any) -> None:
