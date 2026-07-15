@@ -115,6 +115,8 @@ class OmniScheduler:
         enable_overlap: bool = False,
         enable_async_decode: bool = False,
         async_decode_min_batch_size: int = 2,
+        prefill_coalesce_requests: int = 0,
+        prefill_coalesce_wait_ms: float = 60.0,
         request_build_max_workers: int = 1,
         request_build_max_pending: int | None = None,
     ):
@@ -189,6 +191,13 @@ class OmniScheduler:
         self.async_decode_min_batch_size = int(async_decode_min_batch_size)
         if model_runner is not None:
             model_runner._async_enabled = enable_async_decode
+
+        # Prefill admission coalescing: hold prefill until K requests are
+        # waiting or the oldest has waited T ms, amortizing the per-step host
+        # cost (mostly batch-size-independent) over more requests. 0 = off.
+        self.prefill_coalesce_requests = int(prefill_coalesce_requests)
+        self.prefill_coalesce_wait_s = float(prefill_coalesce_wait_ms) / 1e3
+        self._prefill_coalesce_t0: float | None = None
 
         # Token / memory info (upstream reads from tp_worker.get_worker_info)
         mr = tp_worker.model_runner
@@ -809,6 +818,26 @@ class OmniScheduler:
                 data=error,
             )
         )
+
+    def get_new_batch_prefill(self):
+        # Admission coalescing (see __init__). Chunked prefill in flight must
+        # finish, so it bypasses the gate; the wait deadline bounds added TTFB.
+        if self.prefill_coalesce_requests <= 1 or self.chunked_req is not None:
+            return _Upstream.get_new_batch_prefill(self)
+        if not self.waiting_queue:
+            self._prefill_coalesce_t0 = None
+            return _Upstream.get_new_batch_prefill(self)
+        if len(self.waiting_queue) >= self.prefill_coalesce_requests:
+            self._prefill_coalesce_t0 = None
+            return _Upstream.get_new_batch_prefill(self)
+        now = time.perf_counter()
+        if self._prefill_coalesce_t0 is None:
+            self._prefill_coalesce_t0 = now
+            return None
+        if now - self._prefill_coalesce_t0 >= self.prefill_coalesce_wait_s:
+            self._prefill_coalesce_t0 = None
+            return _Upstream.get_new_batch_prefill(self)
+        return None
 
     def run_batch(self, batch, pp_proxy_tensors=None):
         try:
