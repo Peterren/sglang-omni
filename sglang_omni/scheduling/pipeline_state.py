@@ -21,6 +21,7 @@ __all__ = [
 ]
 
 _USAGE_FIELDS = ("prompt_tokens", "completion_tokens", "engine_time_s")
+_EXPLICIT_EMIT_MODES = frozenset({"always", "not_none", "truthy"})
 
 
 @dataclass
@@ -128,6 +129,37 @@ class _WireSpec:
 _DEFAULT_SPEC = _WireSpec()
 
 
+@dataclass(frozen=True)
+class _FieldPlan:
+    name: str
+    emit: str
+    codec: str
+    anchor: str | None
+    encode: Callable[[Any], Any] | None
+    decode: Callable[[Any, Any], Any] | None
+    default_value: Any
+    default_factory: Callable[[], Any] | None
+    is_usage: bool = False
+
+    def default(self) -> Any:
+        if self.default_factory is not None:
+            return self.default_factory()
+        return self.default_value
+
+
+_PLAN_CACHE: dict[type[Any], tuple[_FieldPlan, ...]] = {}
+
+
+def _validate_emit_mode(emit: str | None) -> None:
+    if emit is None or emit in _EXPLICIT_EMIT_MODES:
+        return
+    if emit.startswith("with:"):
+        if not emit.split(":", 1)[1]:
+            raise ValueError("wire emit with anchor must not be empty")
+        return
+    raise ValueError(f"unknown wire emit mode: {emit!r}")
+
+
 def wire(
     default: Any = MISSING,
     *,
@@ -137,10 +169,11 @@ def wire(
 ) -> Any:
     """dataclasses.field carrying wire metadata for DeclarativeStateBase.
 
-    `emit` defaults by inference: fields whose default is None emit only when
-    not None; everything else always emits. `codec="typed_tensor"` expands to
+    emit defaults by inference: fields whose default is None emit only when
+    not None; everything else always emits. codec="typed_tensor" expands to
     the {name}_bytes/_shape/_dtype key triple via scheduling.typed_tensor.
     """
+    _validate_emit_mode(emit)
     if codec != "typed_tensor" and codec not in _CODECS:
         raise ValueError(f"unknown wire codec: {codec!r}")
     metadata = {"wire": _WireSpec(emit=emit, codec=codec)}
@@ -162,6 +195,7 @@ def _default_of(f: dataclasses.Field) -> Any:
 
 
 def _emit_kind(f: dataclasses.Field, spec: _WireSpec) -> str:
+    _validate_emit_mode(spec.emit)
     if spec.emit is not None:
         return spec.emit
     if f.default is not MISSING and f.default is None:
@@ -169,11 +203,73 @@ def _emit_kind(f: dataclasses.Field, spec: _WireSpec) -> str:
     return "always"
 
 
+def _plan_default_factory(f: dataclasses.Field) -> Callable[[], Any] | None:
+    if f.default_factory is MISSING:  # type: ignore[misc]
+        return None
+    return f.default_factory  # type: ignore[return-value,misc]
+
+
+def _has_encoded_typed_tensor_payload(data: dict[str, Any], name: str) -> bool:
+    return (
+        f"{name}_bytes" in data
+        or f"{name}_shape" in data
+        or f"{name}_dtype" in data
+    )
+
+
+def _has_typed_tensor_payload(data: dict[str, Any], name: str) -> bool:
+    return name in data or _has_encoded_typed_tensor_payload(data, name)
+
+
+def _build_plan(cls: type[Any]) -> tuple[_FieldPlan, ...]:
+    fields = dataclasses.fields(cls)
+    field_names = {f.name for f in fields}
+    plans: list[_FieldPlan] = []
+    for f in fields:
+        spec = _spec_of(f)
+        emit = _emit_kind(f, spec)
+        anchor = emit.split(":", 1)[1] if emit.startswith("with:") else None
+        if anchor is not None and anchor not in field_names:
+            raise ValueError(
+                f"wire emit anchor {anchor!r} for {cls.__name__}.{f.name} "
+                "is not a dataclass field"
+            )
+        encode: Callable[[Any], Any] | None
+        decode: Callable[[Any, Any], Any] | None
+        if spec.codec == "typed_tensor":
+            encode = None
+            decode = None
+        else:
+            encode, decode = _CODECS[spec.codec]
+        plans.append(
+            _FieldPlan(
+                name=f.name,
+                emit=emit,
+                codec=spec.codec,
+                anchor=anchor,
+                encode=encode,
+                decode=decode,
+                default_value=_default_of(f),
+                default_factory=_plan_default_factory(f),
+                is_usage=f.name in _USAGE_FIELDS,
+            )
+        )
+    return tuple(plans)
+
+
+def _plan_for(cls: type[Any]) -> tuple[_FieldPlan, ...]:
+    plan = _PLAN_CACHE.get(cls)
+    if plan is None:
+        plan = _build_plan(cls)
+        _PLAN_CACHE[cls] = plan
+    return plan
+
+
 @dataclass
 class DeclarativeStateBase(PipelineStateBase):
     """PipelineStateBase with to_dict/from_dict derived from field metadata.
 
-    Subclasses declare wire behavior inline with `wire(...)` fields instead of
+    Subclasses declare wire behavior inline with wire(...) fields instead of
     hand-writing the serialization pair; plain fields default to
     always-emitted raw passthrough (None-defaulted fields emit only when set).
     Usage fields keep the append_usage_fields contract. The field-complete
@@ -183,70 +279,76 @@ class DeclarativeStateBase(PipelineStateBase):
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {}
-        coupled: list[tuple[dataclasses.Field, _WireSpec, str]] = []
-        for f in dataclasses.fields(self):
-            if f.name in _USAGE_FIELDS:
+        coupled: list[_FieldPlan] = []
+        for plan in _plan_for(type(self)):
+            if plan.is_usage:
                 continue
-            spec = _spec_of(f)
-            emit = _emit_kind(f, spec)
-            if emit.startswith("with:"):
-                coupled.append((f, spec, emit.split(":", 1)[1]))
+            if plan.anchor is not None:
+                coupled.append(plan)
                 continue
-            self._encode_field(data, f, spec, emit)
-        for f, spec, anchor in coupled:
-            if anchor in data:
-                self._encode_field(data, f, spec, "always")
+            self._encode_field(data, plan, plan.emit)
+        for plan in coupled:
+            if plan.anchor in data:
+                self._encode_field(data, plan, "always")
         self.append_usage_fields(data)
         return data
 
     def _encode_field(
         self,
         data: dict[str, Any],
-        f: dataclasses.Field,
-        spec: _WireSpec,
+        plan: _FieldPlan,
         emit: str,
     ) -> None:
-        value = getattr(self, f.name)
+        value = getattr(self, plan.name)
         if emit == "not_none" and value is None:
             return
         if emit == "truthy" and not value:
             return
-        if spec.codec == "typed_tensor":
+        if plan.codec == "typed_tensor":
             if value is not None:
                 from sglang_omni.scheduling.typed_tensor import encode_typed_tensor
 
-                data.update(encode_typed_tensor(value, key=f.name))
+                data.update(encode_typed_tensor(value, key=plan.name))
             return
-        encode, _ = _CODECS[spec.codec]
-        data[f.name] = encode(value)
+        assert plan.encode is not None
+        encode = plan.encode
+        data[plan.name] = encode(value)
 
     @classmethod
     def from_dict(cls: type[StateT], data: Any) -> StateT:
         if not isinstance(data, dict):
             data = {}
         kwargs: dict[str, Any] = {}
-        for f in dataclasses.fields(cls):
-            spec = _spec_of(f)
-            if spec.codec == "typed_tensor":
+        for plan in _plan_for(cls):
+            if plan.codec == "typed_tensor":
+                if not _has_typed_tensor_payload(data, plan.name):
+                    continue
+                if (
+                    plan.name in data
+                    and data[plan.name] is None
+                    and not _has_encoded_typed_tensor_payload(data, plan.name)
+                ):
+                    kwargs[plan.name] = None
+                    continue
                 from sglang_omni.scheduling.typed_tensor import decode_typed_tensor
 
-                kwargs[f.name] = decode_typed_tensor(
-                    data, key=f.name, legacy_key=f.name
+                kwargs[plan.name] = decode_typed_tensor(
+                    data, key=plan.name, legacy_key=plan.name
                 )
                 continue
-            if f.name == "prompt_tokens":
-                kwargs[f.name] = int(data.get("prompt_tokens", 0) or 0)
+            if plan.name == "prompt_tokens":
+                kwargs[plan.name] = int(data.get("prompt_tokens", 0) or 0)
                 continue
-            if f.name == "completion_tokens":
-                kwargs[f.name] = int(data.get("completion_tokens", 0) or 0)
+            if plan.name == "completion_tokens":
+                kwargs[plan.name] = int(data.get("completion_tokens", 0) or 0)
                 continue
-            if f.name == "engine_time_s":
-                kwargs[f.name] = float(data.get("engine_time_s", 0.0) or 0.0)
+            if plan.name == "engine_time_s":
+                kwargs[plan.name] = float(data.get("engine_time_s", 0.0) or 0.0)
                 continue
-            if f.name not in data:
+            if plan.name not in data:
                 continue
-            _, decode = _CODECS[spec.codec]
-            kwargs[f.name] = decode(data[f.name], _default_of(f))
+            assert plan.decode is not None
+            kwargs[plan.name] = plan.decode(data[plan.name], plan.default())
         return cls(**kwargs)
 
 

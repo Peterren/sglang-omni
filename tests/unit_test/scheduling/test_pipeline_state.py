@@ -8,10 +8,12 @@ import torch
 
 from sglang_omni.proto import OmniRequest, StagePayload
 from sglang_omni.scheduling.pipeline_state import (
+    DeclarativeStateBase,
     PipelineStateBase,
     build_usage,
     load_state,
     store_state,
+    wire,
 )
 from sglang_omni.scheduling.typed_tensor import decode_typed_tensor, encode_typed_tensor
 
@@ -145,7 +147,7 @@ def _assert_restored_fields(
     """Field-complete check on the *restored object's attributes*.
 
     Every dataclass field of the restored state must equal the originally
-    constructed value; `overrides` lists only the fields whose representation
+    constructed value; overrides lists only the fields whose representation
     intentionally changes across the round trip (tensor-to-list models).
     Iterating all fields instead of an explicit expected mapping makes it
     impossible to silently omit a field: a to_dict() bug that drops a field
@@ -166,7 +168,10 @@ def _assert_restored_fields(
         actual_value = getattr(restored, field.name)
         assert _normalize_payload_value(actual_value) == _normalize_payload_value(
             expected_value
-        ), f"{type(state).__name__}.{field.name}: {actual_value!r} != {expected_value!r}"
+        ), (
+            f"{type(state).__name__}.{field.name}: "
+            f"{actual_value!r} != {expected_value!r}"
+        )
 
 
 def test_tts_pipeline_state_round_trips_preserve_payload_fields() -> None:
@@ -180,7 +185,7 @@ def test_tts_pipeline_state_round_trips_preserve_payload_fields() -> None:
     # Each (state, overrides) pair is checked two ways: the
     # to_dict()-vs-to_dict() comparison (wire-format stability across a
     # double round trip), and a field-complete attribute check on the
-    # restored object against the constructed values. `overrides` names only
+    # restored object against the constructed values. overrides names only
     # the intentional representation changes: Qwen3-TTS flattens tensors to
     # lists in to_dict() and never rebuilds them in from_dict(); Voxtral does
     # the same only for audio_samples (audio_codes round-trips as a tensor
@@ -349,3 +354,31 @@ def test_typed_tensor_legacy_list_fallback_and_missing() -> None:
     )
     assert restored.tolist() == [[1, 2], [3, 4]]
     assert decode_typed_tensor({}, key="audio_codes") is None
+
+
+def test_declarative_typed_tensor_missing_payload_keeps_default() -> None:
+    @dataclass
+    class _TypedDefaultState(DeclarativeStateBase):
+        audio_codes: Any = wire(default_factory=lambda: [[9, 10]], codec="typed_tensor")
+
+    assert _TypedDefaultState.from_dict({}).audio_codes == [[9, 10]]
+    assert _TypedDefaultState.from_dict({"audio_codes": None}).audio_codes is None
+
+
+def test_declarative_wire_rejects_unknown_emit_mode() -> None:
+    with pytest.raises(ValueError, match="unknown wire emit mode"):
+        wire(None, emit="not-non")
+
+
+def test_declarative_wire_rejects_empty_with_anchor() -> None:
+    with pytest.raises(ValueError, match="anchor must not be empty"):
+        wire(None, emit="with:")
+
+
+def test_declarative_wire_rejects_missing_with_anchor_on_first_use() -> None:
+    @dataclass
+    class _BadAnchorState(DeclarativeStateBase):
+        sample_rate: int = wire(24000, emit="with:missing_audio")
+
+    with pytest.raises(ValueError, match="not a dataclass field"):
+        _BadAnchorState().to_dict()
