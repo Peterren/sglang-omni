@@ -7,10 +7,6 @@ except ModuleNotFoundError:
     import _omni_launcher as _launcher
 
 
-async def main_async(args):
-    await _launcher.run_ming_speech(args)
-
-
 def parse_args():
     return _launcher.parse_preset_args("ming-speech")
 

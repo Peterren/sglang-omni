@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import importlib.util
 import pathlib
 import subprocess
 import sys
@@ -12,6 +11,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from examples._omni_launcher import _parse_thinker_tp_gpu_list
+from examples._omni_launcher import launch_qwen_speech_server as _launch_speech_server
 from sglang_omni.models.qwen3_omni.config import MIN_PARTIAL_START_CHUNKS
 
 _EXAMPLES_DIR = pathlib.Path(__file__).resolve().parents[3] / "examples"
@@ -111,27 +112,6 @@ def test_example_script_help(script):
         capture_output=True,
     )
     assert result.returncode == 0, result.stderr.decode()
-
-
-_EXAMPLE_MODULE_PATH = (
-    pathlib.Path(__file__).resolve().parents[3]
-    / "examples"
-    / "run_qwen3_omni_speech_server.py"
-)
-
-
-def _load_example_module():
-    spec = importlib.util.spec_from_file_location(
-        "run_qwen3_omni_speech_server", _EXAMPLE_MODULE_PATH
-    )
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-_mod = _load_example_module()
-_launch_speech_server = _mod._launch_speech_server
-_parse_thinker_tp_gpu_list = _mod._parse_thinker_tp_gpu_list
 
 
 def _make_args(**overrides) -> argparse.Namespace:

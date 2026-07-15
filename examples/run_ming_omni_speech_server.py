@@ -7,10 +7,6 @@ except ModuleNotFoundError:
     import _omni_launcher as _launcher
 
 
-def _launch_speech_server(args):
-    return _launcher.launch_ming_speech_server(args)
-
-
 def parse_args():
     return _launcher.parse_preset_args("ming-speech-server")
 
