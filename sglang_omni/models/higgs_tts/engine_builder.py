@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 from typing import Any
 
 from sglang_omni.models.higgs_tts import request_builders
@@ -24,12 +25,16 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
         cuda_graph_max_bs: int,
         enable_async_decode: bool,
         async_decode_min_batch_size: int,
+        prefill_coalesce_requests: int = 0,
+        prefill_coalesce_wait_ms: float = 60.0,
     ) -> None:
         self.max_new_tokens = max_new_tokens
         self.max_running_requests = max_running_requests
         self.cuda_graph_max_bs = cuda_graph_max_bs
         self.enable_async_decode = enable_async_decode
         self.async_decode_min_batch_size = async_decode_min_batch_size
+        self.prefill_coalesce_requests = prefill_coalesce_requests
+        self.prefill_coalesce_wait_ms = prefill_coalesce_wait_ms
         self.model: Any | None = None
 
     def resolve_checkpoint(self, model_path: str) -> str:
@@ -94,6 +99,8 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
         return {
             "enable_async_decode": self.enable_async_decode,
             "async_decode_min_batch_size": self.async_decode_min_batch_size,
+            "prefill_coalesce_requests": self.prefill_coalesce_requests,
+            "prefill_coalesce_wait_ms": self.prefill_coalesce_wait_ms,
         }
 
     def post_scheduler_setup(self, scheduler: Any, model_runner: Any) -> None:

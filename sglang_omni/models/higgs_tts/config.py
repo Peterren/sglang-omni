@@ -46,6 +46,9 @@ class HiggsTtsPipelineConfig(PipelineConfig):
             factory=f"{_PKG}.stages.create_audio_encoder_executor",
             factory_args={"device": "cuda"},
             gpu=0,
+            runtime=StageRuntimeConfig(
+                resources=StageResourceConfig(total_gpu_memory_fraction=0.03)
+            ),
             next="tts_engine",
         ),
         StageConfig(
@@ -58,15 +61,21 @@ class HiggsTtsPipelineConfig(PipelineConfig):
                 "enable_async_decode": True,
             },
             gpu=0,
+            runtime=StageRuntimeConfig(
+                resources=StageResourceConfig(total_gpu_memory_fraction=0.85)
+            ),
             next="vocoder",
             stream_to=["vocoder"],
         ),
         StageConfig(
             name="vocoder",
-            process="pipeline",
+            process="vocoder",
             factory=f"{_PKG}.stages.create_vocoder_executor",
-            factory_args={"device": "cuda"},
+            factory_args={"device": "cuda",  "compile_decode": True},
             gpu=0,
+            runtime=StageRuntimeConfig(
+                resources=StageResourceConfig(total_gpu_memory_fraction=0.10)
+            ),
             terminal=True,
             can_accept_stream_before_payload=True,
         ),

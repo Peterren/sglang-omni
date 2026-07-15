@@ -393,6 +393,8 @@ def create_sglang_tts_engine_executor(
     server_args_overrides: dict[str, Any] | None = None,
     enable_async_decode: bool = False,
     async_decode_min_batch_size: int = 2,
+    prefill_coalesce_requests: int = 0,
+    prefill_coalesce_wait_ms: float = 60.0,
 ):
     """sglang-backed AR engine for Higgs TTS."""
     from sglang_omni.models.higgs_tts.engine_builder import HiggsTtsEngineBuilder
@@ -403,6 +405,8 @@ def create_sglang_tts_engine_executor(
         cuda_graph_max_bs=cuda_graph_max_bs,
         enable_async_decode=enable_async_decode,
         async_decode_min_batch_size=async_decode_min_batch_size,
+        prefill_coalesce_requests=prefill_coalesce_requests,
+        prefill_coalesce_wait_ms=prefill_coalesce_wait_ms,
     ).build(
         model_path,
         device=device,
@@ -421,6 +425,7 @@ def create_vocoder_executor(
     stream_followup_stride: int = 75,
     stream_overlap_tokens: int = 8,
     stream_holdback_tokens: int = 4,
+    compile_decode: bool = False,
 ):
     """Decode Higgs delayed codes to a mono 24 kHz waveform.
 
@@ -428,6 +433,8 @@ def create_vocoder_executor(
     """
     checkpoint_dir = resolve_checkpoint(model_path)
     codec = get_or_load_codec(checkpoint_dir, device, dtype)
+    if compile_decode:
+        codec.model.decode = torch.compile(codec.model.decode, dynamic=True)
 
     return HiggsStreamingVocoderScheduler(
         codec,
