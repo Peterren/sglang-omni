@@ -6,8 +6,9 @@ try:
 except ModuleNotFoundError:
     import _omni_launcher as _launcher
 
-_save_audio = _launcher._save_audio
-main_async = _launcher.run_qwen_speech
+
+async def main_async(args):
+    await _launcher.run_qwen_speech(args)
 
 
 def parse_args():

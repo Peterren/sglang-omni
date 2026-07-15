@@ -6,7 +6,9 @@ try:
 except ModuleNotFoundError:
     import _omni_launcher as _launcher
 
-main_async = _launcher.run_ming_text
+
+async def main_async(args):
+    await _launcher.run_ming_text(args)
 
 
 def parse_args():

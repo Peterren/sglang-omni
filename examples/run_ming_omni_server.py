@@ -6,7 +6,9 @@ try:
 except ModuleNotFoundError:
     import _omni_launcher as _launcher
 
-_launch_text_server = _launcher.launch_ming_text_server
+
+def _launch_text_server(args):
+    return _launcher.launch_ming_text_server(args)
 
 
 def parse_args():

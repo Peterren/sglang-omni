@@ -6,8 +6,13 @@ try:
 except ModuleNotFoundError:
     import _omni_launcher as _launcher
 
-_launch_speech_server = _launcher.launch_qwen_speech_server
-_parse_thinker_tp_gpu_list = _launcher._parse_thinker_tp_gpu_list
+
+def _launch_speech_server(args):
+    return _launcher.launch_qwen_speech_server(args)
+
+
+def _parse_thinker_tp_gpu_list(spec: str, tp_size: int) -> list[int]:
+    return _launcher._parse_thinker_tp_gpu_list(spec, tp_size)
 
 
 def parse_args():
