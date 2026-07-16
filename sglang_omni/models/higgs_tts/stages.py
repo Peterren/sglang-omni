@@ -79,6 +79,7 @@ _REF_CODE_CACHE_MAX_ITEMS = 256
 _REF_CODE_CACHE_MAX_BYTES = 256 * 1024 * 1024
 _REF_WAVEFORM_CACHE_MAX_ITEMS = 256
 _REF_WAVEFORM_CACHE_MAX_BYTES = 512 * 1024 * 1024
+_VOCODER_COMPILE_WARMUP_FRAME_COUNTS = (1, 8)
 
 
 def _reference_audio_cache_key(reference_audio: Any) -> str | None:
@@ -506,11 +507,20 @@ def create_vocoder_executor(
         eager_decode = codec.model.decode
         try:
             codec.model.decode = torch.compile(eager_decode, dynamic=True)
-            warm_codes = codec.encode_reference(
-                torch.zeros(codec.SAMPLE_RATE // 2), sample_rate=codec.SAMPLE_RATE
+            warm_codes_TN = torch.zeros(
+                (
+                    max(_VOCODER_COMPILE_WARMUP_FRAME_COUNTS),
+                    int(codec.model.config.num_quantizers),
+                ),
+                dtype=torch.long,
+                device="cpu",
             )
-            codec.decode(warm_codes)
-            codec.decode_batch([warm_codes[:8], warm_codes[:8]])
+            # note (stephenkgli): Match serving's contiguous [T, N] layout and
+            # warm the zero-one-specialized batch and frame-count classes.
+            for frame_count in _VOCODER_COMPILE_WARMUP_FRAME_COUNTS:
+                frame_codes_TN = warm_codes_TN[:frame_count]
+                codec.decode(frame_codes_TN)
+                codec.decode_batch([frame_codes_TN, frame_codes_TN])
         except Exception:
             logger.warning(
                 "torch.compile of the codec decode failed; falling back to the "
