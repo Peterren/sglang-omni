@@ -124,12 +124,39 @@ def test_model_info_advertises_distributed_weight_update_transport(
     )
     worker.tp_rank = 0
     worker.model_arch_override = "HiggsAudioV2GenerationModel"
-    worker.model_runner = SimpleNamespace(update_weights_from_disk=lambda: None)
+    worker.model_runner = SimpleNamespace(
+        update_weights_from_disk=lambda: None,
+        update_weights_from_distributed=lambda: None,
+    )
 
     info = ModelWorker.model_info(worker)
 
     assert info["supports_distributed_weight_update"] is True
     assert info["distributed_weight_update"] == transport
+
+
+def test_model_info_does_not_advertise_unsupported_distributed_weight_update(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "sglang_omni.model_runner.model_worker._distributed_weight_update_transport",
+        lambda: pytest.fail("transport must not be inspected when unsupported"),
+    )
+    worker = object.__new__(ModelWorker)
+    worker.server_args = SimpleNamespace(
+        model_path="model",
+        load_format="auto",
+        weight_version="v1",
+        tp_size=1,
+    )
+    worker.tp_rank = 0
+    worker.model_arch_override = "HiggsAudioV2GenerationModel"
+    worker.model_runner = SimpleNamespace(update_weights_from_disk=lambda: None)
+
+    info = ModelWorker.model_info(worker)
+
+    assert info["supports_distributed_weight_update"] is False
+    assert info["distributed_weight_update"] is None
 
 
 def test_model_worker_update_weights_from_disk_updates_visible_model_info() -> None:

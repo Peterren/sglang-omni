@@ -251,6 +251,9 @@ class ModelWorker:
         return batch_result
 
     def model_info(self) -> dict[str, Any]:
+        supports_distributed_weight_update = hasattr(
+            self.model_runner, "update_weights_from_distributed"
+        )
         return {
             "model_path": self.server_args.model_path,
             "load_format": self.server_args.load_format,
@@ -261,8 +264,12 @@ class ModelWorker:
             "supports_weight_update": hasattr(
                 self.model_runner, "update_weights_from_disk"
             ),
-            "supports_distributed_weight_update": True,
-            "distributed_weight_update": _distributed_weight_update_transport(),
+            "supports_distributed_weight_update": (supports_distributed_weight_update),
+            "distributed_weight_update": (
+                _distributed_weight_update_transport()
+                if supports_distributed_weight_update
+                else None
+            ),
             "supports_weight_checker": True,
         }
 
