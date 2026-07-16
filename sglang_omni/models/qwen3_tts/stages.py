@@ -153,6 +153,9 @@ def create_sglang_tts_engine_executor(
     )
 
 
+create_tts_engine_executor = create_sglang_tts_engine_executor
+
+
 class _Qwen3TTSVocoder(BatchVocoderBase):
     def __init__(self, tokenizer: Any) -> None:
         self._tokenizer = tokenizer

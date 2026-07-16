@@ -131,6 +131,9 @@ def create_sglang_tts_engine_executor(
     )
 
 
+create_tts_engine_executor = create_sglang_tts_engine_executor
+
+
 class _MossTTSVocoder(BatchVocoderBase):
     def __init__(self, processor: Any, device: str) -> None:
         self._processor = processor
