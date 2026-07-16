@@ -29,7 +29,9 @@ from sglang_omni.utils.checkpoint import resolve_checkpoint
 BOC_ID = 1024
 EOC_ID = 1025
 
-# Shared between audio_encoder + vocoder; one codec load saves ~1 GB VRAM.
+# Per-process codec cache. audio_encoder and the vocoder now live in
+# separate processes, so each loads its own copy (~130 MB extra VRAM
+# measured); within a process the cache still dedupes loads.
 _CODEC_CACHE: dict[tuple[str, str, str], HiggsAudioCodec] = {}
 
 
