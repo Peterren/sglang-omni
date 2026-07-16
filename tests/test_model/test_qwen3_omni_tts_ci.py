@@ -80,15 +80,14 @@ VC_SIMILARITY_MEAN_MIN = 60.0
 VC_UTMOS_MEAN_REFERENCE = 4.2107
 VC_UTMOS_MEAN_MIN = apply_mos_slack(VC_UTMOS_MEAN_REFERENCE)
 
-# Keep speed references tied to the 2xH100 CI runner; H200 calibration numbers
-# make these gates unattainable on the hardware that executes them.
+# Strict worst-of-5 references from #1021's published 8xH100 calibration report.
 
 _VC_NON_STREAM_P95 = {
     16: {
-        "throughput_qps": 5.317,
-        "output_tok_per_req_s": 5.2,
-        "latency_mean_s": 2.803,
-        "rtf_mean": 0.8149,
+        "throughput_qps": 5.146,
+        "output_tok_per_req_s": 5.1,
+        "latency_mean_s": 2.869,
+        "rtf_mean": 0.9505,
     },
 }
 
