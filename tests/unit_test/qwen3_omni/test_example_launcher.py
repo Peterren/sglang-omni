@@ -12,9 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from examples.launchers.qwen3_omni import (
-    _parse_thinker_tp_gpu_list,
-)
+from examples.launchers.qwen3_omni import _parse_thinker_tp_gpu_list
 from examples.launchers.qwen3_omni import (
     launch_qwen_speech_server as _launch_speech_server,
 )
