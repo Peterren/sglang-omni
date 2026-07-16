@@ -22,6 +22,7 @@ __all__ = [
 
 _USAGE_FIELDS = ("prompt_tokens", "completion_tokens", "engine_time_s")
 _EXPLICIT_EMIT_MODES = frozenset({"always", "not_none", "truthy"})
+_DEFAULT_CONSUMING_CODECS = frozenset({"int_or", "str_or"})
 
 
 @dataclass
@@ -134,9 +135,10 @@ class _FieldPlan:
     name: str
     emit: str
     codec: str
-    anchor: str | None
+    anchor_index: int | None
     encode: Callable[[Any], Any] | None
     decode: Callable[[Any, Any], Any] | None
+    decode_uses_default: bool
     default_value: Any
     default_factory: Callable[[], Any] | None
     is_usage: bool = False
@@ -186,14 +188,6 @@ def _spec_of(f: dataclasses.Field) -> _WireSpec:
     return f.metadata.get("wire", _DEFAULT_SPEC)
 
 
-def _default_of(f: dataclasses.Field) -> Any:
-    if f.default is not MISSING:
-        return f.default
-    if f.default_factory is not MISSING:  # type: ignore[misc]
-        return f.default_factory()  # type: ignore[misc]
-    return None
-
-
 def _emit_kind(f: dataclasses.Field, spec: _WireSpec) -> str:
     _validate_emit_mode(spec.emit)
     if spec.emit is not None:
@@ -209,27 +203,56 @@ def _plan_default_factory(f: dataclasses.Field) -> Callable[[], Any] | None:
     return f.default_factory  # type: ignore[return-value,misc]
 
 
-def _has_encoded_typed_tensor_payload(data: dict[str, Any], name: str) -> bool:
-    return (
-        f"{name}_bytes" in data
-        or f"{name}_shape" in data
-        or f"{name}_dtype" in data
-    )
+def _has_complete_typed_tensor_payload(data: dict[str, Any], name: str) -> bool:
+    required = {f"{name}_bytes", f"{name}_shape"}
+    keys = (*required, f"{name}_dtype")
+    specified = {key for key in keys if key in data}
+    if not specified:
+        return False
+    null_keys = {key for key in specified if data[key] is None}
+    if null_keys:
+        invalid_keys = ", ".join(sorted(null_keys))
+        raise ValueError(
+            f"invalid typed_tensor payload for {name}: null {invalid_keys}"
+        )
+    missing = required - specified
+    if missing:
+        missing_keys = ", ".join(sorted(missing))
+        raise ValueError(
+            f"incomplete typed_tensor payload for {name}: missing {missing_keys}"
+        )
+    return True
 
 
-def _has_typed_tensor_payload(data: dict[str, Any], name: str) -> bool:
-    return name in data or _has_encoded_typed_tensor_payload(data, name)
+def _validate_anchor_cycles(cls: type[Any], plans: tuple[_FieldPlan, ...]) -> None:
+    states = [0] * len(plans)
+
+    def visit(index: int) -> None:
+        if states[index] == 2:
+            return
+        if states[index] == 1:
+            raise ValueError(
+                f"cyclic wire emit anchors at {cls.__name__}.{plans[index].name}"
+            )
+        states[index] = 1
+        anchor_index = plans[index].anchor_index
+        if anchor_index is not None:
+            visit(anchor_index)
+        states[index] = 2
+
+    for index in range(len(plans)):
+        visit(index)
 
 
 def _build_plan(cls: type[Any]) -> tuple[_FieldPlan, ...]:
     fields = dataclasses.fields(cls)
-    field_names = {f.name for f in fields}
+    field_indices = {f.name: index for index, f in enumerate(fields)}
     plans: list[_FieldPlan] = []
     for f in fields:
         spec = _spec_of(f)
         emit = _emit_kind(f, spec)
         anchor = emit.split(":", 1)[1] if emit.startswith("with:") else None
-        if anchor is not None and anchor not in field_names:
+        if anchor is not None and anchor not in field_indices:
             raise ValueError(
                 f"wire emit anchor {anchor!r} for {cls.__name__}.{f.name} "
                 "is not a dataclass field"
@@ -246,15 +269,18 @@ def _build_plan(cls: type[Any]) -> tuple[_FieldPlan, ...]:
                 name=f.name,
                 emit=emit,
                 codec=spec.codec,
-                anchor=anchor,
+                anchor_index=field_indices[anchor] if anchor is not None else None,
                 encode=encode,
                 decode=decode,
-                default_value=_default_of(f),
+                decode_uses_default=spec.codec in _DEFAULT_CONSUMING_CODECS,
+                default_value=f.default if f.default is not MISSING else None,
                 default_factory=_plan_default_factory(f),
                 is_usage=f.name in _USAGE_FIELDS,
             )
         )
-    return tuple(plans)
+    compiled = tuple(plans)
+    _validate_anchor_cycles(cls, compiled)
+    return compiled
 
 
 def _plan_for(cls: type[Any]) -> tuple[_FieldPlan, ...]:
@@ -279,17 +305,39 @@ class DeclarativeStateBase(PipelineStateBase):
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {}
-        coupled: list[_FieldPlan] = []
-        for plan in _plan_for(type(self)):
+        plans = _plan_for(type(self))
+        emitted: dict[int, bool] = {}
+
+        def field_emits(index: int) -> bool:
+            if index in emitted:
+                return emitted[index]
+            plan = plans[index]
+            value = getattr(self, plan.name)
             if plan.is_usage:
-                continue
-            if plan.anchor is not None:
-                coupled.append(plan)
-                continue
-            self._encode_field(data, plan, plan.emit)
-        for plan in coupled:
-            if plan.anchor in data:
-                self._encode_field(data, plan, "always")
+                result = bool(value)
+            elif plan.anchor_index is not None:
+                result = field_emits(plan.anchor_index)
+            elif plan.emit == "not_none":
+                result = value is not None
+            elif plan.emit == "truthy":
+                result = bool(value)
+            else:
+                result = True
+            if plan.codec == "typed_tensor" and value is None:
+                result = False
+            emitted[index] = result
+            return result
+
+        for index, plan in enumerate(plans):
+            if not plan.is_usage and plan.anchor_index is None and field_emits(index):
+                self._encode_field(data, plan)
+        for index, plan in enumerate(plans):
+            if (
+                not plan.is_usage
+                and plan.anchor_index is not None
+                and field_emits(index)
+            ):
+                self._encode_field(data, plan)
         self.append_usage_fields(data)
         return data
 
@@ -297,18 +345,12 @@ class DeclarativeStateBase(PipelineStateBase):
         self,
         data: dict[str, Any],
         plan: _FieldPlan,
-        emit: str,
     ) -> None:
         value = getattr(self, plan.name)
-        if emit == "not_none" and value is None:
-            return
-        if emit == "truthy" and not value:
-            return
         if plan.codec == "typed_tensor":
-            if value is not None:
-                from sglang_omni.scheduling.typed_tensor import encode_typed_tensor
+            from sglang_omni.scheduling.typed_tensor import encode_typed_tensor
 
-                data.update(encode_typed_tensor(value, key=plan.name))
+            data.update(encode_typed_tensor(value, key=plan.name))
             return
         assert plan.encode is not None
         encode = plan.encode
@@ -321,13 +363,10 @@ class DeclarativeStateBase(PipelineStateBase):
         kwargs: dict[str, Any] = {}
         for plan in _plan_for(cls):
             if plan.codec == "typed_tensor":
-                if not _has_typed_tensor_payload(data, plan.name):
+                has_encoded = _has_complete_typed_tensor_payload(data, plan.name)
+                if plan.name not in data and not has_encoded:
                     continue
-                if (
-                    plan.name in data
-                    and data[plan.name] is None
-                    and not _has_encoded_typed_tensor_payload(data, plan.name)
-                ):
+                if plan.name in data and data[plan.name] is None and not has_encoded:
                     kwargs[plan.name] = None
                     continue
                 from sglang_omni.scheduling.typed_tensor import decode_typed_tensor
@@ -348,7 +387,8 @@ class DeclarativeStateBase(PipelineStateBase):
             if plan.name not in data:
                 continue
             assert plan.decode is not None
-            kwargs[plan.name] = plan.decode(data[plan.name], plan.default())
+            default = plan.default() if plan.decode_uses_default else None
+            kwargs[plan.name] = plan.decode(data[plan.name], default)
         return cls(**kwargs)
 
 

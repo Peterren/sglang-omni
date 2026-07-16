@@ -365,6 +365,109 @@ def test_declarative_typed_tensor_missing_payload_keeps_default() -> None:
     assert _TypedDefaultState.from_dict({"audio_codes": None}).audio_codes is None
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"audio_codes_shape": [1]},
+        {"audio_codes_bytes": b"\x01\x00"},
+        {"audio_codes_dtype": "uint16"},
+        {
+            "audio_codes_bytes": b"\x01\x00",
+            "audio_codes_dtype": "uint16",
+        },
+        {"audio_codes_bytes": None, "audio_codes_shape": [1]},
+        {
+            "audio_codes_bytes": b"\x01\x00",
+            "audio_codes_shape": [1],
+            "audio_codes_dtype": None,
+        },
+    ],
+)
+def test_declarative_typed_tensor_rejects_partial_payload(
+    payload: dict[str, Any],
+) -> None:
+    @dataclass
+    class _TypedState(DeclarativeStateBase):
+        audio_codes: Any = wire(None, codec="typed_tensor")
+
+    with pytest.raises(ValueError, match="typed_tensor payload"):
+        _TypedState.from_dict(payload)
+
+
+def test_declarative_typed_tensor_allows_omitted_dtype() -> None:
+    @dataclass
+    class _TypedState(DeclarativeStateBase):
+        audio_codes: Any = wire(None, codec="typed_tensor")
+
+    payload = encode_typed_tensor(torch.tensor([1, 2]), key="audio_codes")
+    del payload["audio_codes_dtype"]
+
+    assert _TypedState.from_dict(payload).audio_codes.tolist() == [1, 2]
+
+
+def test_declarative_with_emit_tracks_typed_anchor() -> None:
+    @dataclass
+    class _TypedAnchorState(DeclarativeStateBase):
+        marker: str = wire("present", emit="with:audio_codes")
+        audio_codes: Any = wire(None, codec="typed_tensor")
+
+    data = _TypedAnchorState(audio_codes=torch.tensor([1, 2])).to_dict()
+
+    assert data["marker"] == "present"
+    assert "audio_codes" not in data
+    assert "audio_codes_bytes" in data
+    assert list(data)[-1] == "marker"
+
+
+def test_declarative_with_emit_resolves_reverse_order_chain() -> None:
+    @dataclass
+    class _ChainedState(DeclarativeStateBase):
+        tail: str = wire("tail", emit="with:middle")
+        middle: str = wire("middle", emit="with:source")
+        source: str | None = wire(None)
+
+    assert _ChainedState(source="ready").to_dict() == {
+        "sample_rate": 24000,
+        "tail": "tail",
+        "middle": "middle",
+        "source": "ready",
+    }
+    assert not ({"tail", "middle", "source"} & _ChainedState().to_dict().keys())
+
+
+def test_declarative_with_emit_rejects_cycles() -> None:
+    @dataclass
+    class _CyclicState(DeclarativeStateBase):
+        first: str = wire("first", emit="with:second")
+        second: str = wire("second", emit="with:first")
+
+    with pytest.raises(ValueError, match="cyclic wire emit anchors"):
+        _CyclicState().to_dict()
+
+
+def test_declarative_default_factory_is_lazy() -> None:
+    calls = 0
+
+    def make_items() -> list[int]:
+        nonlocal calls
+        calls += 1
+        return [1]
+
+    @dataclass
+    class _FactoryState(DeclarativeStateBase):
+        items: list[int] = wire(default_factory=make_items, codec="list")
+
+    state = _FactoryState()
+    assert calls == 1
+
+    payload = state.to_dict()
+    assert calls == 1
+
+    restored = _FactoryState.from_dict(payload)
+    assert calls == 1
+    assert restored.items == [1]
+
+
 def test_declarative_wire_rejects_unknown_emit_mode() -> None:
     with pytest.raises(ValueError, match="unknown wire emit mode"):
         wire(None, emit="not-non")
