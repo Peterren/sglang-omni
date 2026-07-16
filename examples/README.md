@@ -21,9 +21,10 @@ preset to inspect its options.
 The older `run_qwen3_omni_*.py` and `run_ming_omni_*.py` paths remain as
 compatibility wrappers around these presets.
 
-New model examples should add a parser and runner to `_omni_launcher.py`, then
-register one preset in `PRESETS` instead of creating another standalone
-launcher.
+New model examples should add a model-local module under `examples/launchers/`
+that exports its preset map, then register that map in `_omni_launcher.py`.
+Keep model defaults, stage mutations, and request schemas in the model-local
+module; `_omni_launcher.py` owns only registry and CLI dispatch.
 
 ## Qwen3-Omni Server
 

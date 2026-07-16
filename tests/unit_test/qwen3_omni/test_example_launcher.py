@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import pathlib
 import subprocess
 import sys
@@ -11,8 +12,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from examples._omni_launcher import _parse_thinker_tp_gpu_list
-from examples._omni_launcher import launch_qwen_speech_server as _launch_speech_server
+from examples.launchers.qwen3_omni import (
+    _parse_thinker_tp_gpu_list,
+)
+from examples.launchers.qwen3_omni import (
+    launch_qwen_speech_server as _launch_speech_server,
+)
 from sglang_omni.models.qwen3_omni.config import MIN_PARTIAL_START_CHUNKS
 
 _EXAMPLES_DIR = pathlib.Path(__file__).resolve().parents[3] / "examples"
@@ -38,16 +43,87 @@ def test_unified_launcher_preset_help(preset):
     assert result.returncode == 0, result.stderr.decode()
 
 
+def test_qwen_speech_help_preserves_topology_contract():
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(_EXAMPLES_DIR / "run_omni.py"),
+            "qwen3-speech-server",
+            "--help",
+        ],
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr.decode()
+    help_text = " ".join(result.stdout.decode().split())
+    assert "Tensor-parallel size for the thinker stage" in help_text
+    assert "exactly that many GPU ids" in help_text
+    assert "Defaults to on for the disaggregated topology" in help_text
+    assert "must be >= MIN_PARTIAL_START_CHUNKS (3)" in help_text
+    assert "All GPU stage flags must point to the same device" in help_text
+
+
+def _fresh_process_log_level(preset: str, loglevel: str | None) -> str:
+    code = (
+        "import logging\n"
+        "from examples import _omni_launcher\n"
+        "try:\n"
+        f"    _omni_launcher.run_preset({preset!r}, ['--help'])\n"
+        "except SystemExit:\n"
+        "    pass\n"
+        "print(logging.getLevelName(logging.getLogger().level))\n"
+    )
+    process_env = os.environ.copy()
+    if loglevel is None:
+        process_env.pop("LOGLEVEL", None)
+    else:
+        process_env["LOGLEVEL"] = loglevel
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=_EXAMPLES_DIR.parent,
+        env=process_env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    return result.stdout.strip().splitlines()[-1]
+
+
+@pytest.mark.parametrize(
+    "preset",
+    [
+        "qwen3-text-server",
+        "qwen3-speech-server",
+        "qwen3-speech",
+        "ming-text-server",
+        "ming-speech-server",
+        "ming-speech",
+        "ming-text",
+    ],
+)
+def test_unified_launcher_honors_loglevel_override(preset):
+    assert _fresh_process_log_level(preset, "DEBUG") == "DEBUG"
+
+
+@pytest.mark.parametrize(
+    ("preset", "expected"),
+    [("qwen3-text-server", "INFO"), ("ming-text", "DEBUG")],
+)
+def test_unified_launcher_preserves_default_log_levels(preset, expected):
+    assert _fresh_process_log_level(preset, None) == expected
+
+
 def test_unified_qwen_offline_launcher_applies_stage_gpus(monkeypatch):
-    from examples import _omni_launcher as launcher
+    from examples import _omni_launcher as registry
+    from examples.launchers import qwen3_omni as launcher
 
     captured = {}
 
     async def fake_run(config, **kwargs):
         captured["config"] = config
 
-    monkeypatch.setattr(launcher, "_run_speech_request", fake_run)
-    args = launcher.parse_preset_args("qwen3-speech", ["--model-path", "dummy"])
+    monkeypatch.setattr(launcher, "run_speech_request", fake_run)
+    args = registry.parse_preset_args("qwen3-speech", ["--model-path", "dummy"])
 
     asyncio.run(launcher.run_qwen_speech(args))
 
@@ -60,15 +136,16 @@ def test_unified_qwen_offline_launcher_applies_stage_gpus(monkeypatch):
 
 
 def test_unified_ming_offline_launcher_applies_tp_and_overrides(monkeypatch):
-    from examples import _omni_launcher as launcher
+    from examples import _omni_launcher as registry
+    from examples.launchers import ming_omni as launcher
 
     captured = {}
 
     async def fake_run(config, **kwargs):
         captured["config"] = config
 
-    monkeypatch.setattr(launcher, "_run_speech_request", fake_run)
-    args = launcher.parse_preset_args(
+    monkeypatch.setattr(launcher, "run_speech_request", fake_run)
+    args = registry.parse_preset_args(
         "ming-speech",
         [
             "--model-path",
@@ -77,6 +154,8 @@ def test_unified_ming_offline_launcher_applies_tp_and_overrides(monkeypatch):
             "2",
             "--gpu-talker",
             "2",
+            "--voice",
+            "CUSTOM_VOICE",
             "--cpu-offload-gb",
             "4",
             "--mem-fraction-static",
@@ -92,6 +171,7 @@ def test_unified_ming_offline_launcher_applies_tp_and_overrides(monkeypatch):
     assert thinker.parallelism.tp == 2
     assert thinker.gpu == [0, 1]
     assert stages["talker"].gpu == 2
+    assert stages["talker"].factory_args["voice"] == "CUSTOM_VOICE"
     assert thinker.factory_args["server_args_overrides"] == {
         "disable_custom_all_reduce": True,
         "cpu_offload_gb": 4.0,
@@ -99,11 +179,38 @@ def test_unified_ming_offline_launcher_applies_tp_and_overrides(monkeypatch):
     }
 
 
+def test_unified_ming_text_applies_thinker_max_seq_len():
+    from examples import _omni_launcher as registry
+    from examples.launchers import ming_omni as launcher
+
+    args = registry.parse_preset_args(
+        "ming-text",
+        [
+            "--model-path",
+            "dummy",
+            "--thinker-max-seq-len",
+            "1234",
+            "--cpu-offload-gb",
+            "0",
+        ],
+    )
+
+    config = launcher.build_ming_text_config(args)
+
+    thinker = next(stage for stage in config.stages if stage.name == "thinker")
+    assert thinker.factory_args["thinker_max_seq_len"] == 1234
+
+
 @pytest.mark.parametrize(
     "script",
     [
         "run_qwen3_omni_server.py",
         "run_qwen3_omni_speech.py",
+        "run_qwen3_omni_speech_server.py",
+        "run_ming_omni_server.py",
+        "run_ming_omni_speech.py",
+        "run_ming_omni_speech_server.py",
+        "run_ming_omni_text_first.py",
     ],
 )
 def test_example_script_help(script):
