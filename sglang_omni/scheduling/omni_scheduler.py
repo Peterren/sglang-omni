@@ -198,6 +198,14 @@ class OmniScheduler:
         # Prefill admission coalescing: hold prefill until K requests are
         # waiting or the oldest has waited T ms, amortizing the per-step host
         # cost (mostly batch-size-independent) over more requests. 0 = off.
+        if int(prefill_coalesce_requests) > 1 and int(server_args.tp_size) > 1:
+            logger.warning(
+                "Prefill admission coalescing is disabled for "
+                f"tp_size={server_args.tp_size}: the wait deadline reads each "
+                "rank's local clock, so ranks could disagree on expiry and "
+                "break lockstep scheduling"
+            )
+            prefill_coalesce_requests = 0
         self.prefill_coalesce_requests = int(prefill_coalesce_requests)
         self.prefill_coalesce_wait_s = float(prefill_coalesce_wait_ms) / 1e3
 
