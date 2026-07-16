@@ -503,7 +503,24 @@ def create_vocoder_executor(
     checkpoint_dir = resolve_checkpoint(model_path)
     codec = get_or_load_codec(checkpoint_dir, device, dtype)
     if compile_decode:
-        codec.model.decode = torch.compile(codec.model.decode, dynamic=True)
+        eager_decode = codec.model.decode
+        try:
+            codec.model.decode = torch.compile(eager_decode, dynamic=True)
+            # torch.compile is lazy: warm it here so the first request does not
+            # stall the vocoder thread, and so an inductor failure degrades to
+            # eager at startup instead of erroring every request.
+            warm_codes = codec.encode_reference(
+                torch.zeros(codec.SAMPLE_RATE // 2), sample_rate=codec.SAMPLE_RATE
+            )
+            codec.decode(warm_codes)
+            codec.decode_batch([warm_codes[:8], warm_codes[:8]])
+        except Exception:
+            logger.warning(
+                "torch.compile of the codec decode failed; falling back to the "
+                "eager vocoder decode",
+                exc_info=True,
+            )
+            codec.model.decode = eager_decode
 
     return HiggsStreamingVocoderScheduler(
         codec,

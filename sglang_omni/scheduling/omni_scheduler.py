@@ -200,7 +200,6 @@ class OmniScheduler:
         # cost (mostly batch-size-independent) over more requests. 0 = off.
         self.prefill_coalesce_requests = int(prefill_coalesce_requests)
         self.prefill_coalesce_wait_s = float(prefill_coalesce_wait_ms) / 1e3
-        self._prefill_coalesce_t0: float | None = None
 
         # Token / memory info (upstream reads from tp_worker.get_worker_info)
         mr = tp_worker.model_runner
@@ -734,6 +733,8 @@ class OmniScheduler:
                 stage=None,
                 event_name="scheduler_queue_enter",
             )
+            if not hasattr(req, "_coalesce_enqueue_t"):
+                req._coalesce_enqueue_t = time.perf_counter()
             self.waiting_queue.append(req)
 
         if request_admission_lock_held:
@@ -825,22 +826,17 @@ class OmniScheduler:
 
     def get_new_batch_prefill(self):
         # NOTE(maydomine): requests often arrive faster than they batch, so the
-        # loop burns its time on tiny prefill batches. Set coalesce_requests /
-        # wait_ms to hold admission until a batch is worth its fixed step cost.
+        # loop burns its time on tiny prefill batches. Hold admission until the
+        # batch is worth its fixed step cost; the deadline is measured from the
+        # oldest queued request, so partial admission or aborts never restart it.
         if self.prefill_coalesce_requests <= 1 or self.chunked_req is not None:
             return _Upstream.get_new_batch_prefill(self)
-        if not self.waiting_queue:
-            self._prefill_coalesce_t0 = None
-            return _Upstream.get_new_batch_prefill(self)
-        if len(self.waiting_queue) >= self.prefill_coalesce_requests:
-            self._prefill_coalesce_t0 = None
+        waiting = self.waiting_queue
+        if not waiting or len(waiting) >= self.prefill_coalesce_requests:
             return _Upstream.get_new_batch_prefill(self)
         now = time.perf_counter()
-        if self._prefill_coalesce_t0 is None:
-            self._prefill_coalesce_t0 = now
-            return None
-        if now - self._prefill_coalesce_t0 >= self.prefill_coalesce_wait_s:
-            self._prefill_coalesce_t0 = None
+        oldest = min(getattr(req, "_coalesce_enqueue_t", now) for req in waiting)
+        if now - oldest >= self.prefill_coalesce_wait_s:
             return _Upstream.get_new_batch_prefill(self)
         return None
 
