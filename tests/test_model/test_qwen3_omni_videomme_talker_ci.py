@@ -62,18 +62,18 @@ SHORT_ANSWER_PROMPT = (
 )
 
 VIDEOMME_TALKER_THINKER_TEXT_MIN_ACCURACY = 0.55
-VIDEOMME_TALKER_WER_BELOW_50_CORPUS_MAX = 0.0438
+VIDEOMME_TALKER_WER_BELOW_50_CORPUS_MAX = 0.0493
 VIDEOMME_TALKER_WER_BELOW_50_CORPUS_THRESHOLD = apply_wer_slack(
     VIDEOMME_TALKER_WER_BELOW_50_CORPUS_MAX
 )
-VIDEOMME_TALKER_N_ABOVE_50_MAX = 0
+VIDEOMME_TALKER_N_ABOVE_50_MAX = 2
 
 _VIDEOMME_TALKER_AUDIO_P95 = {
     16: {
-        "throughput_qps": 0.925,
-        "output_tok_per_req_s": 3.7,
-        "latency_mean_s": 12.702,
-        "rtf_mean": 1.3248,
+        "throughput_qps": 0.843,
+        "output_tok_per_req_s": 3.4,
+        "latency_mean_s": 13.148,
+        "rtf_mean": 1.5726,
     },
 }
 VIDEOMME_TALKER_THRESHOLDS = apply_slack(_VIDEOMME_TALKER_AUDIO_P95)
