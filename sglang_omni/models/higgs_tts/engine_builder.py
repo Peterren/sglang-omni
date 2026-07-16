@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import importlib
-import os
 from typing import Any
 
 from sglang_omni.models.higgs_tts import request_builders
