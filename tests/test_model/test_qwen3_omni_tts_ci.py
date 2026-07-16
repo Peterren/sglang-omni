@@ -80,15 +80,15 @@ VC_SIMILARITY_MEAN_MIN = 60.0
 VC_UTMOS_MEAN_REFERENCE = 4.2107
 VC_UTMOS_MEAN_MIN = apply_mos_slack(VC_UTMOS_MEAN_REFERENCE)
 
-# Note (Chenyang): The thresholds for the throughput_qps of tests/test_model/test_qwen3_omni_tts_ci.py
-# are the most unstable metrics, so I drop it a lot.
+# Keep speed references tied to the 2xH100 CI runner; H200 calibration numbers
+# make these gates unattainable on the hardware that executes them.
 
 _VC_NON_STREAM_P95 = {
     16: {
-        "throughput_qps": 6.492,
-        "output_tok_per_req_s": 6.4,
-        "latency_mean_s": 2.29,
-        "rtf_mean": 0.7606,
+        "throughput_qps": 5.317,
+        "output_tok_per_req_s": 5.2,
+        "latency_mean_s": 2.803,
+        "rtf_mean": 0.8149,
     },
 }
 
