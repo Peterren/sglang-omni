@@ -40,6 +40,23 @@ def test_higgs_streaming_pipeline_routes_chunks_to_vocoder() -> None:
     assert stages_by_name["vocoder"].can_accept_stream_before_payload is True
 
 
+def test_higgs_streaming_pipeline_shares_vocoder_stride_with_tts_engine() -> None:
+    raw_config = HiggsTtsPipelineConfig(model_path="fake-model").model_dump()
+    vocoder = next(
+        stage for stage in raw_config["stages"] if stage["name"] == "vocoder"
+    )
+    vocoder["factory_args"].update(
+        stream_stride=3,
+        stream_followup_stride=2,
+    )
+
+    config = HiggsTtsPipelineConfig.model_validate(raw_config)
+    stages_by_name = {stage.name: stage for stage in config.stages}
+
+    assert stages_by_name["tts_engine"].factory_args["stream_stride"] == 3
+    assert stages_by_name["tts_engine"].factory_args["stream_followup_stride"] == 2
+
+
 def test_higgs_tts_engine_enables_cuda_graph_by_default(monkeypatch) -> None:
     from sglang_omni.models.higgs_tts import model_runner as model_runner_mod
     from sglang_omni.models.higgs_tts import request_builders
@@ -153,7 +170,11 @@ def test_higgs_tts_engine_enables_cuda_graph_by_default(monkeypatch) -> None:
     assert captured["server_args"].torch_compile_max_bs == 32
     assert infrastructure_saw_graph_disabled == [True]
     assert init_graph_calls == [True]
-    assert captured["adapter_kwargs"] == {"max_new_tokens_cap": 2048}
+    assert captured["adapter_kwargs"] == {
+        "max_new_tokens_cap": 2048,
+        "stream_stride": DEFAULT_HIGGS_STREAM_STRIDE,
+        "stream_followup_stride": DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
+    }
     assert (
         captured["stream_outbox"]
         is captured["scheduler_kwargs"]["model_runner"]._outbox

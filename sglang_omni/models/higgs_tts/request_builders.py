@@ -132,7 +132,11 @@ def build_sglang_higgs_request(
 
 
 def build_higgs_stream_metadata(
-    payload: StagePayload, data: HiggsSGLangRequestData
+    payload: StagePayload,
+    data: HiggsSGLangRequestData,
+    *,
+    stream_stride: int = DEFAULT_HIGGS_STREAM_STRIDE,
+    stream_followup_stride: int = DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
 ) -> dict[str, Any] | None:
     params = payload.request.params
     if not isinstance(params, dict):
@@ -154,8 +158,8 @@ def build_higgs_stream_metadata(
         "stream": True,
         "num_codebooks": num_codebooks,
         "codebook_size": codebook_size,
-        HIGGS_STREAM_STRIDE_METADATA: DEFAULT_HIGGS_STREAM_STRIDE,
-        HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA: DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
+        HIGGS_STREAM_STRIDE_METADATA: stream_stride,
+        HIGGS_STREAM_FOLLOWUP_STRIDE_METADATA: stream_followup_stride,
     }
     if params.get(INITIAL_CODEC_CHUNK_FRAMES_PARAM) is not None:
         metadata[INITIAL_CODEC_CHUNK_FRAMES_PARAM] = params[
@@ -197,6 +201,8 @@ def make_higgs_scheduler_adapters(
     model: _ResettableHiggsModel,
     *,
     max_new_tokens_cap: int | None = None,
+    stream_stride: int = DEFAULT_HIGGS_STREAM_STRIDE,
+    stream_followup_stride: int = DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
 ) -> tuple[_HiggsRequestBuilder, _HiggsResultAdapter]:
     """Build (request_builder, result_adapter) closures bound to a
     :class:`HiggsTTSModel` instance.
@@ -216,7 +222,12 @@ def make_higgs_scheduler_adapters(
         data = build_sglang_higgs_request(state, request_id=payload.request_id)
         data.engine_start_s = _perf_counter()
         data.stage_payload = payload
-        data.stream_metadata = build_higgs_stream_metadata(payload, data)
+        data.stream_metadata = build_higgs_stream_metadata(
+            payload,
+            data,
+            stream_stride=stream_stride,
+            stream_followup_stride=stream_followup_stride,
+        )
         return data
 
     def result_adapter(data: HiggsSGLangRequestData) -> StagePayload:

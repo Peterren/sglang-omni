@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from sglang_omni.config import PipelineConfig, StageConfig
 
@@ -71,6 +71,15 @@ class HiggsTtsPipelineConfig(PipelineConfig):
             can_accept_stream_before_payload=True,
         ),
     ]
+
+    def model_post_init(self, __context: Any = None) -> None:
+        super().model_post_init(__context)
+        stages = {stage.name: stage for stage in self.stages}
+        for key in ("stream_stride", "stream_followup_stride"):
+            if key in stages["vocoder"].factory_args:
+                stages["tts_engine"].factory_args[key] = stages["vocoder"].factory_args[
+                    key
+                ]
 
     def requires_uploaded_voice_for_named_voice(self) -> bool:
         return True
