@@ -71,7 +71,7 @@ class HiggsTtsPipelineConfig(PipelineConfig):
             name="vocoder",
             process="vocoder",
             factory=f"{_PKG}.stages.create_vocoder_executor",
-            factory_args={"device": "cuda",  "compile_decode": True},
+            factory_args={"device": "cuda", "compile_decode": True},
             gpu=0,
             runtime=StageRuntimeConfig(
                 resources=StageResourceConfig(total_gpu_memory_fraction=0.10)
