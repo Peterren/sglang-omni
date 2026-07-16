@@ -296,8 +296,7 @@ def _run_s2pro_engine_with_fake_buffers(
     stages = importlib.import_module("sglang_omni.models.fishaudio_s2_pro.stages")
     from sglang_omni.models.fishaudio_s2_pro import bootstrap as fish_bootstrap
     from sglang_omni.scheduling import bootstrap as scheduler_bootstrap
-    from sglang_omni.scheduling import engine_factory
-    from sglang_omni.scheduling import sglang_backend
+    from sglang_omni.scheduling import engine_factory, sglang_backend
 
     monkeypatch.setattr(
         engine_factory, "_resolve_checkpoint", lambda model_path: model_path
