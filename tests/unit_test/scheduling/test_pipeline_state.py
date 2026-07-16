@@ -460,11 +460,13 @@ def test_declarative_default_factory_is_lazy() -> None:
     state = _FactoryState()
     assert calls == 1
 
+    calls_before_to_dict = calls
     payload = state.to_dict()
-    assert calls == 1
+    assert calls == calls_before_to_dict
 
+    calls_before_restore = calls
     restored = _FactoryState.from_dict(payload)
-    assert calls == 1
+    assert calls == calls_before_restore
     assert restored.items == [1]
 
 
