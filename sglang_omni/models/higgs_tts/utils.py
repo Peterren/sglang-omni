@@ -29,9 +29,8 @@ from sglang_omni.utils.checkpoint import resolve_checkpoint
 BOC_ID = 1024
 EOC_ID = 1025
 
-# Per-process codec cache. audio_encoder and the vocoder now live in
-# separate processes, so each loads its own copy (~130 MB extra VRAM
-# measured); within a process the cache still dedupes loads.
+# Note(maydomine): Per-process codec cache. audio_encoder and the vocoder now live in
+# separate processes, so each loads its own copy
 _CODEC_CACHE: dict[tuple[str, str, str], HiggsAudioCodec] = {}
 
 

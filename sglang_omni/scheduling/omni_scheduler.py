@@ -195,7 +195,7 @@ class OmniScheduler:
         if model_runner is not None:
             model_runner._async_enabled = enable_async_decode
 
-        # Prefill admission coalescing: hold prefill until K requests are
+        # Note(maydomine): Prefill admission coalescing: hold prefill until K requests are
         # waiting or the oldest has waited T ms, amortizing the per-step host
         # cost (mostly batch-size-independent) over more requests. 0 = off.
         if int(prefill_coalesce_requests) > 1 and int(server_args.tp_size) > 1:
