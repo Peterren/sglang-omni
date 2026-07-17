@@ -113,7 +113,7 @@ def load_audio_decoder(
         prefix="audio_decoder.",
         strict=True,
     )
-    # Meta construction leaves non-persistent buffers on meta after strict
+    # note (xinyu): Meta construction leaves non-persistent buffers on meta after strict
     # parameter assignment. Rebuild them before moving the module to its device.
     _rematerialize_audio_decoder_buffers(audio_decoder, device)
     audio_decoder = audio_decoder.to(device=device, dtype=torch.bfloat16).eval()

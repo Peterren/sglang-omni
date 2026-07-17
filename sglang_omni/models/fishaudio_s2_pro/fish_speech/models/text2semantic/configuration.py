@@ -442,7 +442,7 @@ class FishQwen3OmniConfig(PretrainedConfig):
         return clean_config_dict(output)
 
 
-# SGLang asks Transformers to parse the checkpoint before constructing the
+# note (xinyu): SGLang asks Transformers to parse the checkpoint before constructing the
 # project-owned Slow AR model. Keep config discovery without registering any
 # unused Hugging Face model implementation.
 AutoConfig.register("fish_qwen3", FishQwen3Config)
