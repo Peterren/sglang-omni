@@ -40,10 +40,13 @@ measured ASR request latency was 95.8 ms for current and 94.8 ms for pre-T1;
 these one-sample timings validate the evaluator and are not model-performance
 comparisons.
 
-The optional GPT-translated English WER was not recorded because no OpenAI API
-credential was available on the benchmark host. The runner now exposes
-`--translated-wer`, caches independent reference/hypothesis translations, and
-keeps Arabic WER as the primary correctness metric.
+GPT-5.6 Luna translated the reference and ASR hypothesis independently to the
+same English sentence: "We are pleased to test today the system for converting
+Arabic text into clear and natural speech." Translated English WER was 0.0 for
+both snapshots. The current run made two API calls using 277 tokens (217 input,
+60 output); pre-T1 reused both content-addressed cache entries and made no API
+calls. This one-sample translated score is auxiliary because translation can
+hide Arabic ASR differences; Arabic WER remains the primary correctness metric.
 
 The benchmark initially found that a persistent llama.cpp instance changed its
 first result despite a fixed seed. Explicitly resetting llama.cpp before each

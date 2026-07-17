@@ -30,7 +30,20 @@
       "pre_t1_asr_latency_s": 0.09478981187567115,
       "current_asr_latency_s": 0.09575377590954304
     },
-    "translated_english_wer": null
+    "translated_english_wer": {
+      "model": "gpt-5.6-luna",
+      "prompt_version": "literal-ar-en-v1",
+      "translation": "We are pleased to test today the system for converting Arabic text into clear and natural speech.",
+      "pre_t1_wer": 0.0,
+      "current_wer": 0.0,
+      "current_api_calls": 2,
+      "pre_t1_cache_hits": 2,
+      "current_usage": {
+        "input_tokens": 217,
+        "output_tokens": 60,
+        "total_tokens": 277
+      }
+    }
   },
   "warm_performance": {
     "pre_t1": {
