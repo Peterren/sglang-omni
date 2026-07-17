@@ -18,6 +18,7 @@ import logging
 import os
 import string
 import time
+import unicodedata
 import wave
 from dataclasses import dataclass
 from typing import AsyncIterator, Protocol
@@ -53,6 +54,13 @@ from benchmarks.metrics.wer import (
     calculate_wer_metrics,
     print_asr_speed_summary,
     print_wer_summary,
+)
+from benchmarks.tasks.text_translation import (
+    ARABIC_TRANSLATION_PROMPT_VERSION,
+    DEFAULT_ARABIC_TRANSLATION_MODEL,
+    DEFAULT_TRANSLATION_API_KEY_ENV,
+    TranslationRecord,
+    translate_arabic_texts_to_english,
 )
 
 logger = logging.getLogger(__name__)
@@ -117,6 +125,35 @@ def normalize_text(text: str, lang: str) -> str:
         text = text.replace(" ", "").replace("\u3000", "").strip()
         text = " ".join(list(text))
         return text
+
+    if lang == "ar":
+        normalized = unicodedata.normalize("NFKC", text).translate(
+            str.maketrans(
+                {
+                    "أ": "ا",
+                    "إ": "ا",
+                    "آ": "ا",
+                    "ٱ": "ا",
+                    "ى": "ي",
+                    "٠": "0",
+                    "١": "1",
+                    "٢": "2",
+                    "٣": "3",
+                    "٤": "4",
+                    "٥": "5",
+                    "٦": "6",
+                    "٧": "7",
+                    "٨": "8",
+                    "٩": "9",
+                }
+            )
+        )
+        normalized = "".join(
+            " " if unicodedata.category(ch).startswith("P") else ch
+            for ch in normalized
+            if ch != "ـ" and not unicodedata.combining(ch)
+        )
+        return " ".join(normalized.split())
 
     normalizer = _get_en_normalizer()
     return normalizer(text)
@@ -311,7 +348,7 @@ def load_asr_model(lang: str, device: str, generation_mode: str | None = None):
     """
     mode_suffix = f" for {generation_mode} generation" if generation_mode else ""
     del device
-    if lang not in {"en", "zh"}:
+    if lang not in {"ar", "en", "zh"}:
         raise ValueError(f"Unsupported language: {lang}")
     raise ValueError(
         "WER transcription requires a running SGLang Omni ASR server"
@@ -946,6 +983,136 @@ def _log_transcribe_result(
         )
 
 
+def _apply_translated_wer(output: SampleOutput, hyp_text: str) -> SampleOutput:
+    output.whisper_text = hyp_text
+    output.ref_norm = normalize_text(output.target_text, "en")
+    output.hyp_norm = normalize_text(hyp_text, "en")
+    if not output.ref_norm:
+        output.error = "Empty translated reference after normalization"
+        return output
+    measures = process_words(output.ref_norm, output.hyp_norm)
+    output.wer = measures.wer
+    output.substitutions = measures.substitutions
+    output.deletions = measures.deletions
+    output.insertions = measures.insertions
+    output.hits = measures.hits
+    output.is_success = True
+    return output
+
+
+def _translation_record_json(record: TranslationRecord) -> dict:
+    return {
+        "text": record.translated_text,
+        "cache_key": record.cache_key,
+        "cache_hit": record.cache_hit,
+        "requested_model": record.requested_model,
+        "response_model": record.response_model,
+        "response_id": record.response_id,
+        "usage": record.usage,
+    }
+
+
+def _translated_wer_results(
+    outputs: list[SampleOutput],
+    config: SeedttsTranscribeConfig,
+    wer_config: dict,
+) -> dict:
+    model = str(getattr(config, "translation_model", DEFAULT_ARABIC_TRANSLATION_MODEL))
+    api_key_env = str(
+        getattr(config, "translation_api_key_env", DEFAULT_TRANSLATION_API_KEY_ENV)
+    )
+    cache_path = getattr(config, "translation_cache", None) or os.path.join(
+        config.output_dir, "translation_cache.json"
+    )
+    source_successes = [output for output in outputs if output.is_success]
+    texts = [
+        text
+        for output in source_successes
+        for text in (output.target_text, output.whisper_text)
+    ]
+    translations = translate_arabic_texts_to_english(
+        texts,
+        model=model,
+        api_key_env=api_key_env,
+        cache_path=cache_path,
+    )
+    records = iter(translations.records)
+    translated_outputs: list[SampleOutput] = []
+    per_sample: list[dict] = []
+
+    for source in outputs:
+        translated = SampleOutput(
+            sample_id=source.sample_id,
+            latency_s=source.latency_s,
+            audio_duration_s=source.audio_duration_s,
+            asr_latency_s=source.asr_latency_s,
+        )
+        ref_record: TranslationRecord | None = None
+        hyp_record: TranslationRecord | None = None
+        if not source.is_success:
+            translated.error = source.error or "Arabic ASR metric failed"
+        else:
+            ref_record = next(records)
+            hyp_record = next(records)
+            translated.target_text = ref_record.translated_text
+            translated = _apply_translated_wer(translated, hyp_record.translated_text)
+        translated_outputs.append(translated)
+        per_sample.append(
+            {
+                "id": source.sample_id,
+                "is_success": translated.is_success,
+                "source_ref_text": source.target_text,
+                "source_hyp_text": source.whisper_text,
+                "source_wer": source.wer if source.is_success else None,
+                "translated_ref": (
+                    _translation_record_json(ref_record) if ref_record else None
+                ),
+                "translated_hyp": (
+                    _translation_record_json(hyp_record) if hyp_record else None
+                ),
+                "ref_norm": translated.ref_norm,
+                "hyp_norm": translated.hyp_norm,
+                "wer": translated.wer if translated.is_success else None,
+                "substitutions": (
+                    translated.substitutions if translated.is_success else None
+                ),
+                "deletions": translated.deletions if translated.is_success else None,
+                "insertions": translated.insertions if translated.is_success else None,
+                "hits": translated.hits if translated.is_success else None,
+                "error": translated.error or None,
+            }
+        )
+
+    metrics = calculate_wer_metrics(translated_outputs, "en")
+    metrics["metric"] = "arabic_to_english_translated_wer"
+    metrics["source_lang"] = "ar"
+    usage: dict[str, int] = {}
+    for record in translations.records:
+        if record.cache_hit:
+            continue
+        for key, value in record.usage.items():
+            usage[key] = usage.get(key, 0) + value
+    response_models = sorted({record.response_model for record in translations.records})
+    return {
+        "summary": metrics,
+        "config": {
+            **wer_config,
+            "source_lang": "ar",
+            "metric_lang": "en",
+            "translation_model": model,
+            "translation_prompt_version": ARABIC_TRANSLATION_PROMPT_VERSION,
+        },
+        "translation": {
+            "cache_path": translations.cache_path,
+            "cache_hits": translations.cache_hits,
+            "api_calls": translations.api_calls,
+            "response_models": response_models,
+            "usage": usage,
+        },
+        "per_sample": per_sample,
+    }
+
+
 def run_seedtts_transcribe(
     config: SeedttsTranscribeConfig,
     *,
@@ -1051,11 +1218,28 @@ def run_seedtts_transcribe(
     save_wer_results(outputs, wer_metrics, wer_config, config.output_dir)
     save_json_results(asr_metrics, config.output_dir, "asr_speed_results.json")
 
-    return {
+    result = {
         "wer_summary": wer_metrics,
         "asr_speed": asr_metrics,
         "per_sample": outputs,
     }
+    if getattr(config, "translated_wer", False):
+        if config.lang != "ar":
+            raise ValueError("Translated WER currently requires lang='ar'")
+        translated = _translated_wer_results(outputs, config, wer_config)
+        print_wer_summary(
+            translated["summary"],
+            config.model,
+            f"{generation_mode or 'generated audio'}, ar translated to en",
+            tts_speed_summary=tts_speed_summary,
+        )
+        save_json_results(
+            translated,
+            config.output_dir,
+            "translated_wer_results.json",
+        )
+        result["translated_wer"] = translated
+    return result
 
 
 # ---------------------------------------------------------------------------
