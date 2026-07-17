@@ -74,6 +74,12 @@ dependencies = [
     "x-transformers",          # Ming talker rotary embeddings
 ]
 
+[project.optional-dependencies]
+audar-tts = [
+    "llama-cpp-python==0.3.34",
+    "neucodec==0.0.6",
+]
+
 [project.scripts]
 sgl-omni = "sglang_omni.cli:app"
 sgl-omni-router = "sglang_omni_router.serve:main"
