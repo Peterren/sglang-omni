@@ -59,8 +59,6 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
             "max_running_requests": self.max_running_requests,
             "cuda_graph_max_bs": self.cuda_graph_max_bs,
             "disable_cuda_graph": False,
-            # The stage's runtime.resources.total_gpu_memory_fraction is the
-            # single source of truth when set; 0.85 only applies without one.
             "mem_fraction_static": (
                 self.total_gpu_memory_fraction
                 if self.total_gpu_memory_fraction is not None

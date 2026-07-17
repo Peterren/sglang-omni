@@ -839,8 +839,6 @@ class OmniScheduler:
         # oldest queued request, so partial admission or aborts never restart it.
         if self.prefill_coalesce_requests <= 1 or self.chunked_req is not None:
             return _Upstream.get_new_batch_prefill(self)
-        # With no decode work in flight the loop is idle, so holding prefill
-        # amortizes nothing and only costs TTFB.
         if self.running_batch is None or self.running_batch.is_empty():
             return _Upstream.get_new_batch_prefill(self)
         waiting = self.waiting_queue
@@ -851,8 +849,6 @@ class OmniScheduler:
         for req in waiting:
             t = getattr(req, "_coalesce_enqueue_t", None)
             if t is None:
-                # Stamp-on-miss: an unstamped request starts aging from first
-                # observation, guaranteeing release within the wait deadline.
                 t = req._coalesce_enqueue_t = now
             oldest = min(oldest, t)
         if now - oldest >= self.prefill_coalesce_wait_s:

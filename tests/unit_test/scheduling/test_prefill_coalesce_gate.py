@@ -39,7 +39,6 @@ class _StubScheduler:
         self.prefill_coalesce_wait_s = wait_ms / 1e3
         self.chunked_req = None
         self.waiting_queue: list = []
-        # Decode work in flight by default; the idle-loop bypass has its own test.
         self.running_batch = SimpleNamespace(is_empty=lambda: False)
 
     def get_new_batch_prefill(self):
@@ -127,7 +126,7 @@ def test_abort_does_not_hand_newcomers_an_expired_deadline(upstream, clock):
 
 
 def test_idle_loop_bypasses_gate(upstream):
-    # No decode in flight: holding prefill amortizes nothing, only costs TTFB.
+    # Note(maydomine): No decode in flight: holding prefill amortizes nothing, only costs TTFB.
     sched = _StubScheduler(coalesce_requests=8)
     sched.waiting_queue = [_req(0.0)]
     sched.running_batch = None
@@ -138,7 +137,7 @@ def test_idle_loop_bypasses_gate(upstream):
 
 
 def test_unstamped_request_is_stamped_and_eventually_released(upstream, clock):
-    # Stamp-on-miss: held at first observation, then guaranteed release
+    # Note(maydomine): Stamp-on-miss: held at first observation, then guaranteed release
     # within the wait deadline (never a K-only unbounded hold).
     sched = _StubScheduler(coalesce_requests=8, wait_ms=60.0)
     clock.return_value = 200.0
