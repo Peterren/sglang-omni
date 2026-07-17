@@ -1,5 +1,9 @@
 # Audar-TTS-V1 Turbo
 
+The model weights use the
+[AudarAI Community License](https://huggingface.co/audarai/Audar-TTS-V1-Turbo/blob/main/LICENSE).
+Review its deployment terms before production use.
+
 Install the optional GGUF and codec dependencies:
 
 ```bash

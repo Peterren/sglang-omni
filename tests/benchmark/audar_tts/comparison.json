@@ -1,0 +1,45 @@
+{
+  "snapshots": {
+    "pre_t1": "efad7215aaaf054d3597a4678e29e3370231b45a",
+    "current": "68187ff8bfd58d4442786817f79d90948324ff1b"
+  },
+  "correctness": {
+    "requests_compared": 14,
+    "audio_code_count": 285,
+    "audio_code_sha256": "f9f63e0ca99e82bf7bbcab20a3b6d6fc7e36bc73a320f2f84a7942edde6bc98e",
+    "waveform_sha256": "44ec732c1243bf5d6115783b318de2cd7691f5ba0ab6a75c1e01ea85eae73492",
+    "http_wav_sha256": "66128571a5a473ababa0bb2c6bc7a5ed1ee625cf580979ff6c906b1f2aa64b4c",
+    "sample_rate": 24000,
+    "duration_s": 5.7,
+    "asr_cer": 0.0,
+    "asr_wer": 0.0
+  },
+  "warm_performance": {
+    "pre_t1": {
+      "total_s": 1.0772618738701567,
+      "rtf": 0.18899331120529064,
+      "engine_s": 1.068821196735371,
+      "engine_codes_per_s": 294.2298872348613
+    },
+    "current": {
+      "total_s": 1.1021006368100643,
+      "rtf": 0.19335098891404634,
+      "engine_s": 1.0923754822579212,
+      "engine_codes_per_s": 288.23232657423483
+    }
+  },
+  "added_lines_excluding_tests": {
+    "including_model_readme": {
+      "pre_t1": 673,
+      "current": 731
+    },
+    "excluding_readme": {
+      "pre_t1": 635,
+      "current": 693
+    },
+    "model_package_python": {
+      "pre_t1": 625,
+      "current": 683
+    }
+  }
+}
