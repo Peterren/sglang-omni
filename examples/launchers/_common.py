@@ -72,9 +72,24 @@ def add_server_args(
     *,
     model_name: str | None,
 ) -> None:
-    target.add_argument("--host", type=str, default="0.0.0.0")
-    target.add_argument("--port", type=int, default=8000)
-    target.add_argument("--model-name", type=str, default=model_name)
+    target.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="Server bind host (default: 0.0.0.0).",
+    )
+    target.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Server bind port (default: 8000).",
+    )
+    target.add_argument(
+        "--model-name",
+        type=str,
+        default=model_name,
+        help="Model name exposed by /v1/models.",
+    )
 
 
 def add_offline_args(
@@ -85,13 +100,31 @@ def add_offline_args(
     max_new_tokens: int,
     output: str | None,
 ) -> None:
-    target.add_argument("--prompt", type=str, default=prompt)
-    target.add_argument("--system", type=str, default=system)
-    target.add_argument("--max-new-tokens", type=int, default=max_new_tokens)
-    target.add_argument("--temperature", type=float, default=0.7)
+    target.add_argument("--prompt", type=str, default=prompt, help="User prompt.")
+    target.add_argument("--system", type=str, default=system, help="System prompt.")
+    target.add_argument(
+        "--max-new-tokens",
+        type=int,
+        default=max_new_tokens,
+        help=f"Maximum generated tokens (default: {max_new_tokens}).",
+    )
+    target.add_argument(
+        "--temperature",
+        type=float,
+        default=0.7,
+        help="Sampling temperature (default: 0.7).",
+    )
     add_relay_backend(target)
-    target.add_argument("--output", type=str, default=output)
-    target.add_argument("--timeout", type=float, default=300.0)
+    output_help = "Output WAV path; omit to skip saving audio."
+    if output is not None:
+        output_help = f"Output WAV path (default: {output})."
+    target.add_argument("--output", type=str, default=output, help=output_help)
+    target.add_argument(
+        "--timeout",
+        type=float,
+        default=300.0,
+        help="Pipeline request timeout in seconds (default: 300).",
+    )
 
 
 def validate_fraction(flag_name: str, value: float | None) -> None:

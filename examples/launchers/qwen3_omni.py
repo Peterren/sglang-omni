@@ -20,6 +20,17 @@ from ._common import (
     validate_fraction,
 )
 
+_TEXT_SERVER_DESCRIPTION = """Launch Qwen3-Omni with text-only OpenAI responses.
+
+Examples:
+  python examples/run_omni.py qwen3-text-server \\
+      --model-path Qwen/Qwen3-Omni-30B-A3B-Instruct --port 8000
+
+  curl http://localhost:8000/v1/chat/completions \\
+      -H "Content-Type: application/json" \\
+      -d '{"messages":[{"role":"user","content":"Hello!"}],"max_tokens":256}'
+"""
+
 _SPEECH_SERVER_DESCRIPTION = """Launch Qwen3-Omni with speech output.
 
 Each stage runs in its own process with explicit GPU placement.
@@ -33,6 +44,19 @@ Examples:
   python examples/run_omni.py qwen3-speech-server \\
       --thinker-tp-size 2 --gpu-thinker-tp 0,1 \\
       --gpu-talker 2 --gpu-code2wav 2
+"""
+
+_SPEECH_DESCRIPTION = """Run one Qwen3-Omni text-to-speech request.
+
+Examples:
+  python examples/run_omni.py qwen3-speech \\
+      --prompt "Tell me about what makes a beautiful sunset."
+
+  python examples/run_omni.py qwen3-speech \\
+      --prompt "Hello, how are you?" --gpu-thinker 0 --gpu-talker 1
+
+  python examples/run_omni.py qwen3-speech \\
+      --prompt "Read me a bedtime story." --output audio.wav
 """
 
 
@@ -94,10 +118,20 @@ def _resolve_speech_mem_fractions(
 
 
 def _build_qwen_text_server_parser() -> argparse.ArgumentParser:
-    target = parser("Launch Qwen3-Omni with text-only OpenAI responses.")
+    target = parser(_TEXT_SERVER_DESCRIPTION)
     add_model_path(target, "Qwen/Qwen3-Omni-30B-A3B-Instruct")
-    target.add_argument("--thinker-max-seq-len", type=int, default=None)
-    target.add_argument("--cpu-offload-gb", type=int, default=0)
+    target.add_argument(
+        "--thinker-max-seq-len",
+        type=int,
+        default=None,
+        help="Context length for preprocessing and the thinker stage.",
+    )
+    target.add_argument(
+        "--cpu-offload-gb",
+        type=int,
+        default=0,
+        help="GB of thinker weights to offload to CPU.",
+    )
     add_relay_backend(target, choices=("shm", "nccl", "nixl"))
     add_mem_fraction(
         target,
@@ -107,10 +141,20 @@ def _build_qwen_text_server_parser() -> argparse.ArgumentParser:
         "--encoder-mem-reserve",
         type=float,
         default=None,
-        help="GPU-memory fraction reserved for colocated encoders.",
+        help=(
+            "GPU-memory fraction kept outside SGLang's static pool for the "
+            "colocated vision and audio encoders. With neither memory flag, "
+            "SGLang auto-selects the pool and reserves 0.05. This flag changes "
+            "that reserve; --mem-fraction-static instead pins the pool directly. "
+            "Passing both flags is rejected."
+        ),
     )
     add_server_args(target, model_name=None)
-    target.add_argument("--enable-realtime", action="store_true")
+    target.add_argument(
+        "--enable-realtime",
+        action="store_true",
+        help="Mount the WebSocket /v1/realtime endpoint.",
+    )
     return target
 
 
@@ -426,7 +470,7 @@ def launch_qwen_speech_server(args: argparse.Namespace) -> None:
 
 
 def _build_qwen_speech_parser() -> argparse.ArgumentParser:
-    target = parser("Run one Qwen3-Omni text-to-speech request.")
+    target = parser(_SPEECH_DESCRIPTION)
     add_model_path(target, "Qwen/Qwen3-Omni-30B-A3B-Instruct")
     add_offline_args(
         target,

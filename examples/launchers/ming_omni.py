@@ -20,16 +20,76 @@ from ._common import (
     validate_fraction,
 )
 
+_MING_TEXT_SERVER_DESCRIPTION = """Launch Ming-Omni with text-only OpenAI responses.
+
+Examples:
+  python examples/run_omni.py ming-text-server \\
+      --model-path inclusionAI/Ming-flash-omni-2.0 --port 8000
+
+  curl http://localhost:8000/v1/chat/completions \\
+      -H "Content-Type: application/json" \\
+      -d '{"model":"ming-omni","messages":[{"role":"user","content":"你好！"}]}'
+"""
+
+_MING_SPEECH_SERVER_DESCRIPTION = """Launch Ming-Omni with text and audio OpenAI responses.
+
+Each stage runs in its own process with explicit GPU placement.
+
+Examples:
+  python examples/run_omni.py ming-speech-server \\
+      --gpu-thinker 0 --gpu-talker 1 --cpu-offload-gb 80
+
+  python examples/run_omni.py ming-speech-server \\
+      --gpu-thinker 0 --gpu-talker 1 --enable-streaming-tts
+
+  curl http://localhost:8000/v1/chat/completions \\
+      -H "Content-Type: application/json" \\
+      -d '{"model":"ming-omni","messages":[{"role":"user","content":"你好！"}],"modalities":["text","audio"]}'
+"""
+
+_MING_SPEECH_DESCRIPTION = """Run one Ming-Omni text-to-speech request.
+
+The talker contains its own LLM, CFM, and AudioVAE and generates speech from
+the thinker's decoded text.
+
+Examples:
+  python examples/run_omni.py ming-speech --prompt "请给我讲一个故事。"
+
+  python examples/run_omni.py ming-speech \\
+      --prompt "你好，今天天气怎么样？" --gpu-thinker 0 --gpu-talker 1
+
+  python examples/run_omni.py ming-speech \\
+      --prompt "朗读一首古诗。" --output audio.wav
+"""
+
+_MING_TEXT_DESCRIPTION = """Run one Ming-Omni request with text output.
+
+Examples:
+  python examples/run_omni.py ming-text \\
+      --prompt "你好，请介绍一下你自己。"
+
+  python examples/run_omni.py ming-text \\
+      --audio-path /path/to/audio.wav --prompt "请描述这段音频的内容。"
+"""
+
 
 def _build_ming_text_server_parser() -> argparse.ArgumentParser:
-    target = parser("Launch Ming-Omni with text-only OpenAI responses.")
+    target = parser(_MING_TEXT_SERVER_DESCRIPTION)
     add_model_path(target, "inclusionAI/Ming-flash-omni-2.0")
-    target.add_argument("--thinker-max-seq-len", type=int, default=8192)
+    target.add_argument(
+        "--thinker-max-seq-len",
+        type=int,
+        default=8192,
+        help="Context length for the thinker stage (default: 8192).",
+    )
     target.add_argument(
         "--tp-size",
         type=int,
         default=1,
-        help="Tensor parallel size for thinker (must be >= 1)",
+        help=(
+            "Tensor parallel size for thinker (must be >= 1). TP ranks use "
+            "GPU ids 0 through N-1."
+        ),
     )
     target.add_argument(
         "--gpu-audio-encoder",
@@ -58,8 +118,21 @@ def _build_ming_text_server_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Launch a text-only smoke pipeline without media encoders.",
     )
-    target.add_argument("--quantization", type=str, default=None)
-    target.add_argument("--cpu-offload-gb", type=int, default=80)
+    target.add_argument(
+        "--quantization",
+        type=str,
+        default=None,
+        help="Thinker quantization method, for example fp8.",
+    )
+    target.add_argument(
+        "--cpu-offload-gb",
+        type=int,
+        default=80,
+        help=(
+            "GB of thinker weights to offload to CPU "
+            "(default: 80 for Ming-flash-omni-2.0)."
+        ),
+    )
     add_mem_fraction(target, "Set mem_fraction_static for the thinker stage.")
     add_relay_backend(target, choices=("shm", "nccl", "nixl"))
     add_server_args(target, model_name="ming-omni")
@@ -156,21 +229,58 @@ def launch_ming_text_server(args: argparse.Namespace) -> None:
 
 
 def _build_ming_speech_server_parser() -> argparse.ArgumentParser:
-    target = parser("Launch Ming-Omni with text and audio OpenAI responses.")
+    target = parser(_MING_SPEECH_SERVER_DESCRIPTION)
     add_model_path(target, "inclusionAI/Ming-flash-omni-2.0")
-    target.add_argument("--gpu-thinker", type=int, default=0)
-    target.add_argument("--gpu-talker", type=int, default=1)
+    target.add_argument(
+        "--gpu-thinker",
+        type=int,
+        default=0,
+        help=(
+            "Thinker GPU id. With TP > 1, this is the first GPU rank and the "
+            "thinker uses the contiguous range starting here."
+        ),
+    )
+    target.add_argument(
+        "--gpu-talker",
+        type=int,
+        default=1,
+        help="Talker GPU id; it must be outside the thinker TP range.",
+    )
     target.add_argument(
         "--tp-size",
         type=int,
         default=1,
-        help="Tensor parallel size for thinker (must be >= 1)",
+        help=(
+            "Tensor parallel size for thinker (must be >= 1). "
+            "--gpu-thinker is the first GPU rank."
+        ),
     )
     add_relay_backend(target)
-    target.add_argument("--voice", type=str, default="DB30")
+    target.add_argument(
+        "--voice",
+        type=str,
+        default="DB30",
+        help="Voice ID for the talker (default: DB30).",
+    )
     add_mem_fraction(target, "Set mem_fraction_static for the thinker stage.")
-    target.add_argument("--cpu-offload-gb", type=int, default=None)
-    target.add_argument("--enable-streaming-tts", action="store_true")
+    target.add_argument(
+        "--cpu-offload-gb",
+        type=int,
+        default=None,
+        help=(
+            "Offload N GiB of thinker weights to CPU. Ming-flash-omni-2.0 has "
+            "about 200 GB of MoE weights and normally requires offload on one GPU."
+        ),
+    )
+    target.add_argument(
+        "--enable-streaming-tts",
+        action="store_true",
+        help=(
+            "Use the 8-stage streaming-TTS path with a segmenter and streaming "
+            "talker for sub-second time-to-first-audio. The default uses the "
+            "non-streaming 7-stage speech path."
+        ),
+    )
     add_server_args(target, model_name="ming-omni")
     return target
 
@@ -239,7 +349,7 @@ def launch_ming_speech_server(args: argparse.Namespace) -> None:
 
 
 def _build_ming_speech_parser() -> argparse.ArgumentParser:
-    target = parser("Run one Ming-Omni text-to-speech request.")
+    target = parser(_MING_SPEECH_DESCRIPTION)
     add_model_path(target, "inclusionAI/Ming-flash-omni-2.0")
     add_offline_args(
         target,
@@ -248,17 +358,48 @@ def _build_ming_speech_parser() -> argparse.ArgumentParser:
         max_new_tokens=256,
         output="./output_audio.wav",
     )
-    target.add_argument("--audio-path", type=str, default=None)
-    target.add_argument("--voice", type=str, default="DB30")
-    target.add_argument("--gpu-thinker", type=int, default=0)
-    target.add_argument("--gpu-talker", type=int, default=1)
-    target.add_argument("--cpu-offload-gb", type=float, default=0)
+    target.add_argument(
+        "--audio-path",
+        type=str,
+        default=None,
+        help="Optional audio input path.",
+    )
+    target.add_argument(
+        "--voice",
+        type=str,
+        default="DB30",
+        help="Voice ID for the talker (default: DB30).",
+    )
+    target.add_argument(
+        "--gpu-thinker",
+        type=int,
+        default=0,
+        help=(
+            "Thinker GPU id. With TP > 1, this is the first GPU rank and the "
+            "thinker uses the contiguous range starting here."
+        ),
+    )
+    target.add_argument(
+        "--gpu-talker",
+        type=int,
+        default=1,
+        help="Talker GPU id; it must be outside the thinker TP range.",
+    )
+    target.add_argument(
+        "--cpu-offload-gb",
+        type=float,
+        default=0,
+        help="GiB of thinker weights to offload to CPU.",
+    )
     add_mem_fraction(target, "Set mem_fraction_static for the thinker stage.")
     target.add_argument(
         "--tp-size",
         type=int,
         default=1,
-        help="Tensor parallel size for thinker (must be >= 1)",
+        help=(
+            "Tensor parallel size for thinker (must be >= 1). "
+            "--gpu-thinker is the first GPU rank."
+        ),
     )
     return target
 
@@ -327,14 +468,27 @@ async def run_ming_speech(args: argparse.Namespace) -> None:
 
 
 def _build_ming_text_parser() -> argparse.ArgumentParser:
-    target = parser("Run one Ming-Omni request with text output.")
+    target = parser(_MING_TEXT_DESCRIPTION)
     add_model_path(target, "inclusionAI/Ming-flash-omni-2.0")
     target.add_argument("--prompt", type=str, default="你好，请介绍一下你自己。")
     target.add_argument("--thinker-max-seq-len", type=int, default=8192)
     target.add_argument("--max-new-tokens", type=int, default=1024)
     target.add_argument("--temperature", type=float, default=0.8)
-    target.add_argument("--audio-path", type=str, default=None)
-    target.add_argument("--cpu-offload-gb", type=int, default=80)
+    target.add_argument(
+        "--audio-path",
+        type=str,
+        default=None,
+        help="Optional audio input path.",
+    )
+    target.add_argument(
+        "--cpu-offload-gb",
+        type=int,
+        default=80,
+        help=(
+            "GB of thinker weights to offload to CPU "
+            "(default: 80 for Ming-flash-omni-2.0)."
+        ),
+    )
     add_mem_fraction(target, "Set mem_fraction_static for the thinker stage.")
     add_relay_backend(target)
     return target

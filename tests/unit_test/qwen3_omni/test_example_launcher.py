@@ -61,6 +61,51 @@ def test_qwen_speech_help_preserves_topology_contract():
     assert "All GPU stage flags must point to the same device" in help_text
 
 
+def _preset_help(preset: str) -> str:
+    result = subprocess.run(
+        [sys.executable, str(_EXAMPLES_DIR / "run_omni.py"), preset, "--help"],
+        capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr.decode()
+    return " ".join(result.stdout.decode().split())
+
+
+def test_ming_speech_server_help_preserves_pipeline_contract():
+    help_text = _preset_help("ming-speech-server")
+
+    assert "8-stage streaming-TTS path" in help_text
+    assert "non-streaming 7-stage speech path" in help_text
+    assert "about 200 GB of MoE weights" in help_text
+    assert "--gpu-thinker is the first GPU rank" in help_text
+    assert "curl http://localhost:8000/v1/chat/completions" in help_text
+
+
+@pytest.mark.parametrize(
+    ("preset", "expected_examples"),
+    [
+        ("qwen3-text-server", ("qwen3-text-server", "curl http://localhost:8000")),
+        ("qwen3-speech", ("qwen3-speech", "--output audio.wav")),
+        ("ming-text-server", ("ming-text-server", "curl http://localhost:8000")),
+        ("ming-speech", ("ming-speech", "--output audio.wav")),
+        ("ming-text", ("ming-text", "--audio-path /path/to/audio.wav")),
+    ],
+)
+def test_remaining_launcher_help_preserves_examples(preset, expected_examples):
+    help_text = _preset_help(preset)
+
+    for expected in expected_examples:
+        assert expected in help_text
+
+
+def test_offline_help_preserves_input_output_guidance():
+    ming_help = _preset_help("ming-speech")
+    qwen_help = _preset_help("qwen3-speech")
+
+    assert "Thinker GPU id. With TP > 1" in ming_help
+    assert "Output WAV path (default: ./output_audio.wav)" in ming_help
+    assert "Output WAV path; omit to skip saving audio" in qwen_help
+
+
 def _fresh_process_log_level(preset: str, loglevel: str | None) -> str:
     code = (
         "import logging\n"
