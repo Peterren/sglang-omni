@@ -3,6 +3,14 @@
     "pre_t1": "efad7215aaaf054d3597a4678e29e3370231b45a",
     "current": "68187ff8bfd58d4442786817f79d90948324ff1b"
   },
+  "benchmark_commits": {
+    "pre_t1": "34d8ab7bba028bb79931042504405a1821549cd8",
+    "current": "e223e68bafbf70de2045eff5870cc3711db07437"
+  },
+  "raw_artifacts": {
+    "path": "/data/jaxan/audar-results",
+    "status": "local-only; not uploaded"
+  },
   "correctness": {
     "requests_compared": 14,
     "audio_code_count": 285,

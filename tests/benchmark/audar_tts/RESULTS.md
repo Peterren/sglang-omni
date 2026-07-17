@@ -6,10 +6,18 @@
   PR #807's squash commit.
 - Current: `68187ff8bfd58d4442786817f79d90948324ff1b`, the `main` tip used for
   the final run.
+- Pre-T1 benchmark implementation: `luojiaxuan/audar-tts-pre-t1` at
+  `34d8ab7bba028bb79931042504405a1821549cd8`.
+- Current benchmark implementation: `luojiaxuan/audar-tts-current` at
+  `e223e68bafbf70de2045eff5870cc3711db07437`.
 - Audar: `51f5635f32de3ab45ff28a4b958464532225b247`, Q4_K_M GGUF.
 - NeuCodec: `30c1fdd19e68aee65d542cf043750d4c0165893e`.
 - Hardware: one NVIDIA H100 80GB, CUDA 13.0, PyTorch 2.11.0, and
   llama-cpp-python 0.3.34 with CUDA enabled and NCCL disabled.
+
+The summarized metrics in this document and `comparison.json` are the Git
+source of truth. Raw run outputs remain local-only at
+`/data/jaxan/audar-results` on H100 and have not been uploaded.
 
 ## Correctness
 
