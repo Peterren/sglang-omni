@@ -30,6 +30,6 @@ OPENAI_API_KEY=<key> python -m benchmarks.eval.benchmark_tts_seedtts \
 ```
 
 `wer_results.json` is the primary Arabic ASR WER. The auxiliary
-`translated_wer_results.json` translates the reference and ASR hypothesis in
-separate API requests before reusing SeedTTS's English WER. Translations are
+`translated_wer_results.json` translates the reference and ASR hypothesis
+independently before reusing SeedTTS's English WER. Translations are
 content-addressed in `translation_cache.json`, so reruns do not call the API.
