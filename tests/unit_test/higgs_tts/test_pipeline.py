@@ -11,6 +11,7 @@ import torch
 import typer
 
 from sglang_omni.cli.serve import apply_mem_fraction_cli_overrides
+from sglang_omni.config.runtime import resolve_stage_static_factory_args
 from sglang_omni.models.higgs_tts import stages
 from sglang_omni.models.higgs_tts import utils as higgs_utils
 from sglang_omni.models.higgs_tts.config import HiggsTtsPipelineConfig
@@ -55,6 +56,42 @@ def test_higgs_streaming_pipeline_shares_vocoder_stride_with_tts_engine() -> Non
 
     assert stages_by_name["tts_engine"].factory_args["stream_stride"] == 3
     assert stages_by_name["tts_engine"].factory_args["stream_followup_stride"] == 2
+
+
+def test_higgs_streaming_pipeline_shares_vocoder_runtime_stride_override() -> None:
+    config = HiggsTtsPipelineConfig(
+        model_path="fake-model",
+        runtime_overrides={
+            "vocoder": {
+                "stream_stride": 16,
+                "stream_followup_stride": 7,
+            }
+        },
+    )
+    stages_by_name = {stage.name: stage for stage in config.stages}
+
+    tts_engine_args = resolve_stage_static_factory_args(
+        stages_by_name["tts_engine"], config
+    )
+    vocoder_args = resolve_stage_static_factory_args(stages_by_name["vocoder"], config)
+
+    assert tts_engine_args["stream_stride"] == vocoder_args["stream_stride"] == 16
+    assert (
+        tts_engine_args["stream_followup_stride"]
+        == vocoder_args["stream_followup_stride"]
+        == 7
+    )
+
+
+def test_higgs_streaming_pipeline_rejects_conflicting_runtime_stride() -> None:
+    with pytest.raises(ValueError, match="must match between"):
+        HiggsTtsPipelineConfig(
+            model_path="fake-model",
+            runtime_overrides={
+                "tts_engine": {"stream_stride": 8},
+                "vocoder": {"stream_stride": 16},
+            },
+        )
 
 
 def test_higgs_tts_engine_enables_cuda_graph_by_default(monkeypatch) -> None:

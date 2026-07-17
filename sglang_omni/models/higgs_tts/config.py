@@ -75,11 +75,25 @@ class HiggsTtsPipelineConfig(PipelineConfig):
     def model_post_init(self, __context: Any = None) -> None:
         super().model_post_init(__context)
         stages = {stage.name: stage for stage in self.stages}
+        vocoder = stages["vocoder"]
+        tts_engine = stages["tts_engine"]
+        vocoder_overrides = self.runtime_overrides.get("vocoder", {})
+        tts_engine_overrides = self.runtime_overrides.get("tts_engine", {})
+        missing = object()
         for key in ("stream_stride", "stream_followup_stride"):
-            if key in stages["vocoder"].factory_args:
-                stages["tts_engine"].factory_args[key] = stages["vocoder"].factory_args[
-                    key
-                ]
+            value = vocoder_overrides.get(key, vocoder.factory_args.get(key, missing))
+            if value is missing:
+                if key in tts_engine.factory_args or key in tts_engine_overrides:
+                    raise ValueError(
+                        f"Higgs TTS {key!r} must be configured on the vocoder stage"
+                    )
+                continue
+            if key in tts_engine_overrides and tts_engine_overrides[key] != value:
+                raise ValueError(
+                    f"Higgs TTS {key!r} runtime overrides must match between "
+                    "the tts_engine and vocoder stages"
+                )
+            tts_engine.factory_args[key] = value
 
     def requires_uploaded_voice_for_named_voice(self) -> bool:
         return True
