@@ -1,0 +1,840 @@
+<meta charset="utf-8">
+<title>SGLang Omni 每日 PR 学习日报 · 2026-07-17</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#0f1115; --bg2:#161922; --card:#1b1f2a; --card2:#202430; --ink:#e7ebf3; --ink2:#aab3c5;
+  --muted:#7c8598; --line:#2a3040; --accent:#5b9cff; --accent2:#3ad6b0; --warn:#ffb454; --pink:#ff7ab6;
+  --code-bg:#12151d; --code-ink:#d7e0f0; --kw:#ff7ab6; --str:#9ece6a; --com:#5c6784; --num:#ff9e64; --fn:#7dcfff;
+  --tagA:#5b9cff; --tagB:#3ad6b0; --tagC:#ffb454; --tagD:#ff7ab6; --tagE:#b48ead; --tagF:#8fa1b3;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f6fb; --bg2:#ffffff; --card:#ffffff; --ink:#1a2230; --ink2:#41506b;
+    --muted:#6b7891; --line:#e2e7f0; --accent:#2b6fff; --accent2:#12a37f; --warn:#c77b13; --pink:#c43e83;
+    --code-bg:#0f1420; --code-ink:#dbe4f5;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.75;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+header.top{padding:34px 30px;border-radius:20px;background:
+  radial-gradient(1200px 300px at 10% -20%,rgba(91,156,255,.22),transparent),
+  radial-gradient(900px 260px at 110% 0%,rgba(58,214,176,.16),transparent),
+  var(--card);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.kicker{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-size:30px;margin:.35em 0 .2em;line-height:1.25}
+.sub{color:var(--ink2);font-size:15.5px;margin:0}
+.meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.chip{font-size:13px;background:var(--bg2);border:1px solid var(--line);padding:6px 12px;border-radius:999px;color:var(--ink2)}
+.chip b{color:var(--ink)}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
+@media(max-width:640px){.statgrid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.stat .n{font-size:26px;font-weight:800;color:var(--ink)}
+.stat .l{font-size:12.5px;color:var(--muted);margin-top:2px}
+section.toc{margin:30px 0 10px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+section.toc h2{margin:.1em 0 .6em;font-size:18px}
+.themebar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.tt{font-size:12.5px;padding:5px 11px;border-radius:8px;font-weight:600;color:#0b0e14}
+.tocitem{display:flex;gap:12px;align-items:baseline;padding:9px 0;border-top:1px dashed var(--line)}
+.tocitem:first-of-type{border-top:none}
+.tocnum{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;min-width:52px}
+.tocitem a{color:var(--ink);text-decoration:none;font-weight:600}
+.tocitem a:hover{color:var(--accent)}
+.tocitem .d{color:var(--muted);font-size:13px}
+.card{margin:20px 0;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.card>summary{list-style:none;cursor:pointer;padding:22px 26px;display:flex;gap:16px;align-items:flex-start;
+  transition:background .15s}
+.card>summary::-webkit-details-marker{display:none}
+.card>summary:hover{background:rgba(127,150,200,.06)}
+.card[open]>summary{border-bottom:1px solid var(--line)}
+.prnum{font-weight:800;font-size:15px;color:#0b0e14;background:var(--accent);border-radius:10px;padding:4px 10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sumhead{flex:1;min-width:0}
+.sumhead .t{font-size:18px;font-weight:700;margin:0 0 4px;line-height:1.35}
+.sumhead .m{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px}
+.badge{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:6px;background:rgba(58,214,176,.16);color:var(--accent2);border:1px solid rgba(58,214,176,.3)}
+.tagpill{font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:600}
+.chev{margin-left:auto;color:var(--muted);transition:transform .2s;font-size:18px}
+.card[open] .chev{transform:rotate(90deg)}
+.body{padding:6px 28px 26px}
+.body h3{font-size:16.5px;margin:26px 0 8px;padding-left:12px;border-left:3px solid var(--accent);color:var(--ink)}
+.body h4{font-size:14.5px;margin:18px 0 6px;color:var(--accent2)}
+.body p{margin:9px 0;color:var(--ink2)}
+.body ul,.body ol{margin:8px 0;padding-left:22px;color:var(--ink2)}
+.body li{margin:5px 0}
+.body strong{color:var(--ink)}
+.tldr{background:linear-gradient(90deg,rgba(91,156,255,.1),transparent);border:1px solid var(--line);
+  border-left:3px solid var(--accent);border-radius:10px;padding:12px 16px;margin:14px 0;font-size:15px}
+.tldr b{color:var(--accent)}
+.concept{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:14px 0}
+.concept .h{font-weight:700;color:var(--pink);font-size:14.5px;margin-bottom:2px}
+.concept .three{display:grid;gap:6px;margin-top:8px}
+.concept .three div{font-size:14px;color:var(--ink2)}
+.concept .three b{color:var(--ink)}
+.analogy{background:rgba(255,180,84,.08);border:1px dashed rgba(255,180,84,.4);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:14px;color:var(--ink2)}
+.analogy::before{content:"类比　";font-weight:700;color:var(--warn)}
+pre{background:var(--code-bg);color:var(--code-ink);border-radius:12px;padding:16px 18px;overflow-x:auto;
+  font-size:13px;line-height:1.6;border:1px solid rgba(255,255,255,.06);margin:12px 0;
+  font-family:"SF Mono", SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace}
+pre .c{color:var(--com)} pre .k{color:var(--kw)} pre .s{color:var(--str)} pre .n{color:var(--num)} pre .f{color:var(--fn)} pre .plus{color:#3ad6b0} pre .minus{color:#ff6b81}
+code.inl{background:var(--bg2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13px;
+  font-family:"SF Mono",Consolas,Menlo,monospace;color:var(--accent2)}
+.tbl{overflow-x:auto;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{background:var(--bg2);color:var(--ink);font-weight:600}
+td{color:var(--ink2)}
+.good{color:var(--accent2);font-weight:700}
+.learn{background:linear-gradient(90deg,rgba(58,214,176,.1),transparent);border:1px solid var(--line);
+  border-left:3px solid var(--accent2);border-radius:10px;padding:12px 16px;margin:16px 0}
+.learn .h{font-weight:700;color:var(--accent2);margin-bottom:4px}
+footer{margin-top:50px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center}
+a.src{color:var(--accent);text-decoration:none;font-size:13px;border:1px solid var(--line);padding:3px 10px;border-radius:7px}
+a.src:hover{background:var(--bg2)}
+.glossary{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 26px;margin:26px 0}
+.glossary h2{margin-top:.1em}
+.gitem{padding:10px 0;border-top:1px dashed var(--line)}
+.gitem:first-of-type{border-top:none}
+.gitem b{color:var(--accent2)}
+
+/* ---- PDF / print: expand every card, use a light readable theme ---- */
+@media print{
+  :root{
+    --bg:#ffffff; --bg2:#f6f8fc; --card:#ffffff; --ink:#161d29; --ink2:#333e54;
+    --muted:#5c6a83; --line:#d8dfea; --accent:#1f5fe0; --accent2:#0d8f6c; --warn:#b26a08; --pink:#c1356f;
+    --code-bg:#0f1420; --code-ink:#dbe4f5;
+  }
+  body{background:#fff}
+  .wrap{max-width:100%;padding:0}
+  header.top,.card,section.toc,.glossary{box-shadow:none;break-inside:avoid}
+  .card{break-inside:auto}
+  .card>summary{cursor:default}
+  .chev{display:none}
+  details.card:not([open]) .body{display:block !important}
+  details.card .body{display:block !important}
+  .concept,.tldr,.learn,.analogy,pre,.tbl{break-inside:avoid}
+  h3,h4{break-after:avoid}
+  /* flatten everything so Chromium emits vectors, not rasterized tiles */
+  *{box-shadow:none !important;border-radius:0 !important;background-image:none !important;overflow:visible !important}
+  header.top{background:#eef2fb !important}
+  .tldr{background:#eef2fb !important}
+  .learn{background:#eafaf4 !important}
+  .analogy{background:#fdf6ea !important}
+  .stat,.chip,.concept,.glossary,section.toc,.card{background:#ffffff !important}
+  .tldr,.learn,.concept,.gitem{background:#f7f9fc !important}
+  .badge{background:#eafaf4 !important;border-color:#bfe8d8 !important}
+  .tagpill,.tt,.prnum{background:#eef2fb !important;color:#1f5fe0 !important}
+  pre{background:#0f1420 !important;border:1px solid #26304a !important}
+  .analogy{border:1px solid #ead9b6 !important}
+  .tldr,.learn,h3{border-left-width:3px !important}
+}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="kicker">SGLang&nbsp;Omni · Daily PR Digest</div>
+  <h1>SGLang Omni 每日 PR 学习日报</h1>
+  <p class="sub">聚焦 Omni / 多模态 / 多阶段推理架构 · 面向"完全小白"的逐行讲解</p>
+  <div class="meta-row">
+    <span class="chip">日期 <b>2026-07-17</b></span>
+    <span class="chip">时间窗口 <b>过去 24 小时</b></span>
+    <span class="chip">仓库 <b>sgl-project/sglang-omni</b></span>
+    <span class="chip">合并 PR <b>9 个</b></span>
+  </div>
+  <div class="statgrid">
+    <div class="stat"><div class="n">9</div><div class="l">Merged PR</div></div>
+    <div class="stat"><div class="n">6</div><div class="l">深度精讲</div></div>
+    <div class="stat"><div class="n">4</div><div class="l">模型受影响<br>(Fish/Higgs/MOSS/Qwen3-Omni)</div></div>
+    <div class="stat"><div class="n">6</div><div class="l">主题分类</div></div>
+  </div>
+</header>
+
+<section class="toc">
+  <h2>当日概览 &amp; 主题分类</h2>
+  <p class="sub" style="margin-bottom:16px">今天的 9 个 PR 高度集中在一件事上:<strong>把"多阶段推理流水线"里每个阶段的资源、缓存、编码逻辑各归其位</strong>。你会反复看到同一套工程母题——"让 CPU 的活别挡住 GPU""让重复计算只做一次""把只在训练时才用的臃肿代码从推理路径里剥掉"。下面按主题归类。</p>
+  <div class="themebar">
+    <span class="tt" style="background:var(--tagA)">A · 多阶段流水线 &amp; 进程隔离</span>
+    <span class="tt" style="background:var(--tagB)">B · 流式声码器 &amp; CUDA Graph</span>
+    <span class="tt" style="background:var(--tagC)">C · 共享服务 &amp; 缓存</span>
+    <span class="tt" style="background:var(--tagD)">D · Tokenizer &amp; 多模态编码</span>
+    <span class="tt" style="background:var(--tagE)">E · 同卡数据并行 (MPS/DP)</span>
+    <span class="tt" style="background:var(--tagF)">F · CI &amp; 评测校准</span>
+  </div>
+
+  <div class="tocitem"><span class="tocnum">#1047</span><a href="#pr1047">Isolate Fish S2-Pro reference encoding from GPU stages</a><span class="d">A · +138% QPS · 进程隔离</span></div>
+  <div class="tocitem"><span class="tocnum">#1060</span><a href="#pr1060">Bound Qwen3-Omni colocated stage CPU thread pools</a><span class="d">A · +49~98% QPS · 线程收敛</span></div>
+  <div class="tocitem"><span class="tocnum">#1055</span><a href="#pr1055">Reuse idle vocoder lanes for MOSS-TTS Local streaming</a><span class="d">B · +22% QPS · CUDA Graph 车道复用</span></div>
+  <div class="tocitem"><span class="tocnum">#1051</span><a href="#pr1051">Higgs: route reference codes through ReferenceEncodeService</a><span class="d">C · 缓存服务收口 · 单飞去重</span></div>
+  <div class="tocitem"><span class="tocnum">#1058</span><a href="#pr1058">Simplify Fish S2-Pro inference prompt encoding</a><span class="d">D · -721 行 · 推理专用编码器</span></div>
+  <div class="tocitem"><span class="tocnum">#1076</span><a href="#pr1076">Add H100/H200 MPS DP hardware profiles</a><span class="d">E · 同卡 8 副本 · KV 精确校验</span></div>
+  <div class="tocitem"><span class="tocnum">#1057</span><a href="#pr1057">Use upstream Transformers Higgs tokenizer</a><span class="d">D · 去 vendored · -940 行</span></div>
+  <div class="tocitem"><span class="tocnum">#1069</span><a href="#pr1069">Remove unreachable implementation code</a><span class="d">D · 死代码清理 · -266 行</span></div>
+  <div class="tocitem"><span class="tocnum">#1072</span><a href="#pr1072">Align Qwen3-Omni gates with H100 calibration</a><span class="d">F · 评测门槛校准</span></div>
+</section>
+
+<!-- ================= PR 1047 ================= -->
+<details class="card" id="pr1047" open>
+  <summary>
+    <span class="prnum">#1047</span>
+    <span class="sumhead">
+      <div class="t">Isolate Fish S2-Pro reference encoding from GPU stages</div>
+      <div class="m">
+        <span>作者 Hayden727</span><span class="badge">merged</span>
+        <span class="tagpill" style="background:rgba(91,156,255,.16);color:var(--accent)">A · 多阶段流水线</span>
+        <span>合并 07-16 01:56 UTC</span>
+      </div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+    <p style="margin-top:14px"><a class="src" href="https://github.com/sgl-project/sglang-omni/pull/1047" target="_blank">github.com/sgl-project/sglang-omni/pull/1047</a></p>
+    <div class="tldr"><b>一句话:</b> 把 Fish S2-Pro 的"参考音频编码"这段<strong>纯 CPU 计算</strong>从 GPU 进程里搬出来,单独放进一个进程跑,让 CPU 编码不再卡住 GPU 排队——冷启动场景 QPS 直接 <span class="good">+138.4%</span>。</p>
+
+    <h3>1 · 它解决了什么问题</h3>
+    <p>Fish S2-Pro 是一个<strong>声音克隆 (voice cloning)</strong> 的 TTS 模型:你给它一段"参考音频"(想模仿的嗓音),它先把这段音频用一个 codec 编码成离散 token(叫 <strong>reference encoding / 参考编码</strong>),再拿这些 token 当条件去合成目标文本的语音。</p>
+    <p>痛点在于:这段"参考编码"是<strong>纯 CPU 计算</strong>,但它此前和 GPU 上的 TTS 引擎、声码器<strong>跑在同一个操作系统进程里</strong>。CPU 的 codec 会开一大堆原生线程去算,把 CPU 占满;于是负责给 GPU 喂活儿的调度线程抢不到 CPU,GPU 只能干等。PR 里的 stage trace 数据非常直观:</p>
+    <div class="tbl"><table>
+      <tr><th>阶段</th><th>Mean</th><th>p95</th></tr>
+      <tr><td>preprocessing(参考编码)</td><td>5.236 s</td><td>7.460 s</td></tr>
+      <tr><td>tts_engine(GPU 生成)</td><td>1.175 s</td><td>—</td></tr>
+      <tr><td>vocoder(GPU 声码)</td><td>0.199 s</td><td>—</td></tr>
+    </table></div>
+    <p>预处理占了 <strong>79.2%</strong> 的阶段驻留时间,而调度队列 p95 只有 31.6ms——说明瓶颈不是"排队",而是"CPU 编码本身把整台机器拖慢了,还顺带拖慢了 GPU"。</p>
+    <div class="analogy">想象一个厨房里只有一个大灶台(GPU),旁边有个人在同一张操作台上剁一大盆肉馅(CPU 编码)。剁肉的动静太大、占满了台面,厨师连锅都端不上灶。这个 PR 做的事就是——把剁肉的人赶到隔壁房间(单独进程),操作台空出来,灶台立刻转起来。</p>
+
+    <h3>2 · 具体做了什么改动</h3>
+    <h4>改动一:把 preprocessing 阶段放进独立进程</h4>
+    <p>核心只有一个字的改动,在 <code class="inl">config.py</code> 里:</p>
+<pre> StageConfig(
+     name=<span class="s">"preprocessing"</span>,
+<span class="minus">-    process="pipeline",</span>
+<span class="plus">+    process="preprocessing",</span>
+     factory=f<span class="s">"{_PKG}.stages.create_preprocessing_executor"</span>,
+     next=<span class="s">"tts_engine"</span>,
+ ),</pre>
+    <p>在 SGLang Omni 里,每个 <code class="inl">StageConfig</code> 有一个 <code class="inl">process</code> 字段,决定这个阶段<strong>物理上跑在哪个操作系统进程</strong>。改之前,preprocessing 的 <code class="inl">process="pipeline"</code>,意思是"和主流水线(tts_engine、vocoder)挤在同一个进程";改成 <code class="inl">"preprocessing"</code> 后,框架就会为它单独 fork 一个进程。<code class="inl">tts_engine</code> 和 <code class="inl">vocoder</code> 依然共享 GPU 0,不额外占卡。</p>
+
+    <h4>改动二:给这个新进程的 CPU 线程池"上界"</h4>
+    <p>光分家还不够——新进程里的 PyTorch 如果还是按整台机器(比如 224 核)去开线程,几个 worker 一叠加又会互相打架。所以 PR 加了一个函数专门给"intra-op 线程池"设上限:</p>
+<pre><span class="k">def</span> <span class="f">_configure_preprocessing_threads</span>(worker_count: int) -> int:
+    override = os.environ.get(<span class="s">"OMP_NUM_THREADS"</span>, <span class="s">""</span>).strip()
+    <span class="k">if</span> override.isdigit() <span class="k">and</span> int(override) >= 1:
+        requested = int(override)
+        torch.set_num_threads(requested)       <span class="c"># ① 运维显式指定优先</span>
+        <span class="k">return</span> requested
+
+    cpu_count = (
+        len(os.sched_getaffinity(0))           <span class="c"># ② 只看本进程能用的核</span>
+        <span class="k">if</span> hasattr(os, <span class="s">"sched_getaffinity"</span>)
+        <span class="k">else</span> (os.cpu_count() <span class="k">or</span> 1)
+    )
+    <span class="c"># 请求已经在 worker 线程间扇出;把共享 intra-op 池收窄,</span>
+    <span class="c"># 这样参考编码就不会饿死 GPU 流水线进程。</span>
+    intraop_threads = min(
+        max(cpu_count // worker_count, 1),     <span class="c"># ③ 核数 ÷ worker 数</span>
+        _MAX_PREPROCESSING_INTRAOP_THREADS,    <span class="c"># ④ 再封顶到 8</span>
+    )
+    torch.set_num_threads(intraop_threads)
+    <span class="k">return</span> intraop_threads</pre>
+    <p>逐行拆解:</p>
+    <ul>
+      <li><strong>①</strong> 如果运维在环境变量里显式写了 <code class="inl">OMP_NUM_THREADS</code>,一切以它为准——这叫"逃生舱口 (escape hatch)",保证优化不会剥夺人工控制权。</li>
+      <li><strong>②</strong> <code class="inl">os.sched_getaffinity(0)</code> 拿的是"本进程被允许使用的 CPU 核集合",而不是机器总核数。这很关键:因为进程被 <code class="inl">numactl</code> 绑核了,只看到自己那一份,数值才准。</li>
+      <li><strong>③④</strong> 每个 worker 分到 <code class="inl">总核数 / worker 数</code> 个线程,至少 1,最多 8。"至少 1"防止除法归零,"最多 8"是实测出来的甜点值(PR 里做了 4/8/28 的线程扫描,8 吞吐最好)。</li>
+    </ul>
+
+    <h4>改动三:测试用真子进程验证线程上界真的生效</h4>
+    <p>值得学习的一点:PR 不只测函数返回值,还起了一个<strong>真的 Python 子进程</strong>去读 <code class="inl">torch.get_num_threads()</code>,确认设置在真实进程里"落了地"、并且 <code class="inl">OMP_NUM_THREADS</code> 能压过 <code class="inl">MKL_NUM_THREADS</code>。因为线程池是全局副作用,只在主测试进程里 mock 是测不真的。</p>
+
+    <h3>3 · 涉及的知识点(重点)</h3>
+    <div class="concept"><div class="h">多阶段推理流水线 (multi-stage pipeline)</div>
+      <div class="three">
+        <div><b>是什么:</b> SGLang Omni 把一次推理拆成若干"阶段 (stage)",像流水线一样一站接一站:preprocessing → tts_engine → vocoder。每个阶段有自己的调度器 (scheduler) 和可配置的宿主进程/GPU 位置。</div>
+        <div><b>为什么需要:</b> 多模态/语音模型的一次请求包含性质完全不同的工作——有的是 CPU 密集(音频预处理),有的是 GPU 密集(自回归生成)。拆成阶段后,可以分别给每个阶段挑最合适的硬件、并发度、缓存策略,还能让不同请求在不同阶段之间"重叠"起来跑。</div>
+        <div><b>本 PR 怎么用:</b> 正是靠"阶段可以独立指定 process"这个能力,把 CPU 阶段挪到独立进程,实现 CPU 与 GPU 的真正并行重叠。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">进程隔离 vs 线程 &amp; Python GIL</div>
+      <div class="three">
+        <div><b>是什么:</b> Python 有个"全局解释器锁 (GIL)",同一进程内同一时刻只有一个线程能执行 Python 字节码。而底层原生库(codec、PyTorch 算子)会绕过 GIL 开自己的线程池抢 CPU。</div>
+        <div><b>为什么需要:</b> 当 CPU 重活和 GPU 调度在同一进程,GIL 争用 + 原生线程抢核 会让"给 GPU 喂数据"的关键路径被拖住。放到<strong>独立进程</strong>后,两边有各自的解释器和 CPU 配额,互不干扰。</div>
+        <div><b>本 PR 怎么用:</b> preprocessing 独立成进程,代价是多约 2.0 GiB 主机内存、线程从 700→808,换来 GPU 有效占用率(nonzero-SM duty)从 72.5%→88.9%。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">intra-op 线程池 &amp; OMP_NUM_THREADS</div>
+      <div class="three">
+        <div><b>是什么:</b> PyTorch 执行单个算子(如矩阵乘)时会用多线程并行,这叫 intra-op 并行,线程数由 <code class="inl">torch.set_num_threads()</code> / <code class="inl">OMP_NUM_THREADS</code> 控制。</div>
+        <div><b>为什么需要:</b> 默认值往往是"机器全部核数"。当一台机器上跑很多进程/worker 时,每个都开满,总线程数爆炸(oversubscription),线程切换开销反而拖慢一切。</div>
+        <div><b>本 PR 怎么用:</b> 按"本进程可见核数 ÷ worker 数、且 ≤8"来收窄,既保留并行度,又避免超额订阅。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">NUMA &amp; CPU 亲和性 (affinity)</div>
+      <div class="three">
+        <div><b>是什么:</b> 大服务器的内存分成多个 NUMA 节点,CPU 访问"本地节点"内存快、"远端节点"慢。<code class="inl">sched_getaffinity</code> 返回进程被绑定的核集合。</div>
+        <div><b>为什么需要:</b> 把进程绑在离它 GPU/内存最近的 NUMA 节点上,减少跨节点访存延迟。</div>
+        <div><b>本 PR 怎么用:</b> 线程数按"亲和性可见的核"来算,而不是全机核数,配合绑核部署才准确。</div>
+      </div>
+    </div>
+
+    <h3>4 · 我能学到什么 / 延伸思考</h3>
+    <div class="learn"><div class="h">可复用的工程思想</div>
+    <ul>
+      <li><strong>"先量后改"</strong>:PR 先用 stage trace 量出 preprocessing 占 79% 驻留,才动手——瓶颈定位靠数据不靠猜。</li>
+      <li><strong>隔离异构工作负载</strong>:凡是"性质不同的工作(CPU vs GPU、慢 vs 快)混在一个执行体里",就该考虑物理隔离。这是推理基础设施里非常通用的模式(prefill/decode 分离、encode/generate 分离都是同一思路)。</li>
+      <li><strong>优化要留逃生舱</strong>:自动设线程数,但 <code class="inl">OMP_NUM_THREADS</code> 永远压过自动值。</li>
+      <li><strong>验证要打到"真实副作用"层</strong>:全局线程池这种东西,用子进程做端到端验证,而不是只 mock。</li>
+    </ul>
+    </div>
+    <p style="color:var(--muted);font-size:13.5px"><strong>想深入可以先补:</strong> 操作系统进程 vs 线程模型、Python GIL、OpenMP/MKL 线程模型、NUMA 架构、以及"生产者-消费者/流水线并行"的基本概念。</p>
+  </div>
+</details>
+
+<!-- ================= PR 1060 ================= -->
+<details class="card" id="pr1060" open>
+  <summary>
+    <span class="prnum">#1060</span>
+    <span class="sumhead">
+      <div class="t">Bound Qwen3-Omni colocated stage CPU thread pools</div>
+      <div class="m">
+        <span>作者 Hayden727</span><span class="badge">merged</span>
+        <span class="tagpill" style="background:rgba(91,156,255,.16);color:var(--accent)">A · 多阶段流水线</span>
+        <span>合并 07-16 15:30 UTC</span>
+      </div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+    <p style="margin-top:14px"><a class="src" href="https://github.com/sgl-project/sglang-omni/pull/1060" target="_blank">pull/1060</a></p>
+    <div class="tldr"><b>一句话:</b> Qwen3-Omni 的 colocated 部署会启 8 个阶段进程,每个 PyTorch 进程都按整台 224 核机器开线程池,导致两个副本堆到 ~2940 个线程互相争抢。这个 PR 只做一件事:给这些进程默认设 <code class="inl">OMP_NUM_THREADS=8</code> 并关掉用不上的 tokenizer 并行——c32 吞吐 <span class="good">+49.3%</span>,c64 <span class="good">+98.4%</span>,线程数直接砍掉 56%。</p>
+
+    <h3>1 · 它解决了什么问题</h3>
+    <p>这是 #1047 的"同一个病、另一个模型"。Qwen3-Omni 是一个<strong>全模态 (omni-modal)</strong> 大模型(文本+语音+视频输入,能说话输出),它的 colocated(同机共置)部署会拉起 <strong>8 个独立的阶段进程</strong>。问题:</p>
+    <ul>
+      <li>每个 PyTorch 进程默认按"整台机器 224 核"去 sizing 自己的 OpenMP 线程池。两个单卡副本一叠加,主机线程飙到约 <strong>2940 个</strong>,在"启动侧 CPU 工作"上疯狂争抢,结果两张 GPU 的平均利用率只有 71–72%(卡在 CPU 上,喂不饱 GPU)。</li>
+      <li>preprocessing 阶段其实<strong>每次只处理一个 prompt</strong>,但 tokenizer 却初始化了一个"覆盖全机 CPU"的 Rayon 线程池——等于每个 CPU 加一个线程,却根本用不到批量分词。</li>
+    </ul>
+    <div class="analogy">好比一间只有 8 个工位的办公室,却发了 224 张门禁卡还每人配了 8 个助理。人挤人、助理挡道,真正干活的反而动弹不得。PR 做的是"按工位发卡"——每个进程只给 8 个线程。</div>
+
+    <h3>2 · 具体做了什么改动</h3>
+    <p>改动极小、极精准——只在 Qwen3-Omni 的 colocated 配置类上加了一组"环境变量默认值":</p>
+<pre><span class="c"># 一个 colocated worker 启 8 个阶段进程。让每个 PyTorch 进程都</span>
+<span class="c"># 按整机 sizing OpenMP 池,会在多副本共享节点时超额订阅启动侧 CPU。</span>
+<span class="c"># preprocessing 每次只处理一个 prompt,全机 tokenizer Rayon 池只会加剧争用。</span>
+_COLOCATED_STAGE_ENV_DEFAULTS = {
+    **_DEEPGEMM_PRECOMPILE_ENV_DEFAULTS,
+    <span class="s">"OMP_NUM_THREADS"</span>: <span class="s">"8"</span>,           <span class="c"># 每进程 OpenMP 池封顶 8</span>
+    <span class="s">"TOKENIZERS_PARALLELISM"</span>: <span class="s">"false"</span>, <span class="c"># 关掉单-prompt 路径用不上的分词并行</span>
+}
+
+<span class="k">class</span> <span class="f">Qwen3OmniSpeechColocatedPipelineConfig</span>(Qwen3OmniSpeechPipelineConfig):
+    env_defaults: dict[str, str] = Field(
+        default_factory=<span class="k">lambda</span>: dict(_COLOCATED_STAGE_ENV_DEFAULTS)
+    )</pre>
+    <p>关键设计细节(在 PR 描述里明确强调):</p>
+    <ul>
+      <li><strong>"set-if-absent" 语义</strong>:这些叫 <em>defaults</em>——只在运维没显式设置时才生效,人工写的值永远赢。和 #1047 一个哲学。</li>
+      <li><strong>作用域收窄</strong>:只挂在 <code class="inl">Colocated</code> 配置类上;纯文本配置、disaggregated(分离式)语音配置<strong>完全不动</strong>。避免"一刀切"误伤别的部署形态。</li>
+      <li><strong>无新 CLI、不改 GPU 摆放/显存预算</strong>:纯 CPU 侧调优,零风险面。</li>
+    </ul>
+    <p>测试里也顺手把契约锁死了——断言 colocated 配置的 <code class="inl">env_defaults</code> 恰好等于这三个键,防止以后有人误删。</p>
+
+    <h3>3 · 涉及的知识点</h3>
+    <div class="concept"><div class="h">colocated(共置)vs disaggregated(分离)部署</div>
+      <div class="three">
+        <div><b>是什么:</b> colocated = 把一个模型的多个阶段/组件挤在同一台机器(甚至同一张卡)上;disaggregated = 把不同阶段拆到不同机器/卡上独立扩缩容。</div>
+        <div><b>为什么需要:</b> colocated 省机器、通信开销小,适合中小规模;disaggregated 灵活、可对瓶颈阶段单独加卡,适合大规模。二者的 CPU 争用特征完全不同,所以本 PR 的默认值<strong>只对 colocated 生效</strong>。</div>
+        <div><b>本 PR 怎么用:</b> colocated 因为 8 进程挤一台机才有线程超额订阅问题,故仅收窄它。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">线程超额订阅 (thread oversubscription)</div>
+      <div class="three">
+        <div><b>是什么:</b> 活跃线程总数远超物理核数。操作系统被迫频繁做上下文切换,CPU 时间花在"切换"而非"计算"上。</div>
+        <div><b>为什么需要关注:</b> 多进程 × 每进程满线程,是超额订阅最常见的成因。表现就是"CPU 看着很忙但吞吐上不去、GPU 喂不饱"。</div>
+        <div><b>本 PR 怎么用:</b> 2940→1284 线程(-56.3%),两个 preprocessing 进程不再各自膨胀到约 300 线程。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">Tokenizer 的 Rayon 并行 (TOKENIZERS_PARALLELISM)</div>
+      <div class="three">
+        <div><b>是什么:</b> HuggingFace <code class="inl">tokenizers</code> 库用 Rust 的 Rayon 做多线程分词,默认对大批文本并行。</div>
+        <div><b>为什么需要关掉:</b> 只有"一次分很多条文本"时并行才划算。这里 preprocessing 每次只有一个 prompt,并行池纯属白开线程、只添争用。</div>
+        <div><b>本 PR 怎么用:</b> 设 <code class="inl">false</code>,单独再省掉约 740 个线程,吞吐不降反升。</div>
+      </div>
+    </div>
+
+    <h3>4 · 我能学到什么 / 延伸思考</h3>
+    <div class="learn"><div class="h">可复用的工程思想</div>
+    <ul>
+      <li><strong>"默认值也是接口"</strong>:一个好的框架应该给不同部署形态各自合理的默认值,而不是让每个用户去踩坑后手动调环境变量。把知识固化进配置类,是把"运维经验"产品化。</li>
+      <li><strong>改动面 = 风险面</strong>:98% 的吞吐提升,代码只加了 4 行 + 作用域限定。真正高杠杆的优化常常是"发现一个错误的默认值"而非"写一个复杂新算法"。</li>
+      <li><strong>用测试锁契约</strong>:把"应该等于哪三个键"写进单测,防止未来回归。</li>
+    </ul>
+    </div>
+    <p style="color:var(--muted);font-size:13.5px"><strong>想深入可以先补:</strong> OpenMP / Intel MKL 线程模型、上下文切换成本、HuggingFace tokenizers 的并行机制,以及 #1047 里的进程隔离——两者是"CPU 不要挡 GPU"这条主线的一体两面。</p>
+  </div>
+</details>
+
+<!-- ================= PR 1055 ================= -->
+<details class="card" id="pr1055" open>
+  <summary>
+    <span class="prnum">#1055</span>
+    <span class="sumhead">
+      <div class="t">Reuse idle vocoder lanes for MOSS-TTS Local streaming</div>
+      <div class="m">
+        <span>作者 Hayden727</span><span class="badge">merged</span>
+        <span class="tagpill" style="background:rgba(58,214,176,.16);color:var(--accent2)">B · 声码器 &amp; CUDA Graph</span>
+        <span>合并 07-17 05:20 UTC</span>
+      </div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+    <p style="margin-top:14px"><a class="src" href="https://github.com/sgl-project/sglang-omni/pull/1055" target="_blank">pull/1055</a></p>
+    <div class="tldr"><b>一句话:</b> MOSS-TTS Local 的声码器有个固定宽度 16 的 CUDA Graph,却被切成"8 个流式槽 + 8 个离线槽";纯流式服务时那 8 个离线槽白白空着。这个 PR 把它重划成"15 流式 + 1 离线",并允许离线活儿临时借用空闲流式槽——不增显存、不增卡,c32 吞吐 <span class="good">+22.1%</span>、首帧延迟(TTFC) <span class="good">-41.8%</span>。</p>
+
+    <h3>1 · 它解决了什么问题</h3>
+    <p>先建立几个概念的画面感。<strong>声码器 (vocoder)</strong> 是 TTS 的最后一站:模型先生成离散的<strong>音频 codec token</strong>,声码器再把这些 token 解码成真正能听的 PCM 波形。为了快,MOSS 把声码器的解码过程用 <strong>CUDA Graph</strong> 预先"录制"成一个固定 batch 宽度=16 的持久会话(persistent session)。</p>
+    <p>但这 16 个"车道 (lane/slot)"被静态切成两半:<strong>8 个给流式 (streaming) 请求、8 个给离线 (offline) 一次性解码</strong>。问题来了——在正常的"只做流式"的服务里,那 8 个离线车道<strong>永远没人用</strong>,但它们占着 CUDA Graph 的宽度、显存都分好了,live 请求却碰不到。</p>
+    <p>更糟的连锁反应:当并发超过 8,抢不到流式槽的请求只能<strong>攒着所有 codec 行、到最后一次性 flush 解码整段话</strong>。这种大的"最终 flush"经常超出 CUDA Graph 捕获的帧范围(<code class="inl">T=1..25</code>),掉回慢速的 <strong>eager 执行</strong>。于是吞吐卡在一个平台期,而一半的图车道还闲着。</p>
+    <div class="analogy">一条 16 车道的高速公路,硬性规定左边 8 道只走小轿车(流式)、右边 8 道只走货车(离线)。今天全是小轿车,右边 8 道空荡荡,左边却堵得水泄不通,还逼着堵住的车绕去走坑洼的辅路(eager)。这个 PR 说:货车平时只留 1 道应急,其余车道谁空谁上,轿车能全用起来。</p>
+
+    <h3>2 · 具体做了什么改动</h3>
+    <h4>① 重划车道:15 流式 + 1 离线(总宽仍是 16)</h4>
+<pre><span class="minus">-    stream_slots: int = 8,</span>
+<span class="plus">+    stream_slots: int = 15,</span>
+...
+<span class="c"># 纯非流式流量会关掉空闲会话、走打包批处理路径。</span>
+<span class="c"># 只留一条溢出车道保证流式在跑时离线也有进展,</span>
+<span class="c"># 而不是为这种情况把每张流式 CUDA Graph 的一半都预留掉。</span>
+<span class="minus">-    self._offline_slots = max(int(max_batch_size), 1)</span>
+<span class="plus">+    self._offline_slots = _SESSION_RESERVED_OFFLINE_SLOTS  # = 1</span></pre>
+    <p>注意:这<strong>不增加 CUDA Graph 宽度、不加 GPU、不加显存</strong>——只是把同样的 16 个车道重新分配,把浪费的 7 个从"离线专用"变成"流式可用"。</p>
+
+    <h4>② 让离线活儿"借"空闲流式槽,并且借得安全</h4>
+    <p>这是本 PR 最精彩的部分:<code class="inl">decode_offline</code> 现在会计算"我需要几个槽、能借几个空闲流式槽",借来用完必须归还,归还前要 reset 状态:</p>
+<pre>reserved = list(range(self._stream_slots, self._batch_size))  <span class="c"># 那 1 个离线专用槽</span>
+requested_wave_size = min(max(int(max_batch_size), 1), len(codes_list))
+borrow_count = min(
+    max(requested_wave_size - len(reserved), 0),
+    len(self._free_stream_slots),          <span class="c"># 只借当前空闲的流式槽</span>
+)
+borrowed = self._free_stream_slots[-borrow_count:] <span class="k">if</span> borrow_count <span class="k">else</span> []
+<span class="k">if</span> borrowed:
+    <span class="k">del</span> self._free_stream_slots[-borrow_count:]  <span class="c"># 借走  移出空闲池</span>
+available = reserved + borrowed
+...
+decode_succeeded = <span class="k">False</span>
+<span class="k">try</span>:
+    <span class="c"># ... 用 available 这些槽逐"波"解码 ...</span>
+    decode_succeeded = <span class="k">True</span>
+<span class="k">finally</span>:
+    <span class="k">if</span> borrowed:
+        <span class="k">try</span>:
+            self._reset_slots(borrowed)        <span class="c"># ③ 归还前必须复位状态</span>
+        <span class="k">except</span> Exception:
+            logger.exception(<span class="s">"...quarantining them"</span>)  <span class="c"># ④ 复位失败  隔离该槽</span>
+            <span class="k">if</span> decode_succeeded:
+                <span class="k">raise</span>
+        <span class="k">else</span>:
+            self._free_stream_slots.extend(borrowed)  <span class="c"># ⑤ 复位成功才放回池</span></pre>
+    <p>逐块理解这段"fail-closed(失败即关闭)"的安全设计:</p>
+    <ul>
+      <li><strong>①借用记账</strong>:借走的槽立刻从 <code class="inl">_free_stream_slots</code> 删掉,这样它在整个解码生命周期里不会被别人再抢(独占)。</li>
+      <li><strong>③归还必复位</strong>:声码器每个槽内部维护着"流式状态 (streaming state)"——上一步解码的隐状态。借用后必须 <code class="inl">reset</code> 清干净,否则下一个流式请求会读到脏状态、音频出错。</li>
+      <li><strong>④复位失败=隔离 (quarantine)</strong>:如果 reset 抛异常,这个槽<strong>不放回池子</strong>——宁可永久损失一个车道,也不把一个状态可疑的槽再给别人用。这就是"fail-closed":出错时倒向安全一侧。</li>
+      <li><strong>⑤只有复位成功才归还</strong>:干净的槽才回到 <code class="inl">_free_stream_slots</code>。</li>
+      <li>另外 <code class="inl">acquire/release</code> 加了 <code class="inl">_stream_slots_in_use</code> 集合显式跟踪租约,重复释放/非法释放会直接 <code class="inl">raise</code>——不让"悄悄的双重释放"埋雷。</li>
+    </ul>
+
+    <h4>③ 每个流式泵每请求只取一行,守住首帧边界</h4>
+    <p>还加了一个开关 <code class="inl">_stream_chunk_batch_distinct_requests</code>:在合并(coalesce)排队的 codec 行时,<strong>每个请求每轮只收一行</strong>,遇到同一请求的第二行就停下、把它推回队首。这样即使某个请求积压了一堆行,也不会一口气把它的初始 chunk 撑大,从而保住配置的"首帧尽早发出 (low TTFC)"的边界。默认只对 MOSS 开,别的调度器不受影响。</p>
+
+    <h3>3 · 涉及的知识点(重点)</h3>
+    <div class="concept"><div class="h">CUDA Graph</div>
+      <div class="three">
+        <div><b>是什么:</b> 把一串 GPU 操作(kernel 启动)预先"录制"成一张图,之后一次性"回放"。省掉了每次逐个启动 kernel 的 CPU 开销。</div>
+        <div><b>为什么需要:</b> 小算子很多时,CPU 逐个发射 kernel 的开销会成为瓶颈(launch overhead)。CUDA Graph 把这块开销几乎归零,对 TTS 这种"每帧一小步"的解码特别有效。</div>
+        <div><b>为什么有"固定宽度"限制:</b> 图是按固定形状(batch=16、帧数 T=1..25)录制的。超出这个范围就没法回放,只能掉回一条一条发射的 <strong>eager 模式</strong>,慢很多。本 PR 的痛点正是"大 flush 超出捕获帧范围掉 eager"。</div>
+        <div><b>本 PR 怎么用:</b> 不改图的宽度(还是 16),只是把车道用满,并通过"每请求一行 + 步长封顶到 chunk 帧"让更多解码落在图捕获范围内——日志显示图化步骤从 99.3% 升到 99.8%。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">流式 (streaming) vs 离线 (offline) 解码</div>
+      <div class="three">
+        <div><b>是什么:</b> 流式=边生成边一小块一小块地吐音频(用户很快听到第一声);离线=整段生成完再一次性解码返回。</div>
+        <div><b>为什么需要:</b> 流式的核心指标是 <strong>TTFC(Time To First Chunk,首帧时间)</strong>——用户等多久能听到声音。离线更看整体吞吐。</div>
+        <div><b>本 PR 怎么用:</b> 让离线借流式的空闲槽,同时用"每请求一行"守住流式的 TTFC——两个目标兼得,c32 的 TTFC -41.8%。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">持久会话 &amp; 槽 (slot / lane) 状态</div>
+      <div class="three">
+        <div><b>是什么:</b> 声码器把一个 batch=16 的 CUDA Graph 会话常驻显存,每个 batch 位置是一个"槽";每个槽内部有跨步(step)累积的流式隐状态。</div>
+        <div><b>为什么需要:</b> 常驻会话避免每次重新捕获图的开销;但槽是有状态的,复用前必须 reset,否则串音/出错。</div>
+        <div><b>本 PR 怎么用:</b> 借用/归还槽时严格 reset + 隔离,保证有状态资源被安全复用。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">位级等价验证 (bit-identical)</div>
+      <div class="three">
+        <div><b>是什么:</b> 用 SHA-256 校验优化前后单请求的流式输出<strong>逐字节完全一致</strong>(<code class="inl">sha256=a65fa4f3...</code>)。</div>
+        <div><b>为什么需要:</b> 这是一个"纯性能重构"——没动任何模型权重、采样数学、codec 数学。位级一致是"我没改变行为、只改变了速度"的最硬证据。</div>
+        <div><b>本 PR 怎么用:</b> 配合 218 个单测 + 失败注入测试,证明借槽/复位/隔离逻辑既快又不改音质。</div>
+      </div>
+    </div>
+
+    <h3>4 · 我能学到什么 / 延伸思考</h3>
+    <div class="learn"><div class="h">可复用的工程思想</div>
+    <ul>
+      <li><strong>静态分区是资源浪费的常见根源</strong>:"8+8 固定切分"看似公平,实则在偏斜负载下浪费一半。改成"保留最小份额 + 空闲可借"(reservation + work-stealing)是通用解法,和线程池/连接池的弹性借用同构。</li>
+      <li><strong>有状态资源的借用要 fail-closed</strong>:借得出去,更要还得干净;还不干净就隔离,绝不把可疑状态复用。这套 acquire/lease/reset/quarantine 是写并发资源池的范式。</li>
+      <li><strong>性能重构要有"零行为改变"的铁证</strong>:bit-identical 哈希 + 失败注入单测,比"跑了几个 case 没崩"可信得多。</li>
+      <li><strong>理解硬件的"快路径边界"</strong>:CUDA Graph 有捕获范围,优化的一大半是"想办法让更多工作落在快路径内",而不是硬扩图。</li>
+    </ul>
+    </div>
+    <p style="color:var(--muted);font-size:13.5px"><strong>想深入可以先补:</strong> CUDA Graph 原理与 kernel launch overhead、TTS 里 codec/vocoder 的角色、TTFC/RTF 等流式指标、并发资源池(acquire/release/lease)的设计模式。</p>
+  </div>
+</details>
+
+<!-- ================= PR 1051 ================= -->
+<details class="card" id="pr1051">
+  <summary>
+    <span class="prnum">#1051</span>
+    <span class="sumhead">
+      <div class="t">Higgs: route ad-hoc reference codes through ReferenceEncodeService</div>
+      <div class="m">
+        <span>作者 luojiaxuan</span><span class="badge">merged</span>
+        <span class="tagpill" style="background:rgba(255,180,84,.16);color:var(--warn)">C · 共享服务 &amp; 缓存</span>
+        <span>合并 07-16 15:54 UTC</span>
+      </div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+    <p style="margin-top:14px"><a class="src" href="https://github.com/sgl-project/sglang-omni/pull/1051" target="_blank">pull/1051</a></p>
+    <div class="tldr"><b>一句话:</b> 把 Higgs 最后一处"手搓的参考编码缓存"替换成全仓库共享的 <code class="inl">ReferenceEncodeService</code>。至此 fish / qwen3-tts / moss-local / higgs 四个模型全部改用同一套缓存服务——统一了缓存键、单飞去重、字节级 LRU 和统计日志。</p>
+
+    <h3>1 · 它解决了什么问题</h3>
+    <p>每个 TTS 模型都要缓存"参考音频→codec token"的结果(同一段参考音频没必要反复编码)。以前各模型各写各的缓存逻辑(Higgs 用 <code class="inl">StageOutputCache</code>),导致:重复代码、缓存键不统一、没有并发去重(两个请求同时来同一段音频会编码两次)、也没有统一的命中率统计。这个 PR 是 M4a 迁移清单的收尾——把 Higgs 也接到共享服务上。</p>
+    <div class="analogy">四个部门各自建了一个小仓库存同样的货,盘点口径还不一样。现在改成一个中央仓库,统一编号(内容哈希)、统一防止"两个人同时下单同一件货各进一批"(单飞),统一按体积淘汰旧货(字节级 LRU)。</p>
+
+    <h3>2 · 具体做了什么改动</h3>
+    <p>关键在于"内容哈希做键"。参考编码的缓存键用的是<strong>预处理阶段就算好的波形内容哈希</strong> <code class="inl">state.reference_code_cache_key</code>。这意味着——只要参考音频的内容相同,不管它来自文件路径、字节流还是 base64、也不管请求 ID 是什么,都会命中同一个缓存条目。内容键<strong>不会过期</strong>(内容变了哈希就变了)。</p>
+    <p>做法是给共享服务提供一个 Higgs 专用的 <strong>hook(钩子)</strong>,把原来内联的编码逻辑原封不动搬进去:</p>
+<pre><span class="k">class</span> <span class="f">_HiggsReferenceEncodeHook</span>(ReferenceEncodeHook[...]):
+    <span class="k">def</span> <span class="f">cache_key</span>(self, item) -> ReferenceEncodeKey | <span class="k">None</span>:
+        <span class="k">if</span> item.content_key <span class="k">is</span> <span class="k">None</span>:
+            <span class="k">return</span> <span class="k">None</span>            <span class="c"># 没内容键 → 不缓存,直接透传(保持旧行为)</span>
+        <span class="k">return</span> ReferenceEncodeKey(
+            model_id=self._model_identity, model_revision=<span class="s">""</span>,
+            encoder_id=<span class="s">"higgs_codec_delayed"</span>,
+            encoder_config_hash=f<span class="s">"nq{self._num_codebooks}"</span>,
+            artifact_kind=<span class="s">"reference_codes"</span>,
+            input_key=item.content_key,   <span class="c"># ← 波形内容哈希</span>
+        )
+
+    <span class="k">def</span> <span class="f">encode_one</span>(self, item) -> torch.Tensor:
+        ref_codes_TN = self._codec.encode_reference(item.waveform, sample_rate=<span class="n">24000</span>).to(torch.long)
+        <span class="k">if</span> ref_codes_TN.ndim != <span class="n">2</span> <span class="k">or</span> ref_codes_TN.shape[<span class="n">1</span>] != self._num_codebooks:
+            <span class="k">raise</span> ValueError(...)     <span class="c"># 形状不对就大声报错(fail-loud)</span>
+        <span class="k">return</span> apply_delay_pattern(ref_codes_TN)  <span class="c"># 编码数学一字未改</span>
+
+    <span class="k">def</span> <span class="f">store_artifact</span>(self, a) -> torch.Tensor:
+        <span class="k">return</span> a.detach().to(<span class="s">"cpu"</span>, torch.int32)  <span class="c"># 存:int32 省内存</span>
+    <span class="k">def</span> <span class="f">load_artifact</span>(self, s) -> torch.Tensor:
+        <span class="k">return</span> s.detach().clone().to(torch.long)  <span class="c"># 取:转回 long 给下游</span></pre>
+    <p>这个 hook 把一件事拆成四个明确职责:<strong>算键 (cache_key)、算值 (encode_one)、怎么存 (store)、怎么取 (load)</strong>。共享服务负责"命中就返回、没命中就调 encode_one、并发同键只算一次、按字节淘汰"这些通用机制,模型只需填四个方法。</p>
+    <p>另一处巧思是"两级缓存分工":<strong>上传的具名音色 (uploaded voice)</strong> 仍走"带版本号的 speaker 缓存"(它的失效契约是"重新上传"),而所有临时 (ad-hoc) 参考走内容键的共享服务;speaker 缓存未命中时,编码也会顺便把内容键条目"焐热",实现"跨名字复用"。存 <code class="inl">int32</code>、取回 <code class="inl">long</code> 的往返也被单测严格校验。</p>
+
+    <h3>3 · 涉及的知识点</h3>
+    <div class="concept"><div class="h">内容寻址缓存 (content-addressed cache)</div>
+      <div class="three">
+        <div><b>是什么:</b> 用"数据内容的哈希"当键,而不是用文件名/路径/请求 ID。</div>
+        <div><b>为什么需要:</b> 内容相同则键相同,天然去重、天然不会过期(内容变→哈希变→自动是新键)。Git 的对象存储、Docker 层缓存都是这个思路。</div>
+        <div><b>本 PR 怎么用:</b> 波形内容哈希做键,让同一段参考音频无论以什么形式、什么请求进来都只编码一次。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">单飞 (single-flight) 去重</div>
+      <div class="three">
+        <div><b>是什么:</b> 多个并发请求要同一个键的结果时,只让"第一个"真正去计算,其余请求等它算完共享结果。</div>
+        <div><b>为什么需要:</b> 冷启动瞬间可能有 N 个请求同时请求同一段新参考音频。没有单飞就会编码 N 次,既浪费又可能击穿(cache stampede)。</div>
+        <div><b>本 PR 怎么用:</b> 共享服务内置单飞,同内容并发只 encode 一次。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">字节级 LRU 淘汰</div>
+      <div class="three">
+        <div><b>是什么:</b> LRU=最近最少使用淘汰。"字节级"指按缓存占用的实际字节数(而非条目个数)来设上限。</div>
+        <div><b>为什么需要:</b> 每段参考音频编码后的张量大小差异很大,按"条数"限容易内存失控;按字节封顶才可控。存成 int32 也是为了缩小占用。</div>
+        <div><b>本 PR 怎么用:</b> <code class="inl">max_bytes</code> 设上界,张量以 CPU int32 存储。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">Hook / 策略模式 (Strategy Pattern)</div>
+      <div class="three">
+        <div><b>是什么:</b> 把"通用流程"和"可变细节"分开:服务定义流程骨架,模型通过实现 hook 接口注入自己的细节。</div>
+        <div><b>为什么需要:</b> 四个模型的编码数学不同,但"查缓存/去重/淘汰/统计"完全一样。用 hook 抽出共性,消除四份重复实现。</div>
+        <div><b>本 PR 怎么用:</b> <code class="inl">ReferenceEncodeHook</code> 定义 cache_key/encode_one/store/load 四点,Higgs 只填这四点。</div>
+      </div>
+    </div>
+
+    <h3>4 · 我能学到什么 / 延伸思考</h3>
+    <div class="learn"><div class="h">可复用的工程思想</div>
+    <ul>
+      <li><strong>"收口 (consolidation)"迁移法</strong>:四个模型逐个(fish→qwen3-tts→moss→higgs)迁到同一服务,每个 PR 只搬一个、保持行为等价、加针对性测试。大重构拆成可验证小切片,是控制风险的正道。</li>
+      <li><strong>内容寻址是去重的银弹</strong>:只要能对输入取稳定哈希,缓存键、去重、失效三件事一次解决。</li>
+      <li><strong>用 hook 分离"机制"与"策略"</strong>:通用机制(缓存/单飞/LRU)写一次,模型差异用接口注入。</li>
+      <li><strong>fail-loud vs fail-closed</strong>:这里 codec 形状不对<strong>立刻报错</strong>(fail-loud),因为那是编程/权重错误,越早暴露越好——和 #1055 借槽时的 fail-closed 是"按错误性质选失败姿态"。</li>
+    </ul>
+    </div>
+    <p style="color:var(--muted);font-size:13.5px"><strong>想深入可以先补:</strong> 内容寻址存储(Git/Docker)、singleflight 模式、LRU/LFU 缓存淘汰、策略模式,以及"缓存击穿/雪崩"的经典问题。</p>
+  </div>
+</details>
+
+<!-- ================= PR 1058 ================= -->
+<details class="card" id="pr1058">
+  <summary>
+    <span class="prnum">#1058</span>
+    <span class="sumhead">
+      <div class="t">Simplify Fish S2-Pro inference prompt encoding</div>
+      <div class="m">
+        <span>作者 SandyLuXY</span><span class="badge">merged</span>
+        <span class="tagpill" style="background:rgba(255,122,182,.16);color:var(--pink)">D · Tokenizer &amp; 多模态编码</span>
+        <span>合并 07-17 02:00 UTC</span>
+      </div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+    <p style="margin-top:14px"><a class="src" href="https://github.com/sgl-project/sglang-omni/pull/1058" target="_blank">pull/1058</a></p>
+    <div class="tldr"><b>一句话:</b> Fish S2-Pro 推理时只需要三样东西:prompt token IDs、VQ-token mask、参考 VQ 张量;但它以前依赖 722 行"通用对话工具"(还带着训练标签、可视化、变异 API)。这个 PR 用一个"推理专用编码器"替换它,净删 <span class="good">721 行</span>,同时逐 token 保持输出完全一致。</p>
+
+    <h3>1 · 它解决了什么问题</h3>
+    <p>Fish S2-Pro 用 Qwen3 聊天格式构造 prompt:system 消息放参考文本+参考音频的 VQ 码(用于声音克隆),user 消息放要合成的目标文本,assistant 消息放一个 <code class="inl">&lt;|voice|&gt;</code> 标记(生成从这里开始)。</p>
+    <p>但构造这个 prompt 走的是一套<strong>通用 <code class="inl">Conversation</code> / <code class="inl">ContentSequence</code> 框架</strong>——它是给"训练"设计的,里面塞满了推理根本用不到的东西:训练用的 loss labels、彩色可视化、音频特征提取、通用内容变异 API……足足 722 行。推理路径其实只消费其中很小一部分输出。</p>
+    <div class="analogy">好比你只想烧壶开水,却每次都要开动整条食品加工流水线(和面、发酵、烘焙、包装全套),最后只取一杯热水。这个 PR 拆掉流水线,换成一个电热水壶——只做"烧水"这一件事,又快又干净。</p>
+
+    <h3>2 · 具体做了什么改动</h3>
+    <p>新增一个 <code class="inl">_InferencePromptEncoder</code>,只累积推理需要的三样张量,把"消息对象 → 编码 → 取出需要的字段"这条绕路,变成"直接一段段追加":</p>
+<pre><span class="k">class</span> <span class="f">_InferencePromptEncoder</span>:
+    <span class="k">def</span> <span class="f">append_text</span>(self, text: str) -> <span class="k">None</span>:
+        tokens = torch.tensor(self._tokenizer.encode(text), dtype=torch.int)
+        self._token_segments.append(tokens)
+        self._vq_mask_segments.append(torch.zeros_like(tokens, dtype=torch.bool))  <span class="c"># 文本段 mask=0</span>
+
+    <span class="k">def</span> <span class="f">append_vq</span>(self, codes: torch.Tensor) -> <span class="k">None</span>:
+        codes = codes.clone().to(torch.int)
+        tokens = torch.tensor(self._tokenizer.convert_tokens_to_ids(
+            [SEMANTIC_TOKEN_TEMPLATE.format(i=code) <span class="k">for</span> code <span class="k">in</span> codes[<span class="n">0</span>].int()]  <span class="c"># 第一个码本 → 语义 token</span>
+        ), dtype=torch.int)
+        self._token_segments.append(tokens)
+        self._vq_mask_segments.append(torch.ones_like(tokens, dtype=torch.bool))   <span class="c"># VQ 段 mask=1</span>
+        self._vq_parts.append(codes)          <span class="c"># 完整码本行留存</span>
+
+    <span class="k">def</span> <span class="f">finish</span>(self) -> dict:
+        <span class="k">return</span> {
+            <span class="s">"input_ids"</span>: torch.cat(self._token_segments, dim=<span class="n">0</span>),
+            <span class="s">"vq_mask_tokens"</span>: torch.cat(self._vq_mask_segments, dim=<span class="n">0</span>),
+            <span class="s">"vq_parts"</span>: self._vq_parts,
+        }</pre>
+    <p>然后 <code class="inl">build_prompt</code> 直接、显式地拼出聊天段落,不再构造 Message/Conversation 对象:</p>
+<pre>encoder.append_text(f<span class="s">"{IM_START_TOKEN}system\n"</span>)
+encoder.append_text(<span class="s">"convert the provided text to speech reference..."</span>)
+<span class="k">for</span> ref <span class="k">in</span> references:
+    <span class="k">if</span> ref.text: encoder.append_text(f<span class="s">"&lt;|speaker:{speaker}|&gt;{ref.text}"</span>)
+    ...
+<span class="k">if</span> all_codes:
+    encoder.append_vq(torch.cat(all_codes, dim=<span class="n">1</span>))  <span class="c"># 多个参考沿时间维拼接</span>
+encoder.append_text(f<span class="s">"{IM_END_TOKEN}\n"</span>)
+<span class="c"># ... user 段 / assistant &lt;|voice|&gt; 段同理 ...</span>
+<span class="k">return</span> encoder.finish()</pre>
+    <p>同时删掉了 <code class="inl">conversation.py</code>(170 行)和 <code class="inl">content_sequence.py</code>(552 行)整整两个文件——这些是它<strong>唯一的生产调用者</strong>被消除后的连带清理。改动前还加了严格的输入校验:每个参考 VQ 必须是 <code class="inl">[num_codebooks, T]</code> 形状,否则报清晰错误。</p>
+    <p>怎么保证"只删臃肿、不改行为"?PR 加了参数化单测,覆盖<strong>无参考 / 单参考 / 多参考 / 纯文本 / 纯码</strong>五种 prompt,对每一段的 segment、token、mask、dtype、VQ 布局逐一断言;还测了零长度 VQ 张量和非法 rank/码本数报错。Accuracy 测试显示 corpus WER 甚至从 1.10% 微降到 1.00%(即输出未劣化)。</p>
+
+    <h3>3 · 涉及的知识点</h3>
+    <div class="concept"><div class="h">VQ (Vector Quantization,向量量化) &amp; codec token</div>
+      <div class="three">
+        <div><b>是什么:</b> 把连续的音频波形压成一串离散整数("码"),每个码指向码本 (codebook) 里的一个向量。语音大模型正是把音频当成"离散 token 序列"来处理,才能和文本 token 统一用 Transformer 建模。</div>
+        <div><b>为什么需要:</b> Transformer 天生处理离散 token。VQ 把音频"token 化",让语音能像文本一样被自回归生成。多码本 (num_codebooks) 是为了在有限码表下表达更丰富的音频细节。</div>
+        <div><b>本 PR 怎么用:</b> 参考音频的 VQ 码进 prompt;第一个码本映射成"语义 token"(<code class="inl">&lt;|semantic:i|&gt;</code>),完整码本行存在 <code class="inl">vq_parts</code> 里给模型。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">多模态 prompt 中的 mask</div>
+      <div class="three">
+        <div><b>是什么:</b> <code class="inl">vq_mask_tokens</code> 是一个和 token 序列等长的布尔数组,标记"哪些位置是 VQ 音频 token、哪些是普通文本 token"。</div>
+        <div><b>为什么需要:</b> 文本 token 走词嵌入表,音频/VQ token 要走另一条 embedding 路径。模型靠这个 mask 知道每个位置该用哪套嵌入——这是"多模态输入对齐"的关键机制。</div>
+        <div><b>本 PR 怎么用:</b> 文本段追加时 mask 填 0,VQ 段追加时 mask 填 1,精确保持原有语义边界。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">聊天模板 (chat template) &amp; 特殊标记</div>
+      <div class="three">
+        <div><b>是什么:</b> <code class="inl">&lt;|im_start|&gt;</code>/<code class="inl">&lt;|im_end|&gt;</code>/<code class="inl">&lt;|voice|&gt;</code> 等特殊 token 用来切分 system/user/assistant 角色和模态。</div>
+        <div><b>为什么需要:</b> 模型是在这种固定格式上训练的,推理时必须逐字节对齐同样的模板,否则模型"看不懂"。</div>
+        <div><b>本 PR 怎么用:</b> 用显式字符串拼出与原来完全相同的段落,并用单测逐段断言,保证模板不走样。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">推理路径 vs 训练路径的分离</div>
+      <div class="three">
+        <div><b>是什么:</b> 训练需要 loss labels、可视化、数据增强等一大堆东西;推理(serving)只需要"构造输入→前向"。</div>
+        <div><b>为什么需要:</b> 把训练专用代码留在推理路径上,会带来体积、依赖、维护和潜在 bug 面。生产服务应只保留自己真正需要的最小面。</div>
+        <div><b>本 PR 怎么用:</b> 砍掉训练用的 Conversation 框架,只留推理专用编码器,减少 721 行生产代码面。</div>
+      </div>
+    </div>
+
+    <h3>4 · 我能学到什么 / 延伸思考</h3>
+    <div class="learn"><div class="h">可复用的工程思想</div>
+    <ul>
+      <li><strong>"通用抽象"未必是好抽象</strong>:一个能干很多事的 <code class="inl">Conversation</code> 类,在只需要其中 5% 能力的推理路径上就是负债。识别"唯一调用者只用一小部分" → 用窄接口替换,是降低复杂度的高频手法。</li>
+      <li><strong>删代码是最好的重构,但要有等价证据</strong>:净删 721 行的底气来自"逐 token 断言 + WER 未劣化"。删得越狠,越要证明行为不变。</li>
+      <li><strong>让数据流"直白可读"</strong>:从"构造对象→encode→再挑字段"改成"一段段 append",代码意图一眼可见,也更好测。</li>
+      <li>和 #1057、#1069 是同一主题(D):<strong>把推理路径上的臃肿/vendored/死代码持续剥离</strong>,让生产面收敛到最小。</li>
+    </ul>
+    </div>
+    <p style="color:var(--muted);font-size:13.5px"><strong>想深入可以先补:</strong> 音频神经 codec(EnCodec / SoundStream / VQ-VAE)、多码本 (RVQ) 表示、聊天模板与特殊 token、多模态 embedding 对齐,以及"训练/推理代码分离"的工程实践。</p>
+  </div>
+</details>
+
+<!-- ================= PR 1076 ================= -->
+<details class="card" id="pr1076">
+  <summary>
+    <span class="prnum">#1076</span>
+    <span class="sumhead">
+      <div class="t">Add H100 and H200 MPS DP hardware profiles</div>
+      <div class="m">
+        <span>作者 Ratish1</span><span class="badge">merged</span>
+        <span class="tagpill" style="background:rgba(180,142,173,.2);color:var(--tagE)">E · 同卡数据并行</span>
+        <span>合并 07-17 12:11 UTC</span>
+      </div>
+    </span>
+    <span class="chev">▸</span>
+  </summary>
+  <div class="body">
+    <p style="margin-top:14px"><a class="src" href="https://github.com/sgl-project/sglang-omni/pull/1076" target="_blank">pull/1076</a></p>
+    <div class="tldr"><b>一句话:</b> 为"同一张 GPU 上跑多个 Higgs 副本 + CUDA MPS"的部署方式,新增两套经过验证的硬件档位(H100 跑 3 副本、H200 跑 8 副本),并让启动脚本能从 pipeline 配置里读取并<strong>精确校验每个副本的 KV 容量</strong>。H200 DP8 实测 68.4 req/s、26112 请求零失败。</p>
+
+    <h3>1 · 它解决了什么问题</h3>
+    <p>一张现代 GPU(H100/H200)显存很大,单个 TTS 模型往往吃不满。于是可以在<strong>同一张卡上并排跑多个模型副本 (data parallelism, DP)</strong> 来提高吞吐,再用 <strong>CUDA MPS</strong> 让这些副本真正并发共享 GPU。但这套部署很难调对,尤其是<strong>KV cache 的容量分配</strong>:</p>
+    <p>关键陷阱在 PR 文档里讲得很透彻:<strong>相同的 <code class="inl">--mem-fraction-static</code> 标志并不意味着相同的 KV 容量</strong>。因为副本是<strong>顺序启动</strong>的,先启动的副本已经占了一部分显存,后启动的看到的"空闲显存"更小,于是即使标志一模一样,后者算出来的 KV token 数也更少(文档里的真实例子:三个 <code class="inl">mf=0.27</code> 副本分别拿到 97503 / 53149 / 20961 个 KV token,差了近 5 倍!)。</p>
+    <div class="analogy">三个人先后进同一个自助餐厅按"拿盘子容量 27%"取餐。第一个人来时菜是满的,拿得多;第三个人来时菜快没了,同样的"27%"却拿得少得多。所以不能只说"大家都拿 27%",必须规定"每人最终盘子里必须正好这么多",不够就报错。</p>
+
+    <h3>2 · 具体做了什么改动</h3>
+    <h4>① 把"档位"变成可复用的 YAML 配置</h4>
+    <p>新增两个 profile 文件,把"可移植的模型/运行时设置"和"主机专属的 GPU/CPU 摆放"分开。例如 H200 DP8:</p>
+<pre><span class="c"># examples/mps_dp/configs/higgs_h200_dp8.yaml</span>
+config_cls: HiggsTtsPipelineConfig
+model_path: bosonai/higgs-tts-3-4b
+stage_overrides:
+  tts_engine:
+    runtime:
+      sglang_server_args:
+        mem_fraction_static: <span class="n">0.85</span>
+runtime_overrides:
+  tts_engine:
+    server_args_overrides:
+      max_total_tokens: <span class="n">30000</span>       <span class="c"># 每副本 KV 上限(H100 档是 100000)</span>
+      max_running_requests: <span class="n">64</span>      <span class="c"># 准入上限(不是并发保证)</span>
+      cuda_graph_max_bs: <span class="n">64</span></pre>
+    <p>PR 特别点明:H200 的 30000 KV 池其实<strong>小于</strong>"64 个请求每个生成 2048 新 token"的最坏需求。所以 <code class="inl">max_running_requests=64</code> 是一个<strong>准入天花板 (admission ceiling)</strong>,不是"64 个长请求能同时解码"的保证。池满了 SGLang 会<strong>撤回 (retract)</strong> 请求、放回等待队列,等 KV 腾出来再继续。这是一个很重要的"承诺 vs 尽力"的区分。</p>
+
+    <h4>② 启动脚本从配置解析 KV 上限,并逐副本精确校验</h4>
+    <p>新增的 <code class="inl">config.py</code> 通过 <code class="inl">ConfigManager</code> 找到"generation 阶段"配置的 <code class="inl">max_total_tokens</code>;而 <code class="inl">launch.sh</code> 在每个副本健康后,从日志里抓出它实际解析到的 KV token 数,<strong>不等于期望值就直接 die</strong>:</p>
+<pre>resolved_tokens=$(grep -m1 -oE <span class="s">'#tokens:[[:space:]]*[0-9]+'</span> <span class="s">"$log"</span> | grep -oE <span class="s">'[0-9]+$'</span>)
+<span class="k">if</span> [ <span class="s">"$n"</span> -gt 1 ]; <span class="k">then</span>
+  [ -n <span class="s">"$resolved_tokens"</span> ] || die <span class="s">"replica $i healthy but resolved KV capacity missing"</span>
+  [ <span class="s">"$resolved_tokens"</span> = <span class="s">"$expected_max_total_tokens"</span> ] \
+    || die <span class="s">"replica $i resolved $resolved_tokens KV tokens; expected $expected..."</span>
+<span class="k">fi</span></pre>
+    <p>换句话说:因为"内存 profiling 不会跨进程协调 KV 分配",脚本强制要求 N&gt;1 时<strong>每个副本都解析出完全相同的 KV 容量</strong>,否则拒绝启动。这把上面那个"顺序启动导致容量不均"的隐患变成了一个<strong>显式的、启动即失败的硬检查</strong>。同时保留了老的 <code class="inl">MODEL</code> + <code class="inl">MAX_TOTAL_TOKENS</code> 环境变量接口,向后兼容。</p>
+
+    <h3>3 · 涉及的知识点(重点)</h3>
+    <div class="concept"><div class="h">KV Cache(键值缓存)</div>
+      <div class="three">
+        <div><b>是什么:</b> Transformer 自回归生成时,每生成一个 token 都要用到前面所有 token 的 Key/Value 向量。把它们缓存下来避免重复计算,就是 KV cache。它是推理时<strong>最主要的显存消耗者</strong>之一。</div>
+        <div><b>为什么需要:</b> 没有它,每生成一个新 token 都要把整段历史重算一遍,慢到不可用。有了它,生成第 N 个 token 只需算第 N 个。代价是显存——序列越长、并发越多,KV 占用越大。</div>
+        <div><b>本 PR 怎么用:</b> <code class="inl">max_total_tokens</code> 就是 KV 池能容纳的总 token 数上限,直接决定能并发多少/多长的请求。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">CUDA MPS(Multi-Process Service,多进程服务)</div>
+      <div class="three">
+        <div><b>是什么:</b> NVIDIA 的一个机制,让多个进程的 CUDA kernel 能<strong>真正并发</strong>共享一张 GPU(而不是默认的时间片轮转)。</div>
+        <div><b>为什么需要:</b> 单个 TTS 模型常吃不满 GPU 的算力和显存。多副本 + MPS 能把利用率压上去,提高整卡吞吐。</div>
+        <div><b>本 PR 怎么用:</b> 脚本启一个私有 MPS daemon,顺序拉起 N 个副本、逐个等健康、验证 MPS 挂载,H200 上 8 个副本全部挂上。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">数据并行 (Data Parallelism, DP) —— 这里是"同卡 DP"</div>
+      <div class="three">
+        <div><b>是什么:</b> 跑多个完整的模型副本,把请求分散到各副本上。和"张量并行 (TP)"不同:TP 是把<strong>一个</strong>模型切开放到多卡协作算一次前向;DP 是每个副本都是<strong>完整</strong>模型、各自独立处理不同请求。</div>
+        <div><b>为什么需要:</b> 当模型能装进单卡、瓶颈是吞吐时,DP 比 TP 更简单高效(没有跨卡通信)。这里更进一步——多个副本挤在<strong>同一张</strong>卡上,靠 MPS 并发。</div>
+        <div><b>本 PR 怎么用:</b> H100 同卡 3 副本、H200 同卡 8 副本,每副本独立 KV 池,请求不在副本间分发(每个副本自己收自己的)。</div>
+      </div>
+    </div>
+    <div class="concept"><div class="h">mem-fraction-static &amp; 请求撤回 (retraction)</div>
+      <div class="three">
+        <div><b>是什么:</b> <code class="inl">mem_fraction_static</code> 是"启动时按当前空闲显存的百分比预留给模型权重+KV 池"。retraction 是池满时把正在跑的请求踢回等待队列的机制。</div>
+        <div><b>为什么需要:</b> 前者决定 KV 池大小,但因"顺序启动看到的空闲不同"而不可靠;后者保证池不够时系统不崩、只是降速(准入 ≠ 并发保证)。</div>
+        <div><b>本 PR 怎么用:</b> 两档都用 0.85;并用"精确 KV 校验"绕开 mem-fraction 的不确定性,用 retraction 兜住 30000 池小于最坏需求的情况。</div>
+      </div>
+    </div>
+
+    <h3>4 · 我能学到什么 / 延伸思考</h3>
+    <div class="learn"><div class="h">可复用的工程思想</div>
+    <ul>
+      <li><strong>把"隐性假设"变成"显式断言"</strong>:大家默认"相同 flag = 相同容量",而现实不是。好的工程把这种隐性假设做成启动即失败的硬检查——错误在部署第一秒暴露,而不是压测时才发现容量不均。</li>
+      <li><strong>配置分层:可移植的 vs 主机专属的</strong>:模型/运行时设置进 YAML(可复用),GPU/CPU 摆放进环境变量(主机相关)。这种分层让"经过验证的配方"能被别人安全复用。</li>
+      <li><strong>区分"准入 (admission)"与"保证 (guarantee)"</strong>:<code class="inl">max_running_requests=64</code> 只是准入上限,靠 retraction 兜底。理解这层区别,才不会误以为"设了 64 就能同时并发 64 个长请求"。</li>
+      <li><strong>档位要标注"验证边界"</strong>:文档反复强调"这是特定配置下的验证值,不是通用默认;换模型/卡/副本数都要重算"。给出数字的同时给出适用范围,是负责任的性能工程。</li>
+    </ul>
+    </div>
+    <p style="color:var(--muted);font-size:13.5px"><strong>想深入可以先补:</strong> KV cache 与 PagedAttention、CUDA MPS、数据并行 vs 张量并行、SGLang 的显存 profiling 与 max_total_tokens 解析、以及"准入控制 / 背压 (backpressure)"的系统设计概念。</p>
+  </div>
+</details>
+
+<!-- ================= 轻量三连 ================= -->
+<section class="glossary" style="margin-top:34px">
+  <h2>其余 3 个 PR(简讲)</h2>
+  <p class="sub">下面三个改动面较小或偏工程收尾,归入同一主题脉络快速过一遍。</p>
+
+  <div class="gitem" id="pr1057">
+    <p><b>#1057 · Use upstream Transformers Higgs tokenizer</b> &nbsp; <span style="color:var(--muted);font-size:13px">D · SandyLuXY · <a class="src" href="https://github.com/sgl-project/sglang-omni/pull/1057" target="_blank">pull/1057</a></span></p>
+    <p style="color:var(--ink2)"><strong>做了什么:</strong> SGLang-Omni 之前因为老版 Transformers 不含 Higgs Audio V2 tokenizer,自己 <em>vendored</em>(内置拷贝)了一份 940 行的实现。现在钉定的 Transformers 5.6 已经官方内置同样的类,于是删掉 vendored 版、直接 import 上游类,只保留自带的 codec 配置 JSON 和现有权重加载路径,编解码接口一字不改。</p>
+    <p style="color:var(--ink2)"><strong>知识点 —— vendoring(内置依赖):</strong> 把第三方代码拷进自己仓库,好处是不受上游版本约束、可控;坏处是要自己维护、跟不上上游修复。<strong>一旦上游提供了等价能力,及时"去 vendor"是减少维护负担的正确动作</strong>。PR 加了 meta-device 回归测试,钉住"确实绑定到了上游类""527 个 state-dict 键结构""帧率/码本数"等契约,确保切换零行为差异(WER 0.93%→0.86%,未劣化)。</p>
+    <p style="color:var(--ink2)"><strong>可学到:</strong> 依赖管理的"内置↔上游"权衡;用回归测试锁住"重构前后接口/权重结构一致"。与 #1058、#1069 同属"给推理路径瘦身"主题。</p>
+  </div>
+
+  <div class="gitem" id="pr1069">
+    <p><b>#1069 · Remove unreachable implementation code</b> &nbsp; <span style="color:var(--muted);font-size:13px">D · luojiaxuan · <a class="src" href="https://github.com/sgl-project/sglang-omni/pull/1069" target="_blank">pull/1069</a></span></p>
+    <p style="color:var(--ink2)"><strong>做了什么:</strong> 删掉仓库里"没有任何入口"的死代码——没有源码、测试、文档、配置字符串、装饰器或注册表引用它们。包括一个孤儿 environ 模块、一个没用到的 Fish 训练期 MoE loss、一个被取代的通用 cache-key 辅助函数,以及零散的 audio/VAD/Voxtral 小工具。非测试代码净删 266 行,不动任何流水线工厂或运行时接口。</p>
+    <p style="color:var(--ink2)"><strong>知识点 —— 死代码 (dead code) 与可达性分析:</strong> "死代码"= 永远不会被执行到的代码。判断依据是"有没有任何入口点(entry point)可达"——源码调用、测试、配置引用、装饰器注册等都算入口。<strong>死代码不是无害的</strong>:它增加阅读负担、拖慢搜索、可能误导后人以为某功能还在用,还扩大安全/维护面。PR 的验证方式很扎实:删完跑 import 冒烟测试 + 编译检查 + 6 个 cache-key 单测,确认没误删活代码。</p>
+    <p style="color:var(--ink2)"><strong>可学到:</strong> 定期做"可达性清理";删除前先证明"确无入口",删除后用冒烟/编译测试兜底。</p>
+  </div>
+
+  <div class="gitem" id="pr1072">
+    <p><b>#1072 · Align Qwen3-Omni gates with H100 calibration report</b> &nbsp; <span style="color:var(--muted);font-size:13px">F · Hayden727 · <a class="src" href="https://github.com/sgl-project/sglang-omni/pull/1072" target="_blank">pull/1072</a></span></p>
+    <p style="color:var(--ink2)"><strong>做了什么:</strong> 更新 Qwen3-Omni 的 CI 质量门槛。原来的阈值是从旧 PR #1021 抄来的,和当前代码+环境跑出来的真实数据对不上。这个 PR 用"在<strong>当前 PR head</strong> 上、每个 stage 跑 5 次、取最差 (worst-of-5)"的严格校准数据,重设 18 个 stage 的参考值(涵盖 MMSU/VideoMME/VideoAMME 的准确率、速度、Talker WER/RTF 等),并移除了一个过时的 155s 硬超时上限。</p>
+    <p style="color:var(--ink2)"><strong>知识点 —— CI 质量门 (quality gate) 与 worst-of-5 校准:</strong> 推理系统的 CI 不只测"能不能跑",还要测"准确率/速度有没有退化"。但 GPU 评测有波动,单次跑不可靠。<strong>"跑 5 次取最差"</strong> 是在给阈值设一个稳健下界——只要真实表现别比"最差的一次"还差就算通过,能显著降低偶发抖动导致的假失败 (flaky failure)。校准数据还标注了主机、镜像、commit、完整可复现路径。相关领域概念:<strong>RTF(Real-Time Factor,实时率</strong>,<1 表示比实时更快)、<strong>WER(词错误率)、UTMOS(音质 MOS 预测分)、apply_slack(在参考值上留出容差再作为门槛)</strong>。</p>
+    <p style="color:var(--ink2)"><strong>可学到:</strong> 评测阈值要"从当前系统重新校准",而非从旧 PR 硬抄;用重复观测取稳健统计量对抗测量噪声;门槛值要可复现、可追溯。</p>
+  </div>
+</section>
+
+<!-- ================= 术语速查 ================= -->
+<section class="glossary">
+  <h2>今日术语速查表</h2>
+  <div class="gitem"><b>Stage / 阶段</b> — 推理流水线里一段独立的工作单元(预处理/生成/声码),可各自指定进程与 GPU。</div>
+  <div class="gitem"><b>Scheduler / 调度器</b> — 每个阶段前的排队与批处理组件,决定请求怎么攒批、怎么进 GPU。</div>
+  <div class="gitem"><b>KV Cache</b> — 自回归生成时缓存历史 token 的 Key/Value,推理主要显存消耗者;<code class="inl">max_total_tokens</code> 是其容量上限。</div>
+  <div class="gitem"><b>CUDA Graph</b> — 把一串 GPU kernel 录制成图一次性回放,消除 launch 开销;有固定形状/范围限制,超出掉回 eager。</div>
+  <div class="gitem"><b>Vocoder / 声码器</b> — 把音频 codec token 解码成可听 PCM 波形的最后一站。</div>
+  <div class="gitem"><b>VQ / codec token</b> — 向量量化把音频压成离散码,使语音能像文本 token 一样被 Transformer 建模;多码本表达更丰富细节。</div>
+  <div class="gitem"><b>CUDA MPS</b> — 让多个进程的 kernel 真正并发共享一张 GPU 的 NVIDIA 机制。</div>
+  <div class="gitem"><b>DP / TP</b> — 数据并行(多个完整副本各处理不同请求)vs 张量并行(一个模型切分到多卡协作)。</div>
+  <div class="gitem"><b>OMP_NUM_THREADS / intra-op 池</b> — 控制单算子多线程并行度;不收敛会导致多进程线程超额订阅。</div>
+  <div class="gitem"><b>Single-flight / LRU / 内容寻址缓存</b> — 并发同键只算一次 / 按最近最少使用淘汰 / 用内容哈希做键(天然去重免过期)。</div>
+  <div class="gitem"><b>TTFC / RTF / WER / UTMOS</b> — 首帧时间 / 实时率 / 词错误率 / 音质 MOS 预测——语音服务的核心指标。</div>
+  <div class="gitem"><b>fail-closed / fail-loud</b> — 出错时倒向安全侧(隔离资源)/ 出错时立刻大声报错(暴露 bug)。</div>
+</section>
+
+<footer>
+  <p>SGLang Omni 每日 PR 学习日报 · 生成于 2026-07-17 · 数据来源 GitHub <code class="inl">sgl-project/sglang-omni</code></p>
+  <p>时间窗口:过去 24 小时内合并的 9 个 PR · 讲解深度优先 · 本报告为自动化学习日报</p>
+</footer>
+</div>
