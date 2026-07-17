@@ -31,6 +31,7 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
         stream_followup_stride: int = DEFAULT_HIGGS_STREAM_FOLLOWUP_STRIDE,
         prefill_coalesce_requests: int = 0,
         prefill_coalesce_wait_ms: float = 60.0,
+        total_gpu_memory_fraction: float | None = None,
     ) -> None:
         self.max_new_tokens = max_new_tokens
         self.max_running_requests = max_running_requests
@@ -41,6 +42,7 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
         self.stream_followup_stride = stream_followup_stride
         self.prefill_coalesce_requests = prefill_coalesce_requests
         self.prefill_coalesce_wait_ms = prefill_coalesce_wait_ms
+        self.total_gpu_memory_fraction = total_gpu_memory_fraction
         self.model: Any | None = None
 
     def generation_defaults(
@@ -57,7 +59,13 @@ class HiggsTtsEngineBuilder(TtsEngineBuilder):
             "max_running_requests": self.max_running_requests,
             "cuda_graph_max_bs": self.cuda_graph_max_bs,
             "disable_cuda_graph": False,
-            "mem_fraction_static": 0.85,
+            # The stage's runtime.resources.total_gpu_memory_fraction is the
+            # single source of truth when set; 0.85 only applies without one.
+            "mem_fraction_static": (
+                self.total_gpu_memory_fraction
+                if self.total_gpu_memory_fraction is not None
+                else 0.85
+            ),
             "chunked_prefill_size": 8192,
             "dtype": "bfloat16",
         }
