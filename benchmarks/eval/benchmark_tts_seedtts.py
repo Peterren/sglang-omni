@@ -190,6 +190,11 @@ from benchmarks.tasks.asr import (
     DEFAULT_ASR_TRANSCRIBE_CONCURRENCY,
     QWEN3_ASR_MODEL_PATH,
 )
+from benchmarks.tasks.text_translation import (
+    ARABIC_TRANSLATION_PROMPT_VERSION,
+    DEFAULT_ARABIC_TRANSLATION_MODEL,
+    DEFAULT_TRANSLATION_API_KEY_ENV,
+)
 from benchmarks.tasks.tts import (
     MOSS_TTS_TOKEN_COUNT_AUTO,
     build_base_url,
@@ -255,6 +260,10 @@ class TtsSeedttsBenchmarkConfig:
     similarity_checkpoint: str | None = None
     asr_model_path: str = QWEN3_ASR_MODEL_PATH
     asr_concurrency: int = DEFAULT_ASR_TRANSCRIBE_CONCURRENCY
+    translated_wer: bool = False
+    translation_model: str = DEFAULT_ARABIC_TRANSLATION_MODEL
+    translation_api_key_env: str = DEFAULT_TRANSLATION_API_KEY_ENV
+    translation_cache: str | None = None
 
 
 def _build_generation_kwargs(config: TtsSeedttsBenchmarkConfig) -> dict:
@@ -386,6 +395,13 @@ def run_tts_seedtts_transcribe(
         "initial_codec_chunk_frames": config.initial_codec_chunk_frames,
         "concurrency": config.concurrency,
         "asr_concurrency": config.asr_concurrency,
+        "translated_wer": config.translated_wer,
+        "translation_model": (
+            config.translation_model if config.translated_wer else None
+        ),
+        "translation_prompt_version": (
+            ARABIC_TRANSLATION_PROMPT_VERSION if config.translated_wer else None
+        ),
     }
     return run_seedtts_transcribe(
         config,
@@ -434,6 +450,10 @@ def _config_from_args(args: argparse.Namespace) -> TtsSeedttsBenchmarkConfig:
         similarity_checkpoint=args.similarity_checkpoint,
         asr_model_path=args.asr_model_path,
         asr_concurrency=args.asr_concurrency,
+        translated_wer=args.translated_wer,
+        translation_model=args.translation_model,
+        translation_api_key_env=args.translation_api_key_env,
+        translation_cache=args.translation_cache,
     )
 
 
@@ -595,7 +615,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--lang",
         type=str,
-        choices=["en", "zh"],
+        choices=["ar", "en", "zh"],
         default="en",
         help="Language for ASR model (transcribe phase).",
     )
@@ -618,6 +638,29 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_ASR_TRANSCRIBE_CONCURRENCY,
         help="Concurrent transcription requests during WER evaluation.",
+    )
+    parser.add_argument(
+        "--translated-wer",
+        action="store_true",
+        help=(
+            "For Arabic, translate reference and ASR hypothesis independently "
+            "to English with OpenAI, then compute an auxiliary English WER."
+        ),
+    )
+    parser.add_argument(
+        "--translation-model",
+        default=DEFAULT_ARABIC_TRANSLATION_MODEL,
+        help="OpenAI Responses API model used by --translated-wer.",
+    )
+    parser.add_argument(
+        "--translation-api-key-env",
+        default=DEFAULT_TRANSLATION_API_KEY_ENV,
+        help="Environment variable containing the OpenAI API key.",
+    )
+    parser.add_argument(
+        "--translation-cache",
+        default=None,
+        help="Translation cache path. Defaults to output-dir/translation_cache.json.",
     )
     parser.add_argument(
         "--similarity-checkpoint",
@@ -707,6 +750,8 @@ def main() -> None:
         parser.error("--max-running-requests must be positive")
     if args.cuda_graph_max_bs <= 0:
         parser.error("--cuda-graph-max-bs must be positive")
+    if args.translated_wer and args.lang != "ar":
+        parser.error("--translated-wer requires --lang ar")
     if args.use_existing_server and not (args.generate_only or args.transcribe_only):
         parser.error(
             "--use-existing-server currently requires --generate-only or "

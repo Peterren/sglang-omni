@@ -12,7 +12,17 @@
     "sample_rate": 24000,
     "duration_s": 5.7,
     "asr_cer": 0.0,
-    "asr_wer": 0.0
+    "asr_wer": 0.0,
+    "seedtts_qwen3_asr": {
+      "model": "Qwen/Qwen3-ASR-1.7B",
+      "revision": "7278e1e70fe206f11671096ffdd38061171dd6e5",
+      "lang": "ar",
+      "pre_t1_wer": 0.0,
+      "current_wer": 0.0,
+      "pre_t1_asr_latency_s": 0.09478981187567115,
+      "current_asr_latency_s": 0.09575377590954304
+    },
+    "translated_english_wer": null
   },
   "warm_performance": {
     "pre_t1": {

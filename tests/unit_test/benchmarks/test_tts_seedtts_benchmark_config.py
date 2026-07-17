@@ -44,3 +44,23 @@ def test_seedtts_benchmark_batch_args_are_independent() -> None:
     )
     assert results_config["max_running_requests"] == 32
     assert results_config["cuda_graph_max_bs"] == 128
+
+
+def test_seedtts_arabic_translated_wer_config() -> None:
+    config = _config_from_cli(
+        "--lang",
+        "ar",
+        "--translated-wer",
+        "--translation-model",
+        "gpt-test",
+        "--translation-api-key-env",
+        "TEST_OPENAI_API_KEY",
+        "--translation-cache",
+        "/tmp/audar-translations.json",
+    )
+
+    assert config.lang == "ar"
+    assert config.translated_wer is True
+    assert config.translation_model == "gpt-test"
+    assert config.translation_api_key_env == "TEST_OPENAI_API_KEY"
+    assert config.translation_cache == "/tmp/audar-translations.json"

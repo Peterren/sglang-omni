@@ -38,6 +38,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--model-path", default="audarai/Audar-TTS-V1-Turbo")
     parser.add_argument("--reference-path", type=Path)
+    parser.add_argument("--seedtts-output-dir", type=Path)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--seed", type=int, default=1234)
     parser.add_argument("--max-new-tokens", type=int, default=512)
@@ -111,6 +112,9 @@ def main() -> None:
     if args.repeats < 1:
         raise ValueError("--repeats must be positive")
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    seedtts_output_dir = args.seedtts_output_dir or (
+        args.output_dir / "seedtts" / args.label
+    )
     reference_path = args.reference_path
     if reference_path is None:
         reference_path = Path(
@@ -140,6 +144,7 @@ def main() -> None:
     _sync()
     initialization_s = time.perf_counter() - init_started
 
+    output_wav_path = args.output_dir / f"{args.label}.wav"
     iterations: list[dict[str, Any]] = []
     for index in range(args.repeats):
         payload = _payload(
@@ -192,7 +197,7 @@ def main() -> None:
         iterations.append(iteration)
         if index == 0:
             _write_wav(
-                args.output_dir / f"{args.label}.wav",
+                output_wav_path,
                 waveform,
                 sample_rate,
             )
@@ -211,6 +216,7 @@ def main() -> None:
         "max_new_tokens": args.max_new_tokens,
         "repeats": args.repeats,
         "initialization_s": initialization_s,
+        "seedtts_output_dir": str(seedtts_output_dir.resolve()),
         "deterministic_codes": len(code_hashes) == 1,
         "deterministic_waveform": len(waveform_hashes) == 1,
         "summary": {
@@ -229,6 +235,21 @@ def main() -> None:
     output_path = args.output_dir / f"{args.label}.json"
     output_path.write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    seedtts_output_dir.mkdir(parents=True, exist_ok=True)
+    generated = [
+        {
+            "sample_id": args.label,
+            "target_text": TARGET_TEXT,
+            "wav_path": str(output_wav_path.resolve()),
+            "is_success": True,
+            "latency_s": iterations[0]["total_s"],
+            "audio_duration_s": iterations[0]["output_duration_s"],
+        }
+    ]
+    (seedtts_output_dir / "generated.json").write_text(
+        json.dumps(generated, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))

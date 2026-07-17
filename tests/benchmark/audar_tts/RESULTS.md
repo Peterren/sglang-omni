@@ -25,6 +25,18 @@ Whisper large-v3-turbo at revision
 `41f01f3fe87f28c78e2fbf8b568835947dd65ed9` transcribed the output as the
 exact target after Arabic normalization: CER 0.0 and WER 0.0.
 
+The repository's SeedTTS pipeline was also run with Qwen3-ASR-1.7B at revision
+`7278e1e70fe206f11671096ffdd38061171dd6e5`. It produced the same normalized
+Arabic reference and hypothesis for both snapshots, with corpus WER 0.0. The
+measured ASR request latency was 95.8 ms for current and 94.8 ms for pre-T1;
+these one-sample timings validate the evaluator and are not model-performance
+comparisons.
+
+The optional GPT-translated English WER was not recorded because no OpenAI API
+credential was available on the benchmark host. The runner now exposes
+`--translated-wer`, caches independent reference/hypothesis translations, and
+keeps Arabic WER as the primary correctness metric.
+
 The benchmark initially found that a persistent llama.cpp instance changed its
 first result despite a fixed seed. Explicitly resetting llama.cpp before each
 request fixed request isolation; the unit test now enforces that reset.
