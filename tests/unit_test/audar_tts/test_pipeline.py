@@ -20,6 +20,8 @@ import torch
 from sglang_omni.client.client import Client
 from sglang_omni.comm import stage_io
 from sglang_omni.comm.data_ref import DataRef, TransportKind
+from sglang_omni.config.runtime import resolve_factory_signature_args
+from sglang_omni.config.schema import EndpointsConfig
 from sglang_omni.models.audar_tts import stages
 from sglang_omni.models.audar_tts.config import AudarTTSPipelineConfig
 from sglang_omni.models.audar_tts.payload_types import AudarTTSState
@@ -28,10 +30,14 @@ from sglang_omni.models.audar_tts.request_builders import build_audar_state
 from sglang_omni.models.model_capabilities import get_model_capabilities
 from sglang_omni.models.registry import PIPELINE_CONFIG_REGISTRY
 from sglang_omni.pipeline.control_plane import deserialize_message, serialize_message
+from sglang_omni.pipeline.mp_runner import _build_stage_groups
+from sglang_omni.pipeline.runtime_config import prepare_pipeline_runtime
 from sglang_omni.proto import DataReadyMessage, OmniRequest, StagePayload
+from sglang_omni.relay.shm import ShmRelay
 from sglang_omni.serve.protocol import SUPPORTED_TTS_LANGUAGES
 from sglang_omni.serve.speech_service import SpeechRequestValidator
-from tests.unit_test.fixtures.pipeline_fakes import FakeRelay
+from sglang_omni.utils.imports import import_string
+from tests.unit_test.fixtures.pipeline_fakes import FakeMpContext
 
 
 class FakeCodec:
@@ -136,6 +142,45 @@ def test_config_and_state_contracts() -> None:
     assert AudarTTSState.from_dict(state.to_dict()) == state
 
 
+def test_config_dispatch_injects_model_path_and_gpu(tmp_path: Any) -> None:
+    config = AudarTTSPipelineConfig(
+        model_path="audarai/Audar-TTS-V1-Turbo",
+        endpoints=EndpointsConfig(base_path=str(tmp_path)),
+    )
+    prepared = prepare_pipeline_runtime(config)
+    try:
+        groups = _build_stage_groups(
+            config,
+            ctx=FakeMpContext(),
+            stages_cfg=prepared.stages_cfg,
+            name_map=prepared.name_map,
+            endpoints=prepared.endpoints,
+            placement_plan=prepared.placement_plan,
+            process_plan=prepared.process_plan,
+        )
+    finally:
+        assert prepared.runtime_dir is not None
+        prepared.runtime_dir.close()
+
+    resolved = {}
+    for spec in (spec for group in groups for spec in group.specs):
+        resolved[spec.stage_name] = resolve_factory_signature_args(
+            import_string(spec.factory),
+            spec.factory_args,
+            defaults=spec.factory_arg_defaults,
+        )
+
+    assert resolved == {
+        "preprocessing": {},
+        "reference_encoder": {"gpu_id": 0},
+        "tts_engine": {
+            "model_path": "audarai/Audar-TTS-V1-Turbo",
+            "gpu_id": 0,
+        },
+        "vocoder": {"gpu_id": 0},
+    }
+
+
 def test_request_lowering_keeps_audar_defaults_unless_explicit() -> None:
     reference = {"bytes": five_second_wav(), "text": "reference transcript"}
     implicit = make_payload(
@@ -192,8 +237,8 @@ def test_openai_speech_request_lowers_to_audar_state() -> None:
             ),
             "ref_text": "reference transcript",
             "max_new_tokens": 128,
-            "temperature": 0.6,
-            "top_k": 20,
+            "temperature": 0.8,
+            "top_k": 30,
             "seed": 17,
         }
     )
@@ -203,6 +248,12 @@ def test_openai_speech_request_lowers_to_audar_state() -> None:
         validate=False,
         reference_descriptors=prepared.reference_descriptors,
     )
+    assert generation_request.metadata["tts_params"]["explicit_generation_params"] == [
+        "max_new_tokens",
+        "seed",
+        "temperature",
+        "top_k",
+    ]
     payload = StagePayload(
         request_id="request",
         request=Client._build_omni_request(generation_request),
@@ -219,8 +270,8 @@ def test_openai_speech_request_lowers_to_audar_state() -> None:
     }
     assert state.generation_kwargs == {
         "max_new_tokens": 128,
-        "temperature": 0.6,
-        "top_k": 20,
+        "temperature": 0.8,
+        "top_k": 30,
         "top_p": 0.9,
         "repetition_penalty": 1.1,
         "seed": 17,
@@ -241,7 +292,7 @@ def test_reference_audio_survives_control_plane_and_relay(
     reference_audio: dict[str, Any],
 ) -> None:
     async def round_trip() -> AudarTTSState:
-        relay = FakeRelay()
+        relay = ShmRelay(engine_id="audar-reference-round-trip", device="cpu")
         payload = make_payload(
             state=AudarTTSState(
                 target_text="target",
@@ -249,28 +300,34 @@ def test_reference_audio_survives_control_plane_and_relay(
                 reference_audio=reference_audio,
             )
         )
-        data_ref, operation = await stage_io.write_payload(
-            relay,
-            payload.request_id,
-            payload,
-            transport=TransportKind.SHM,
-            from_stage="preprocessing",
-            to_stage="reference_encoder",
-        )
-        await operation.wait_for_completion()
-        message = DataReadyMessage(
-            request_id=payload.request_id,
-            from_stage="preprocessing",
-            to_stage="reference_encoder",
-            data_ref=data_ref.to_dict(),
-        )
-        restored_message = deserialize_message(serialize_message(message))
-        restored_payload = await stage_io.read_payload(
-            relay,
-            payload.request_id,
-            DataRef.from_dict(restored_message.data_ref),
-        )
-        return AudarTTSState.from_dict(restored_payload.data)
+        payload.data["relay_probe"] = torch.tensor([1], dtype=torch.int32)
+        try:
+            data_ref, operation = await stage_io.write_payload(
+                relay,
+                payload.request_id,
+                payload,
+                transport=TransportKind.SHM,
+                from_stage="preprocessing",
+                to_stage="reference_encoder",
+            )
+            message = DataReadyMessage(
+                request_id=payload.request_id,
+                from_stage="preprocessing",
+                to_stage="reference_encoder",
+                data_ref=data_ref.to_dict(),
+            )
+            restored_message = deserialize_message(serialize_message(message))
+            restored_payload = await stage_io.read_payload(
+                relay,
+                payload.request_id,
+                DataRef.from_dict(restored_message.data_ref),
+            )
+            operation.mark_receiver_done()
+            await operation.wait_for_completion()
+            assert torch.equal(restored_payload.data["relay_probe"], torch.tensor([1]))
+            return AudarTTSState.from_dict(restored_payload.data)
+        finally:
+            relay.close()
 
     restored = asyncio.run(round_trip())
 
@@ -634,6 +691,7 @@ def test_llama_cpp_stage_matches_official_generation_loop(
         "top_p": 0.9,
         "repeat_penalty": 1.1,
     }
+    assert scheduler._max_concurrency == 1
 
 
 def test_vocoder_emits_24khz_audio_payload(
