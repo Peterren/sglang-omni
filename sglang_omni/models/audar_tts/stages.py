@@ -57,6 +57,11 @@ def _load_codec(model: str, revision: str, device: str) -> Any:
     return NeuCodec.from_pretrained(model, revision=revision).eval().to(device)
 
 
+@lru_cache(maxsize=None)
+def _codec_lock(model: str, revision: str, device: str) -> threading.Lock:
+    return threading.Lock()
+
+
 def _device(gpu_id: int | None) -> str:
     return f"cuda:{gpu_id}" if gpu_id is not None else "cpu"
 
@@ -143,6 +148,7 @@ class _AudarReferenceEncodeService:
         max_items: int | None = 256,
         max_bytes: int | None = 64 * 1024 * 1024,
         timeout_s: float = 130.0,
+        codec_lock: threading.Lock | None = None,
     ) -> None:
         if max_items is not None and max_items < 1:
             raise ValueError(f"max_items must be >= 1, got {max_items}")
@@ -152,6 +158,7 @@ class _AudarReferenceEncodeService:
         self._device = device
         self._codec_model = codec_model
         self._codec_revision = codec_revision
+        self._codec_lock = codec_lock or threading.Lock()
         self._config_hash = hash_bytes(
             f"sample_rate:{REFERENCE_SAMPLE_RATE}".encode("utf-8")
         )
@@ -196,7 +203,8 @@ class _AudarReferenceEncodeService:
             with self._lock:
                 self._uncacheable += 1
             try:
-                return _encode_reference(self._codec, self._device, item)
+                with self._codec_lock:
+                    return _encode_reference(self._codec, self._device, item)
             except BaseException as exc:
                 self._add_exception_note(exc, desc)
                 with self._lock:
@@ -236,7 +244,8 @@ class _AudarReferenceEncodeService:
 
         assert leader is not None
         try:
-            artifact = _encode_reference(self._codec, self._device, item)
+            with self._codec_lock:
+                artifact = _encode_reference(self._codec, self._device, item)
             stored = artifact.detach().to(device="cpu", dtype=torch.int32).clone()
             should_cache = (
                 item.source_kind != "path" or _reference_key(item) == input_key
@@ -322,6 +331,7 @@ def create_reference_encoder_executor(
         codec_revision=codec_revision,
         max_items=cache_max_items,
         max_bytes=cache_max_bytes,
+        codec_lock=_codec_lock(codec_model, codec_revision, device),
     )
 
     def _encode(payload: StagePayload) -> StagePayload:
@@ -439,32 +449,19 @@ def create_vocoder_executor(
     gpu_id: int | None = None,
     codec_model: str = DEFAULT_CODEC_MODEL,
     codec_revision: str = "main",
-    max_batch_size: int = 8,
-    max_batch_wait_ms: int = 2,
 ) -> SimpleScheduler:
     device = _device(gpu_id)
     codec = _load_codec(codec_model, codec_revision, device)
+    codec_lock = _codec_lock(codec_model, codec_revision, device)
 
-    def _prepare(payload: StagePayload) -> tuple[AudarTTSState, torch.Tensor]:
+    async def _decode(payload: StagePayload) -> StagePayload:
         state = _load_state(payload)
         codes = torch.as_tensor(state.audio_codes, dtype=torch.long)
         if codes.ndim != 1 or codes.numel() == 0:
             raise RuntimeError("Audar-TTS vocoder requires non-empty audio codes")
-        return state, codes
-
-    async def _decode_batch(
-        items: list[tuple[AudarTTSState, torch.Tensor]],
-    ) -> list[torch.Tensor]:
-        outputs = []
-        with torch.inference_mode():
-            for _, codes in items:
-                waveform = codec.decode_code(codes.to(device)[None, None, :])
-                outputs.append(torch.as_tensor(waveform).detach().cpu().reshape(-1))
-        return outputs
-
-    def _store(
-        payload: StagePayload, state: AudarTTSState, waveform: torch.Tensor
-    ) -> StagePayload:
+        with codec_lock, torch.inference_mode():
+            waveform = codec.decode_code(codes.to(device)[None, None, :])
+        waveform = torch.as_tensor(waveform).detach().cpu().reshape(-1)
         state.audio_codes = None
         state.sample_rate = OUTPUT_SAMPLE_RATE
         _store_state(payload, state)
@@ -485,27 +482,7 @@ def create_vocoder_executor(
             }
         return payload
 
-    async def _single(payload: StagePayload) -> StagePayload:
-        state, codes = _prepare(payload)
-        waveform = (await _decode_batch([(state, codes)]))[0]
-        return _store(payload, state, waveform)
-
-    async def _batch(payloads: list[StagePayload]) -> list[StagePayload]:
-        items = [_prepare(payload) for payload in payloads]
-        waveforms = await _decode_batch(items)
-        return [
-            _store(payload, state, waveform)
-            for payload, (state, _), waveform in zip(
-                payloads, items, waveforms, strict=True
-            )
-        ]
-
-    return SimpleScheduler(
-        _single,
-        batch_compute_fn=_batch,
-        max_batch_size=max_batch_size,
-        max_batch_wait_ms=max_batch_wait_ms,
-    )
+    return SimpleScheduler(_decode)
 
 
 def _load_state(payload: StagePayload) -> AudarTTSState:

@@ -25,10 +25,12 @@ curl http://localhost:8000/v1/audio/speech \
   -d '{
     "model": "audarai/Audar-TTS-V1-Turbo",
     "input": "مرحبا، أهلا وسهلا بكم.",
-    "language": "Arabic",
     "ref_audio": "file:///path/to/references/voice.wav",
     "ref_text": "النص المطابق للمقطع المرجعي.",
     "response_format": "wav"
   }' \
   --output audar.wav
 ```
+
+The Audar backend infers the output language from `input`; the optional API
+`language` field is accepted as metadata but is not consumed by this model.

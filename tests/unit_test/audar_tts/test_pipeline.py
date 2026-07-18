@@ -272,17 +272,23 @@ def test_reference_encoder_singleflights_same_reference(
     assert results[0].prompt == results[1].prompt
 
 
-def test_reference_encoder_keeps_different_references_independent(
+def test_reference_encoder_serializes_codec_for_different_references(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     codec = FakeCodec()
-    encode_barrier = threading.Barrier(2)
     encode_lock = threading.Lock()
+    active_calls = 0
+    max_active_calls = 0
 
     def encode_code(waveform: torch.Tensor) -> torch.Tensor:
+        nonlocal active_calls, max_active_calls
         with encode_lock:
             codec.encode_calls += 1
-        encode_barrier.wait(timeout=2)
+            active_calls += 1
+            max_active_calls = max(max_active_calls, active_calls)
+        time.sleep(0.02)
+        with encode_lock:
+            active_calls -= 1
         return torch.tensor([[[7, 8, 9]]])
 
     monkeypatch.setattr(codec, "encode_code", encode_code)
@@ -308,6 +314,7 @@ def test_reference_encoder_keeps_different_references_independent(
         results = [future.result(timeout=3) for future in futures]
 
     assert codec.encode_calls == 2
+    assert max_active_calls == 1
     assert all(result.prompt for result in results)
 
 
@@ -412,7 +419,7 @@ def test_reference_encoder_reports_cache_stats() -> None:
     }
 
 
-def test_codec_model_is_shared_between_stages(
+def test_codec_model_and_lock_are_shared_between_stages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     codec = FakeCodec()
@@ -429,13 +436,18 @@ def test_codec_model_is_shared_between_stages(
         sys.modules, "neucodec", types.SimpleNamespace(NeuCodec=FakeNeuCodec)
     )
     stages._load_codec.cache_clear()
+    stages._codec_lock.cache_clear()
     try:
         first = stages._load_codec("codec", "revision", "cpu")
         second = stages._load_codec("codec", "revision", "cpu")
+        first_lock = stages._codec_lock("codec", "revision", "cpu")
+        second_lock = stages._codec_lock("codec", "revision", "cpu")
     finally:
         stages._load_codec.cache_clear()
+        stages._codec_lock.cache_clear()
 
     assert first is second is codec
+    assert first_lock is second_lock
     assert loads == 1
 
 
@@ -545,23 +557,12 @@ def test_vocoder_emits_24khz_audio_payload(
     }
 
 
-def test_vocoder_batch_callback_preserves_each_payload(
+def test_vocoder_does_not_claim_batching_without_tensor_batch_decode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     codec = FakeCodec()
     monkeypatch.setattr(stages, "_load_codec", lambda *args, **kwargs: codec)
-    scheduler = stages.create_vocoder_executor(gpu_id=None, max_batch_size=4)
-    payloads = [
-        make_payload(
-            request_id=f"request-{index}",
-            state=AudarTTSState(audio_codes=[index + 1, index + 2]),
-        )
-        for index in range(2)
-    ]
+    scheduler = stages.create_vocoder_executor(gpu_id=None)
 
-    results = asyncio.run(scheduler._batch_fn(payloads))
-
-    assert scheduler._max_batch_size == 4
-    assert codec.decode_calls == 2
-    assert len(results) == 2
-    assert all(result.data["sample_rate"] == 24000 for result in results)
+    assert scheduler._batch_fn is None
+    assert scheduler._max_batch_size == 1
