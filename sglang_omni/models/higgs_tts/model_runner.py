@@ -444,7 +444,7 @@ class HiggsTTSModelRunner(ModelRunner):
                 force=self._is_final_code_step(data),
             )
             self._mark_sampler_finished(req, data.generation_done)
-            cb0_per_row.append(int(codes_N[0].item()))
+            cb0_per_row.append(int(codes_cpu[0].item()))
 
         result.next_token_ids = torch.tensor(
             cb0_per_row,
