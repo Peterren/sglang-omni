@@ -199,6 +199,15 @@ def main() -> None:
 
     code_hashes = {item["audio_code_sha256"] for item in iterations}
     waveform_hashes = {item["waveform_sha256"] for item in iterations}
+    summary_fields = (
+        "reference_s",
+        "engine_wall_s",
+        "vocoder_s",
+        "total_s",
+        "rtf",
+        "engine_tokens_per_s",
+    )
+    warm_iterations = iterations[1:] if len(iterations) > 1 else iterations
     result = {
         "label": args.label,
         "audar_revision": AUDAR_REVISION,
@@ -215,14 +224,12 @@ def main() -> None:
         "deterministic_waveform": len(waveform_hashes) == 1,
         "summary": {
             key: _summarize([float(item[key]) for item in iterations])
-            for key in (
-                "reference_s",
-                "engine_wall_s",
-                "vocoder_s",
-                "total_s",
-                "rtf",
-                "engine_tokens_per_s",
-            )
+            for key in summary_fields
+        },
+        "warmup_iterations_excluded": len(iterations) - len(warm_iterations),
+        "warm_summary": {
+            key: _summarize([float(item[key]) for item in warm_iterations])
+            for key in summary_fields
         },
         "iterations": iterations,
     }

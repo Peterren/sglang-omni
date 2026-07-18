@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-18",
+  "snapshots": {
+    "pre_t1": {
+      "baseline": "efad7215aaaf054d3597a4678e29e3370231b45a",
+      "integration": "56714392f7d982ce0ce294ef39a547362b594132"
+    },
+    "latest": {
+      "baseline": "98b634332517ad2c9a88ff7f96880aae251a375c",
+      "integration": "b22341e0d8dd7a3b90fc169713c92de3665e0079"
+    }
+  },
+  "model": {
+    "audar_revision": "51f5635f32de3ab45ff28a4b958464532225b247",
+    "codec_revision": "30c1fdd19e68aee65d542cf043750d4c0165893e"
+  },
+  "correctness": {
+    "audio_code_count": 285,
+    "audio_code_sha256": "f9f63e0ca99e82bf7bbcab20a3b6d6fc7e36bc73a320f2f84a7942edde6bc98e",
+    "waveform_sample_count": 136800,
+    "waveform_sha256": "44ec732c1243bf5d6115783b318de2cd7691f5ba0ab6a75c1e01ea85eae73492",
+    "wav_sha256": "e7f0b6bb3ea5d950ff2fc1329a63954c2579cf97201dafb0a61514eb9b5ca04b",
+    "sample_rate": 24000,
+    "duration_s": 5.7,
+    "all_28_requests_identical": true
+  },
+  "quality": {
+    "sample_count": 1,
+    "arabic_wer": 0.0,
+    "arabic_cer": 0.0,
+    "translated_english_wer": 0.0,
+    "translated_english_bleu": 100.0,
+    "raw_arabic_bleu": 91.21679090703874,
+    "normalized_arabic_bleu": 100.0
+  },
+  "performance": {
+    "method": "mean of two warm run medians; 7 requests per run; iteration 0 excluded",
+    "warm_requests_per_snapshot": 12,
+    "pre_t1": {
+      "total_s": 1.07436146348482,
+      "rtf": 0.18848446727803858,
+      "engine_wall_s": 1.066340891935397,
+      "engine_tokens_per_s": 295.16169767703025,
+      "reference_s": 0.00034897768637165427,
+      "vocoder_s": 0.0075800742488354445
+    },
+    "latest": {
+      "total_s": 1.0806942209019326,
+      "rtf": 0.18959547735121624,
+      "engine_wall_s": 1.072770722093992,
+      "engine_tokens_per_s": 293.3364458188589,
+      "reference_s": 0.0003827339387498796,
+      "vocoder_s": 0.007466045732144266
+    },
+    "latest_vs_pre_percent": {
+      "total_s": 0.589443835464043,
+      "rtf": 0.589443835464043,
+      "engine_wall_s": 0.6029807360125705,
+      "engine_tokens_per_s": -0.6183904864812573
+    }
+  },
+  "loc": {
+    "tests_and_docs_excluded": true,
+    "minimal": {
+      "pre_t1": 575,
+      "latest": 543
+    },
+    "production": {
+      "pre_t1": 820,
+      "latest": 656
+    }
+  },
+  "artifacts": {
+    "raw_local_path": "/data/jaxan/audar-results-latest-prod-comparison",
+    "status": "local-only; Hugging Face destination pending correct-owner credential"
+  }
+}
