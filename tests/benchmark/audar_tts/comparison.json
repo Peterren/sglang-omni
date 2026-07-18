@@ -4,11 +4,11 @@
   "snapshots": {
     "pre_t1": {
       "baseline": "efad7215aaaf054d3597a4678e29e3370231b45a",
-      "integration": "56714392f7d982ce0ce294ef39a547362b594132"
+      "integration": "ec25335e9815ef53daa9c60239a1859804282270"
     },
     "latest": {
       "baseline": "98b634332517ad2c9a88ff7f96880aae251a375c",
-      "integration": "b22341e0d8dd7a3b90fc169713c92de3665e0079"
+      "integration": "49cde765101bf3c4501dc1838f47ec23dbbf225b"
     }
   },
   "model": {
@@ -35,29 +35,43 @@
     "normalized_arabic_bleu": 100.0
   },
   "performance": {
-    "method": "mean of two warm run medians; 7 requests per run; iteration 0 excluded",
+    "method": "fixed order latest/pre-T1/pre-T1/latest; mean of two warm run medians; 7 requests per run; iteration 0 excluded",
+    "run_order": [
+      "latest-order1",
+      "pre-t1-order1",
+      "pre-t1-order2",
+      "latest-order2"
+    ],
     "warm_requests_per_snapshot": 12,
     "pre_t1": {
-      "total_s": 1.07436146348482,
-      "rtf": 0.18848446727803858,
-      "engine_wall_s": 1.066340891935397,
-      "engine_tokens_per_s": 295.16169767703025,
-      "reference_s": 0.00034897768637165427,
-      "vocoder_s": 0.0075800742488354445
+      "total_s": 1.0778646252583712,
+      "rtf": 0.18909905706287214,
+      "engine_wall_s": 1.0696395094855689,
+      "engine_tokens_per_s": 293.95155643647416,
+      "reference_s": 0.0003679589135572314,
+      "vocoder_s": 0.007902770477812737,
+      "run_total_medians_s": [
+        1.0749026134144515,
+        1.080826637102291
+      ]
     },
     "latest": {
-      "total_s": 1.0806942209019326,
-      "rtf": 0.18959547735121624,
-      "engine_wall_s": 1.072770722093992,
-      "engine_tokens_per_s": 293.3364458188589,
-      "reference_s": 0.0003827339387498796,
-      "vocoder_s": 0.007466045732144266
+      "total_s": 1.0764299611910246,
+      "rtf": 0.18884736161246046,
+      "engine_wall_s": 1.0685027391882613,
+      "engine_tokens_per_s": 294.43269231398364,
+      "reference_s": 0.0003690712619572878,
+      "vocoder_s": 0.0074634309858083725,
+      "run_total_medians_s": [
+        1.0762604064075276,
+        1.0765995159745216
+      ]
     },
     "latest_vs_pre_percent": {
-      "total_s": 0.589443835464043,
-      "rtf": 0.589443835464043,
-      "engine_wall_s": 0.6029807360125705,
-      "engine_tokens_per_s": -0.6183904864812573
+      "total_s": -0.13310243547539624,
+      "rtf": -0.13310243547538514,
+      "engine_wall_s": -0.10627601983907997,
+      "engine_tokens_per_s": 0.16367862900343866
     }
   },
   "loc": {
@@ -67,12 +81,12 @@
       "latest": 543
     },
     "production": {
-      "pre_t1": 820,
-      "latest": 656
+      "pre_t1": 797,
+      "latest": 633
     }
   },
   "artifacts": {
-    "raw_local_path": "/data/jaxan/audar-results-latest-prod-comparison",
+    "raw_local_path": "/data/jaxan/audar-results-production-equal-final",
     "status": "local-only; Hugging Face destination pending correct-owner credential"
   }
 }

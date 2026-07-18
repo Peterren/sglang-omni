@@ -7,9 +7,9 @@
 - Latest baseline: `98b634332517ad2c9a88ff7f96880aae251a375c`, the current
   `main` tip on 2026-07-18 and merge commit for PR #1070.
 - Pre-T1 production integration:
-  `56714392f7d982ce0ce294ef39a547362b594132`.
+  `ec25335e9815ef53daa9c60239a1859804282270`.
 - Latest production integration:
-  `b22341e0d8dd7a3b90fc169713c92de3665e0079`.
+  `49cde765101bf3c4501dc1838f47ec23dbbf225b`.
 - Audar revision: `51f5635f32de3ab45ff28a4b958464532225b247`.
 - NeuCodec revision: `30c1fdd19e68aee65d542cf043750d4c0165893e`.
 - Runtime: one NVIDIA H100 80GB, driver 580.126.20, CUDA 13.0,
@@ -53,21 +53,23 @@ so each snapshot contributes 12 measured warm requests.
 
 | Metric | Pre-T1 | Latest | Delta |
 | --- | ---: | ---: | ---: |
-| Total latency | 1.0744 s | 1.0807 s | +0.59% |
-| RTF | 0.1885 | 0.1896 | +0.59% |
-| Engine wall latency | 1.0663 s | 1.0728 s | +0.60% |
-| Engine codes/s | 295.16 | 293.34 | -0.62% |
-| Cached reference stage | 0.349 ms | 0.383 ms | +0.034 ms |
-| Vocoder | 7.580 ms | 7.466 ms | -1.50% |
+| Total latency | 1.0779 s | 1.0764 s | -0.13% |
+| RTF | 0.1891 | 0.1888 | -0.13% |
+| Engine wall latency | 1.0696 s | 1.0685 s | -0.11% |
+| Engine codes/s | 293.95 | 294.43 | +0.16% |
+| Cached reference stage | 0.368 ms | 0.369 ms | +0.001 ms |
+| Vocoder | 7.903 ms | 7.463 ms | -5.56% |
 
-The latest integration is 0.59% slower in this sample. The two latest run
-medians were 1.0778 and 1.0835 seconds, wider than the pre/post difference, so
-this is not evidence of a performance regression. The AR implementation is the
-same serial llama.cpp decode in both branches.
+The latest integration is 0.13% faster in this sample. The two pre-T1 run
+medians were 1.0749 and 1.0808 seconds, wider than the pre/post difference, so
+the result is performance parity rather than evidence of a speedup or
+regression. The paired driver fixes the order to latest, pre-T1, pre-T1,
+latest. The AR implementation is the same serial llama.cpp decode in both
+branches.
 
-Steady-state H100 SM utilization was 61-63%. One GPU is already the minimum
-allocation; this workload is limited by serial GGUF decoding and Python token
-handling rather than available GPU count.
+Steady-state H100 SM utilization was 61-64%. One GPU is already the minimum
+allocation; this single-request latency workload is limited by serial GGUF
+decoding and Python token handling rather than available GPU count.
 
 ## Integration size
 
@@ -76,17 +78,19 @@ Tests and Markdown/RST files are excluded from this LOC table.
 | Capability tier | Pre-T1 | Latest | Reduction |
 | --- | ---: | ---: | ---: |
 | Minimal integration | 575 | 543 | 32 (5.6%) |
-| Production-enhanced integration | 820 | 656 | 164 (20.0%) |
-| Production capability premium | 245 | 113 | 132 (53.9%) |
+| Production-enhanced integration | 797 | 633 | 164 (20.6%) |
+| Production capability premium | 222 | 90 | 132 (59.5%) |
 
 The production tier includes bounded reference caching, composite keys,
-same-reference single-flight, different-reference concurrency, failure fan-out,
-path revalidation, cache statistics, and vocoder batching.
+same-reference single-flight, distinct-reference request isolation, serialized
+NeuCodec forwards, failure fan-out, path revalidation, and cache statistics.
+NeuCodec does not expose a tensor-level batch decode API here, so neither side
+claims vocoder batching or adds a batch wait.
 
 ## Source of truth
 
 - Lightweight summary: this file and `comparison.json` in Git.
-- Raw run outputs: `/data/jaxan/audar-results-latest-prod-comparison` on H100.
+- Raw run outputs: `/data/jaxan/audar-results-production-equal-final` on H100.
 - Prior ASR/translation outputs:
   `/data/jaxan/audar-results/seedtts` on H100.
 - Raw artifacts are local-only. Intended Hugging Face dataset destination is
