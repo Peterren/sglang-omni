@@ -181,6 +181,7 @@ def create_reference_encoder_executor(
     codec_revision: str = "main",
     cache_max_items: int = 256,
     cache_max_bytes: int = 64 * 1024 * 1024,
+    max_concurrency: int = 8,
 ) -> SimpleScheduler:
     device = _device(gpu_id)
     codec = _load_codec(codec_model, codec_revision, device)
@@ -209,7 +210,7 @@ def create_reference_encoder_executor(
         state.reference_audio = None
         return _store_state(payload, state)
 
-    return SimpleScheduler(_encode)
+    return SimpleScheduler(_encode, max_concurrency=max_concurrency)
 
 
 def _resolve_gguf(model_path: str, filename: str, revision: str) -> str:
