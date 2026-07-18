@@ -495,6 +495,15 @@ def test_colocated_defaults_populate_typed_memory_budgets(mock_launch_server):
         "talker_ar": pytest.approx(0.12),
         "code2wav": pytest.approx(0.02),
     }
+    plan = build_stage_placement_plan(config)
+    assert plan.gpus[0].total_gpu_memory_fraction == pytest.approx(0.94)
+    assert (
+        _stage(config, "thinker").runtime.sglang_server_args.mem_fraction_static is None
+    )
+    assert (
+        _stage(config, "talker_ar").runtime.sglang_server_args.mem_fraction_static
+        is None
+    )
 
 
 def test_colocated_mem_fractions_update_typed_budgets(mock_launch_server):
@@ -516,6 +525,18 @@ def test_colocated_mem_fractions_update_typed_budgets(mock_launch_server):
     assert thinker.runtime.sglang_server_args.mem_fraction_static == pytest.approx(0.55)
     assert talker.runtime.resources.total_gpu_memory_fraction == pytest.approx(0.20)
     assert talker.runtime.sglang_server_args.mem_fraction_static == pytest.approx(0.20)
+
+
+def test_colocated_global_mem_fraction_rejects_overcommit(mock_launch_server):
+    mock_launch_server.side_effect = lambda config, **_: build_stage_placement_plan(
+        config
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="total_gpu_memory_fraction=1.070 exceeds placement limit 1.000",
+    ):
+        _launch_speech_server(_make_args(colocated=True, mem_fraction_static=0.5))
 
 
 def test_colocated_rejects_conflicting_stage_gpu(mock_launch_server):
