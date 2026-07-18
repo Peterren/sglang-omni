@@ -9,7 +9,6 @@ from ._common import (
     add_mem_fraction,
     add_model_path,
     add_offline_args,
-    add_relay_backend,
     add_server_args,
     apply_stage_factory_updates,
     parser,
@@ -134,7 +133,6 @@ def _build_ming_text_server_parser() -> argparse.ArgumentParser:
         ),
     )
     add_mem_fraction(target, "Set mem_fraction_static for the thinker stage.")
-    add_relay_backend(target, choices=("shm", "nccl", "nixl"))
     add_server_args(target, model_name="ming-omni")
     return target
 
@@ -169,10 +167,7 @@ def launch_ming_text_server(args: argparse.Namespace) -> None:
         raise ValueError("--image-encoder-tp must be >= 1")
     validate_fraction("--mem-fraction-static", args.mem_fraction_static)
 
-    config = MingOmniPipelineConfig(
-        model_path=args.model_path,
-        relay_backend=args.relay_backend,
-    )
+    config = MingOmniPipelineConfig(model_path=args.model_path)
     if args.thinker_only:
         if args.gpu_audio_encoder is not None or args.gpu_image_encoder is not None:
             raise ValueError(
@@ -255,7 +250,6 @@ def _build_ming_speech_server_parser() -> argparse.ArgumentParser:
             "--gpu-thinker is the first GPU rank."
         ),
     )
-    add_relay_backend(target)
     target.add_argument(
         "--voice",
         type=str,
@@ -298,17 +292,11 @@ def launch_ming_speech_server(args: argparse.Namespace) -> None:
         raise ValueError(f"--tp-size must be >= 1, got {args.tp_size}")
 
     if args.enable_streaming_tts:
-        config = MingOmniStreamingSpeechPipelineConfig(
-            model_path=args.model_path,
-            relay_backend=args.relay_backend,
-        )
+        config = MingOmniStreamingSpeechPipelineConfig(model_path=args.model_path)
         talker_stage = "talker_stream"
         validate_gpus = config._validate_talker_stream_gpu_not_in_thinker_tp_range
     else:
-        config = MingOmniSpeechPipelineConfig(
-            model_path=args.model_path,
-            relay_backend=args.relay_backend,
-        )
+        config = MingOmniSpeechPipelineConfig(model_path=args.model_path)
         talker_stage = "talker"
         validate_gpus = config._validate_talker_gpu_not_in_thinker_tp_range
 
@@ -412,10 +400,7 @@ async def run_ming_speech(args: argparse.Namespace) -> None:
         raise ValueError(f"--tp-size must be >= 1, got {args.tp_size}")
     validate_fraction("--mem-fraction-static", args.mem_fraction_static)
 
-    config = MingOmniSpeechPipelineConfig(
-        model_path=args.model_path,
-        relay_backend=args.relay_backend,
-    )
+    config = MingOmniSpeechPipelineConfig(model_path=args.model_path)
     set_stage_tp_size(config, "thinker", tp_size)
     thinker_gpus: int | list[int] = args.gpu_thinker
     if tp_size > 1:
@@ -490,7 +475,6 @@ def _build_ming_text_parser() -> argparse.ArgumentParser:
         ),
     )
     add_mem_fraction(target, "Set mem_fraction_static for the thinker stage.")
-    add_relay_backend(target)
     return target
 
 
@@ -498,10 +482,7 @@ def build_ming_text_config(args: argparse.Namespace) -> Any:
     from sglang_omni.models.ming_omni.config import MingOmniPipelineConfig
 
     validate_fraction("--mem-fraction-static", args.mem_fraction_static)
-    config = MingOmniPipelineConfig(
-        model_path=args.model_path,
-        relay_backend=args.relay_backend,
-    )
+    config = MingOmniPipelineConfig(model_path=args.model_path)
     overrides: dict[str, object] = {}
     if args.cpu_offload_gb:
         overrides["cpu_offload_gb"] = args.cpu_offload_gb

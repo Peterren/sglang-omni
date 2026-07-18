@@ -9,7 +9,6 @@ from ._common import (
     add_mem_fraction,
     add_model_path,
     add_offline_args,
-    add_relay_backend,
     add_server_args,
     apply_stage_factory_updates,
     parser,
@@ -132,7 +131,6 @@ def _build_qwen_text_server_parser() -> argparse.ArgumentParser:
         default=0,
         help="GB of thinker weights to offload to CPU.",
     )
-    add_relay_backend(target, choices=("shm", "nccl", "nixl"))
     add_mem_fraction(
         target,
         "Set mem_fraction_static for the thinker stage.",
@@ -175,10 +173,7 @@ def launch_qwen_text_server(args: argparse.Namespace) -> None:
             f"--encoder-mem-reserve must be in [0, 1), got {args.encoder_mem_reserve}"
         )
 
-    config = Qwen3OmniPipelineConfig(
-        model_path=args.model_path,
-        relay_backend=args.relay_backend,
-    )
+    config = Qwen3OmniPipelineConfig(model_path=args.model_path)
     thinker_updates: dict[str, object] = {}
     preprocessing_updates: dict[str, object] = {}
     if args.thinker_max_seq_len is not None:
@@ -268,7 +263,6 @@ def _build_qwen_speech_server_parser() -> argparse.ArgumentParser:
             "Length must equal --thinker-tp-size and overrides --gpu-thinker."
         ),
     )
-    add_relay_backend(target)
     target.add_argument(
         "--thinker-max-seq-len",
         type=int,
@@ -389,10 +383,7 @@ def launch_qwen_speech_server(args: argparse.Namespace) -> None:
         if args.colocated
         else Qwen3OmniSpeechPipelineConfig
     )
-    config = config_cls(
-        model_path=args.model_path,
-        relay_backend=args.relay_backend,
-    )
+    config = config_cls(model_path=args.model_path)
     set_stage_gpu(config, "image_encoder", gpu_image_encoder)
     set_stage_gpu(config, "audio_encoder", gpu_audio_encoder)
 
@@ -492,10 +483,7 @@ def _build_qwen_speech_parser() -> argparse.ArgumentParser:
 async def run_qwen_speech(args: argparse.Namespace) -> None:
     from sglang_omni.models.qwen3_omni.config import Qwen3OmniSpeechPipelineConfig
 
-    config = Qwen3OmniSpeechPipelineConfig(
-        model_path=args.model_path,
-        relay_backend=args.relay_backend,
-    )
+    config = Qwen3OmniSpeechPipelineConfig(model_path=args.model_path)
     if args.gpu_code_predictor not in (None, args.gpu_talker):
         raise ValueError(
             "Qwen3 speech pipeline does not expose a separate code_predictor "

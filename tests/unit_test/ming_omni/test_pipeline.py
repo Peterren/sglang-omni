@@ -114,7 +114,6 @@ def test_ming_speech_launcher_places_thinker_tp_and_talker(monkeypatch) -> None:
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=4,
         gpu_thinker=0,
         gpu_talker=4,
@@ -239,7 +238,6 @@ def test_ming_text_launcher_places_tp_ranks_on_distinct_gpus(monkeypatch) -> Non
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=3,
         quantization=None,
         cpu_offload_gb=0,
@@ -278,7 +276,6 @@ def test_ming_text_launcher_rejects_nonpositive_tp_before_config(monkeypatch) ->
     for tp_size in (0, -1):
         args = SimpleNamespace(
             model_path="dummy",
-            relay_backend="shm",
             tp_size=tp_size,
             quantization=None,
             cpu_offload_gb=0,
@@ -310,7 +307,6 @@ def test_ming_text_launcher_allows_encoder_gpu_overrides(monkeypatch) -> None:
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=4,
         quantization=None,
         cpu_offload_gb=0,
@@ -349,7 +345,6 @@ def test_ming_text_launcher_can_build_thinker_only_smoke_pipeline(
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=4,
         quantization=None,
         cpu_offload_gb=0,
@@ -389,7 +384,6 @@ def test_ming_text_launcher_configures_image_encoder_tp(monkeypatch) -> None:
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=1,
         quantization=None,
         cpu_offload_gb=0,
@@ -421,7 +415,6 @@ def test_ming_text_launcher_rejects_image_encoder_tp_zero(monkeypatch) -> None:
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=1,
         quantization=None,
         cpu_offload_gb=0,
@@ -451,7 +444,6 @@ def test_ming_text_launcher_rejects_thinker_only_with_image_encoder_tp(
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=1,
         quantization=None,
         cpu_offload_gb=0,
@@ -481,7 +473,6 @@ def test_ming_text_launcher_requires_gpu_ids_for_image_encoder_tp(
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=1,
         quantization=None,
         cpu_offload_gb=0,
@@ -509,7 +500,6 @@ def test_ming_text_launcher_rejects_mismatched_gpu_count(monkeypatch) -> None:
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=1,
         quantization=None,
         cpu_offload_gb=0,
@@ -537,7 +527,6 @@ def test_ming_text_launcher_rejects_duplicate_gpu_ids(monkeypatch) -> None:
 
     args = SimpleNamespace(
         model_path="dummy",
-        relay_backend="shm",
         tp_size=1,
         quantization=None,
         cpu_offload_gb=0,

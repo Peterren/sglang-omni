@@ -6,7 +6,7 @@ import asyncio
 import logging
 import time
 import wave
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -38,20 +38,6 @@ def add_model_path(
         type=str,
         default=default,
         help="Hugging Face model id or local path",
-    )
-
-
-def add_relay_backend(
-    target: argparse.ArgumentParser,
-    *,
-    choices: Sequence[str] = ("nixl", "shm"),
-) -> None:
-    target.add_argument(
-        "--relay-backend",
-        type=str,
-        default="shm",
-        choices=choices,
-        help="Relay backend for inter-stage data transfer",
     )
 
 
@@ -114,7 +100,6 @@ def add_offline_args(
         default=0.7,
         help="Sampling temperature (default: 0.7).",
     )
-    add_relay_backend(target)
     output_help = "Output WAV path; omit to skip saving audio."
     if output is not None:
         output_help = f"Output WAV path (default: {output})."
