@@ -3,6 +3,10 @@
 
 from __future__ import annotations
 
+import concurrent.futures
+import json
+import logging
+import threading
 import time
 from dataclasses import dataclass
 from functools import lru_cache
@@ -31,6 +35,8 @@ REFERENCE_SAMPLE_RATE = 16000
 OUTPUT_SAMPLE_RATE = 24000
 MIN_REFERENCE_SECONDS = 5.0
 MAX_REFERENCE_SECONDS = 15.0
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -112,6 +118,186 @@ def _encode_reference(codec: Any, device: str, item: _ReferenceInput) -> torch.T
     return codes.detach().to(device="cpu", dtype=torch.long)
 
 
+def _fresh_exception(exc: BaseException) -> BaseException:
+    try:
+        fresh = type(exc)(*getattr(exc, "args", ()))
+    except Exception:
+        fresh = RuntimeError(str(exc))
+    for note in getattr(exc, "__notes__", ()):
+        add_note = getattr(fresh, "add_note", None)
+        if callable(add_note):
+            add_note(note)
+    return fresh
+
+
+class _AudarReferenceEncodeService:
+    _LOG_INTERVAL_S = 60.0
+
+    def __init__(
+        self,
+        *,
+        codec: Any,
+        device: str,
+        codec_model: str,
+        codec_revision: str,
+        max_items: int | None = 256,
+        max_bytes: int | None = 64 * 1024 * 1024,
+        timeout_s: float = 130.0,
+    ) -> None:
+        if max_items is not None and max_items < 1:
+            raise ValueError(f"max_items must be >= 1, got {max_items}")
+        if max_bytes is not None and max_bytes < 1:
+            raise ValueError(f"max_bytes must be >= 1, got {max_bytes}")
+        self._codec = codec
+        self._device = device
+        self._codec_model = codec_model
+        self._codec_revision = codec_revision
+        self._config_hash = hash_bytes(
+            f"sample_rate:{REFERENCE_SAMPLE_RATE}".encode("utf-8")
+        )
+        self._cache = StageOutputCache(
+            max_size=max_items,
+            max_bytes=max_bytes,
+            cache_device="cpu",
+        )
+        self._timeout_s = float(timeout_s)
+        self._lock = threading.Lock()
+        self._inflight: dict[str, concurrent.futures.Future[torch.Tensor]] = {}
+        self._hits = 0
+        self._misses = 0
+        self._merged = 0
+        self._failed = 0
+        self._uncacheable = 0
+        self._last_log_time = 0.0
+
+    def _cache_key(self, item: _ReferenceInput) -> tuple[str, str] | None:
+        input_key = _reference_key(item)
+        if input_key is None:
+            return None
+        key = json.dumps(
+            {
+                "artifact_kind": "audar_reference_codes",
+                "encoder_config_hash": self._config_hash,
+                "encoder_id": "neucodec",
+                "input_key": input_key,
+                "model_id": self._codec_model,
+                "model_revision": self._codec_revision,
+                "options_key": "",
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return key, input_key
+
+    def get_or_encode(self, raw_input: Any, *, desc: str | None = None) -> torch.Tensor:
+        item = _normalize_reference(raw_input)
+        key_parts = self._cache_key(item)
+        if key_parts is None:
+            with self._lock:
+                self._uncacheable += 1
+            try:
+                return _encode_reference(self._codec, self._device, item)
+            except BaseException as exc:
+                self._add_exception_note(exc, desc)
+                with self._lock:
+                    self._failed += 1
+                raise
+
+        cache_key, input_key = key_parts
+        leader: concurrent.futures.Future[torch.Tensor] | None = None
+        follower: concurrent.futures.Future[torch.Tensor] | None = None
+        stored: torch.Tensor | None = None
+        with self._lock:
+            stored = self._cache.get(cache_key)
+            if stored is not None:
+                self._hits += 1
+            elif cache_key in self._inflight:
+                self._merged += 1
+                follower = self._inflight[cache_key]
+            else:
+                self._misses += 1
+                leader = concurrent.futures.Future()
+                self._inflight[cache_key] = leader
+
+        if stored is not None:
+            self._maybe_log()
+            return stored.detach().clone().long()
+
+        if follower is not None:
+            try:
+                stored = follower.result(timeout=self._timeout_s)
+            except concurrent.futures.TimeoutError as exc:
+                self._add_exception_note(exc, desc)
+                raise
+            except BaseException as exc:
+                self._add_exception_note(exc, desc)
+                raise _fresh_exception(exc) from exc
+            return stored.detach().clone().long()
+
+        assert leader is not None
+        try:
+            artifact = _encode_reference(self._codec, self._device, item)
+            stored = artifact.detach().to(device="cpu", dtype=torch.int32).clone()
+            should_cache = (
+                item.source_kind != "path" or _reference_key(item) == input_key
+            )
+            with self._lock:
+                if should_cache:
+                    self._cache.put(cache_key, stored)
+                self._inflight.pop(cache_key, None)
+        except BaseException as exc:
+            self._add_exception_note(exc, desc)
+            with self._lock:
+                self._inflight.pop(cache_key, None)
+                self._failed += 1
+            leader.set_exception(exc)
+            raise
+        leader.set_result(stored)
+        self._maybe_log()
+        return stored.detach().clone().long()
+
+    def stats(self) -> dict[str, int]:
+        with self._lock:
+            return {
+                "hits": self._hits,
+                "misses": self._misses,
+                "merged": self._merged,
+                "entries": len(self._cache),
+                "bytes": self._cache.current_bytes,
+                "evictions": self._cache.eviction_count,
+                "failed": self._failed,
+                "uncacheable": self._uncacheable,
+            }
+
+    @staticmethod
+    def _add_exception_note(exc: BaseException, desc: str | None) -> None:
+        if not desc:
+            return
+        add_note = getattr(exc, "add_note", None)
+        if callable(add_note):
+            add_note(f"Reference encode context: {desc}")
+
+    def _maybe_log(self) -> None:
+        now = time.monotonic()
+        if now - self._last_log_time < self._LOG_INTERVAL_S:
+            return
+        with self._lock:
+            if now - self._last_log_time < self._LOG_INTERVAL_S:
+                return
+            self._last_log_time = now
+            stats = {
+                "hits": self._hits,
+                "misses": self._misses,
+                "merged": self._merged,
+                "entries": len(self._cache),
+                "bytes": self._cache.current_bytes,
+                "evictions": self._cache.eviction_count,
+                "failed": self._failed,
+                "uncacheable": self._uncacheable,
+            }
+        logger.info("Audar-TTS reference encode stats: %s", stats)
+
+
 def create_preprocessing_executor() -> SimpleScheduler:
     return SimpleScheduler(
         lambda payload: _store_state(payload, build_audar_state(payload))
@@ -125,25 +311,24 @@ def create_reference_encoder_executor(
     codec_revision: str = "main",
     cache_max_items: int = 256,
     cache_max_bytes: int = 64 * 1024 * 1024,
+    max_concurrency: int = 8,
 ) -> SimpleScheduler:
     device = _device(gpu_id)
     codec = _load_codec(codec_model, codec_revision, device)
-    cache = StageOutputCache(
-        max_size=cache_max_items,
+    reference_service = _AudarReferenceEncodeService(
+        codec=codec,
+        device=device,
+        codec_model=codec_model,
+        codec_revision=codec_revision,
+        max_items=cache_max_items,
         max_bytes=cache_max_bytes,
-        cache_device="cpu",
     )
 
     def _encode(payload: StagePayload) -> StagePayload:
         state = _load_state(payload)
-        item = _normalize_reference(state.reference_audio)
-        key = _reference_key(item)
-        cached = cache.get(key)
-        codes = cached.clone().long() if cached is not None else None
-        if codes is None:
-            codes = _encode_reference(codec, device, item)
-            if _reference_key(item) == key:
-                cache.put(key, codes.to(torch.int32))
+        codes = reference_service.get_or_encode(
+            state.reference_audio, desc="Audar-TTS reference"
+        )
         state.prompt = build_prompt(
             state.target_text, state.reference_text, codes.tolist()
         )
@@ -152,7 +337,7 @@ def create_reference_encoder_executor(
         state.reference_audio = None
         return _store_state(payload, state)
 
-    return SimpleScheduler(_encode)
+    return SimpleScheduler(_encode, max_concurrency=max_concurrency)
 
 
 def _resolve_gguf(model_path: str, filename: str, revision: str) -> str:

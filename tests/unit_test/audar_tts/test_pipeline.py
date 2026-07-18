@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import io
 import sys
+import threading
+import time
 import types
 import wave
 from typing import Any
@@ -63,13 +66,13 @@ def make_payload(
     )
 
 
-def five_second_wav() -> bytes:
+def five_second_wav(sample_value: int = 0) -> bytes:
     output = io.BytesIO()
     with wave.open(output, "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
         wav.setframerate(16000)
-        wav.writeframes(np.zeros(80000, dtype="<i2").tobytes())
+        wav.writeframes(np.full(80000, sample_value, dtype="<i2").tobytes())
     return output.getvalue()
 
 
@@ -213,6 +216,206 @@ def test_reference_encoder_builds_prompt_and_caches(
     assert first.reference_audio is None
 
 
+def test_reference_encoder_singleflights_same_reference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    codec = FakeCodec()
+    encode_started = threading.Event()
+    release_encode = threading.Event()
+    second_normalized = threading.Event()
+    normalize_lock = threading.Lock()
+    normalize_calls = 0
+    original_normalize = stages._normalize_reference
+
+    def normalize(raw_input: Any):
+        nonlocal normalize_calls
+        item = original_normalize(raw_input)
+        with normalize_lock:
+            normalize_calls += 1
+            if normalize_calls == 2:
+                second_normalized.set()
+        return item
+
+    def encode_code(waveform: torch.Tensor) -> torch.Tensor:
+        codec.encode_calls += 1
+        encode_started.set()
+        assert release_encode.wait(timeout=2)
+        return torch.tensor([[[7, 8, 9]]])
+
+    monkeypatch.setattr(stages, "_normalize_reference", normalize)
+    monkeypatch.setattr(codec, "encode_code", encode_code)
+    monkeypatch.setattr(stages, "_load_codec", lambda *args, **kwargs: codec)
+    scheduler = stages.create_reference_encoder_executor(
+        gpu_id=None, max_concurrency=2
+    )
+    reference_audio = {"bytes": five_second_wav()}
+
+    def encode(request_id: str) -> AudarTTSState:
+        payload = make_payload(
+            state=AudarTTSState(
+                target_text="target",
+                reference_text="reference",
+                reference_audio=reference_audio,
+            ),
+            request_id=request_id,
+        )
+        return AudarTTSState.from_dict(scheduler._fn(payload).data)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(encode, "first")
+        assert encode_started.wait(timeout=2)
+        second = executor.submit(encode, "second")
+        assert second_normalized.wait(timeout=2)
+        release_encode.set()
+        results = [first.result(timeout=2), second.result(timeout=2)]
+
+    assert scheduler._max_concurrency == 2
+    assert codec.encode_calls == 1
+    assert results[0].prompt == results[1].prompt
+
+
+def test_reference_encoder_keeps_different_references_independent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    codec = FakeCodec()
+    encode_barrier = threading.Barrier(2)
+    encode_lock = threading.Lock()
+
+    def encode_code(waveform: torch.Tensor) -> torch.Tensor:
+        with encode_lock:
+            codec.encode_calls += 1
+        encode_barrier.wait(timeout=2)
+        return torch.tensor([[[7, 8, 9]]])
+
+    monkeypatch.setattr(codec, "encode_code", encode_code)
+    monkeypatch.setattr(stages, "_load_codec", lambda *args, **kwargs: codec)
+    scheduler = stages.create_reference_encoder_executor(
+        gpu_id=None, max_concurrency=2
+    )
+
+    def encode(request_id: str, wav_bytes: bytes) -> AudarTTSState:
+        payload = make_payload(
+            state=AudarTTSState(
+                target_text="target",
+                reference_text="reference",
+                reference_audio={"bytes": wav_bytes},
+            ),
+            request_id=request_id,
+        )
+        return AudarTTSState.from_dict(scheduler._fn(payload).data)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(encode, "first", five_second_wav(0)),
+            executor.submit(encode, "second", five_second_wav(1)),
+        ]
+        results = [future.result(timeout=3) for future in futures]
+
+    assert codec.encode_calls == 2
+    assert all(result.prompt for result in results)
+
+
+def test_reference_encoder_propagates_singleflight_failure() -> None:
+    codec = FakeCodec()
+    encode_started = threading.Event()
+    release_encode = threading.Event()
+
+    def encode_code(waveform: torch.Tensor) -> torch.Tensor:
+        codec.encode_calls += 1
+        encode_started.set()
+        assert release_encode.wait(timeout=2)
+        raise RuntimeError("codec failed")
+
+    codec.encode_code = encode_code
+    service = stages._AudarReferenceEncodeService(
+        codec=codec,
+        device="cpu",
+        codec_model="codec",
+        codec_revision="revision",
+    )
+    reference_audio = {"bytes": five_second_wav()}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        leader = executor.submit(service.get_or_encode, reference_audio)
+        assert encode_started.wait(timeout=2)
+        follower = executor.submit(service.get_or_encode, reference_audio)
+        deadline = time.monotonic() + 2
+        while service.stats()["merged"] < 1 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert service.stats()["merged"] == 1
+        release_encode.set()
+        for future in (leader, follower):
+            with pytest.raises(RuntimeError, match="codec failed"):
+                future.result(timeout=2)
+
+    assert codec.encode_calls == 1
+    assert service.stats()["failed"] == 1
+
+
+def test_reference_encoder_revalidates_changed_path(tmp_path) -> None:
+    codec = FakeCodec()
+    encode_started = threading.Event()
+    release_encode = threading.Event()
+    reference_path = tmp_path / "reference.wav"
+    original_audio = five_second_wav(0)
+    changed_audio = five_second_wav(1)
+    reference_path.write_bytes(original_audio)
+
+    def encode_code(waveform: torch.Tensor) -> torch.Tensor:
+        codec.encode_calls += 1
+        if codec.encode_calls == 1:
+            encode_started.set()
+            assert release_encode.wait(timeout=2)
+        return torch.tensor([[[7, 8, 9]]])
+
+    codec.encode_code = encode_code
+    service = stages._AudarReferenceEncodeService(
+        codec=codec,
+        device="cpu",
+        codec_model="codec",
+        codec_revision="revision",
+    )
+    reference_audio = {"audio_path": str(reference_path)}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        first = executor.submit(service.get_or_encode, reference_audio)
+        assert encode_started.wait(timeout=2)
+        reference_path.write_bytes(changed_audio)
+        release_encode.set()
+        first.result(timeout=2)
+
+    service.get_or_encode(reference_audio)
+    reference_path.write_bytes(original_audio)
+    service.get_or_encode(reference_audio)
+
+    assert codec.encode_calls == 3
+
+
+def test_reference_encoder_reports_cache_stats() -> None:
+    codec = FakeCodec()
+    service = stages._AudarReferenceEncodeService(
+        codec=codec,
+        device="cpu",
+        codec_model="codec",
+        codec_revision="revision",
+    )
+    reference_audio = {"bytes": five_second_wav()}
+
+    service.get_or_encode(reference_audio)
+    service.get_or_encode(reference_audio)
+
+    assert service.stats() == {
+        "hits": 1,
+        "misses": 1,
+        "merged": 0,
+        "entries": 1,
+        "bytes": 12,
+        "evictions": 0,
+        "failed": 0,
+        "uncacheable": 0,
+    }
+
+
 def test_codec_model_is_shared_between_stages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -344,3 +547,25 @@ def test_vocoder_emits_24khz_audio_payload(
         "total_tokens": 5,
         "engine_time_s": 0.25,
     }
+
+
+def test_vocoder_batch_callback_preserves_each_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    codec = FakeCodec()
+    monkeypatch.setattr(stages, "_load_codec", lambda *args, **kwargs: codec)
+    scheduler = stages.create_vocoder_executor(gpu_id=None, max_batch_size=4)
+    payloads = [
+        make_payload(
+            request_id=f"request-{index}",
+            state=AudarTTSState(audio_codes=[index + 1, index + 2]),
+        )
+        for index in range(2)
+    ]
+
+    results = asyncio.run(scheduler._batch_fn(payloads))
+
+    assert scheduler._max_batch_size == 4
+    assert codec.decode_calls == 2
+    assert len(results) == 2
+    assert all(result.data["sample_rate"] == 24000 for result in results)
