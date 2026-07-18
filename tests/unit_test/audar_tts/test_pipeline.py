@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import concurrent.futures
 import io
 import sys
@@ -16,6 +17,9 @@ import numpy as np
 import pytest
 import torch
 
+from sglang_omni.client.client import Client
+from sglang_omni.comm import stage_io
+from sglang_omni.comm.data_ref import DataRef, TransportKind
 from sglang_omni.models.audar_tts import stages
 from sglang_omni.models.audar_tts.config import AudarTTSPipelineConfig
 from sglang_omni.models.audar_tts.payload_types import AudarTTSState
@@ -23,8 +27,11 @@ from sglang_omni.models.audar_tts.protocol import build_prompt, parse_speech_cod
 from sglang_omni.models.audar_tts.request_builders import build_audar_state
 from sglang_omni.models.model_capabilities import get_model_capabilities
 from sglang_omni.models.registry import PIPELINE_CONFIG_REGISTRY
-from sglang_omni.proto import OmniRequest, StagePayload
+from sglang_omni.pipeline.control_plane import deserialize_message, serialize_message
+from sglang_omni.proto import DataReadyMessage, OmniRequest, StagePayload
 from sglang_omni.serve.protocol import SUPPORTED_TTS_LANGUAGES
+from sglang_omni.serve.speech_service import SpeechRequestValidator
+from tests.unit_test.fixtures.pipeline_fakes import FakeRelay
 
 
 class FakeCodec:
@@ -108,7 +115,7 @@ def test_config_and_state_contracts() -> None:
     capabilities = get_model_capabilities("AudarTTSForConditionalGeneration")
     assert capabilities is not None
     assert capabilities.supports_reference_audio is True
-    assert capabilities.supports_batch_vocoder is True
+    assert capabilities.supports_batch_vocoder is False
     assert capabilities.supports_streaming_vocoder is False
     assert AudarTTSState().to_dict() == {
         "sample_rate": 24000,
@@ -170,6 +177,104 @@ def test_request_lowering_keeps_audar_defaults_unless_explicit() -> None:
         "repetition_penalty": 1.1,
         "seed": 17,
     }
+
+
+def test_openai_speech_request_lowers_to_audar_state() -> None:
+    wav_bytes = five_second_wav()
+    prepared = SpeechRequestValidator(
+        default_model="audarai/Audar-TTS-V1-Turbo"
+    ).parse_generation_request(
+        {
+            "input": "target text",
+            "response_format": "pcm",
+            "ref_audio": (
+                "data:audio/wav;base64," + base64.b64encode(wav_bytes).decode("ascii")
+            ),
+            "ref_text": "reference transcript",
+            "max_new_tokens": 128,
+            "temperature": 0.6,
+            "top_k": 20,
+            "seed": 17,
+        }
+    )
+    validator = SpeechRequestValidator(default_model="audarai/Audar-TTS-V1-Turbo")
+    generation_request = validator.build_generate_request(
+        prepared.request,
+        validate=False,
+        reference_descriptors=prepared.reference_descriptors,
+    )
+    payload = StagePayload(
+        request_id="request",
+        request=Client._build_omni_request(generation_request),
+        data={},
+    )
+
+    state = build_audar_state(payload)
+
+    assert state.target_text == "target text"
+    assert state.reference_text == "reference transcript"
+    assert state.reference_audio == {
+        "data": base64.b64encode(wav_bytes).decode("ascii"),
+        "media_type": "audio/wav",
+    }
+    assert state.generation_kwargs == {
+        "max_new_tokens": 128,
+        "temperature": 0.6,
+        "top_k": 20,
+        "top_p": 0.9,
+        "repetition_penalty": 1.1,
+        "seed": 17,
+    }
+
+
+@pytest.mark.parametrize(
+    "reference_audio",
+    [
+        {"bytes": five_second_wav()},
+        {
+            "data": base64.b64encode(five_second_wav()).decode("ascii"),
+            "media_type": "audio/wav",
+        },
+    ],
+)
+def test_reference_audio_survives_control_plane_and_relay(
+    reference_audio: dict[str, Any],
+) -> None:
+    async def round_trip() -> AudarTTSState:
+        relay = FakeRelay()
+        payload = make_payload(
+            state=AudarTTSState(
+                target_text="target",
+                reference_text="reference",
+                reference_audio=reference_audio,
+            )
+        )
+        data_ref, operation = await stage_io.write_payload(
+            relay,
+            payload.request_id,
+            payload,
+            transport=TransportKind.SHM,
+            from_stage="preprocessing",
+            to_stage="reference_encoder",
+        )
+        await operation.wait_for_completion()
+        message = DataReadyMessage(
+            request_id=payload.request_id,
+            from_stage="preprocessing",
+            to_stage="reference_encoder",
+            data_ref=data_ref.to_dict(),
+        )
+        restored_message = deserialize_message(serialize_message(message))
+        restored_payload = await stage_io.read_payload(
+            relay,
+            payload.request_id,
+            DataRef.from_dict(restored_message.data_ref),
+        )
+        return AudarTTSState.from_dict(restored_payload.data)
+
+    restored = asyncio.run(round_trip())
+
+    assert restored.reference_audio == reference_audio
 
 
 def test_request_lowering_requires_one_transcribed_reference() -> None:
@@ -282,17 +387,23 @@ def test_reference_encoder_singleflights_same_reference(
     assert results[0].prompt == results[1].prompt
 
 
-def test_reference_encoder_keeps_different_references_independent(
+def test_reference_encoder_serializes_codec_for_different_references(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     codec = FakeCodec()
-    encode_barrier = threading.Barrier(2)
     encode_lock = threading.Lock()
+    active_calls = 0
+    max_active_calls = 0
 
     def encode_code(waveform: torch.Tensor) -> torch.Tensor:
+        nonlocal active_calls, max_active_calls
         with encode_lock:
             codec.encode_calls += 1
-        encode_barrier.wait(timeout=2)
+            active_calls += 1
+            max_active_calls = max(max_active_calls, active_calls)
+        time.sleep(0.02)
+        with encode_lock:
+            active_calls -= 1
         return torch.tensor([[[7, 8, 9]]])
 
     monkeypatch.setattr(codec, "encode_code", encode_code)
@@ -318,6 +429,7 @@ def test_reference_encoder_keeps_different_references_independent(
         results = [future.result(timeout=3) for future in futures]
 
     assert codec.encode_calls == 2
+    assert max_active_calls == 1
     assert all(result.prompt for result in results)
 
 
@@ -417,7 +529,7 @@ def test_reference_encoder_reports_cache_stats() -> None:
     }
 
 
-def test_codec_model_is_shared_between_stages(
+def test_codec_model_and_lock_are_shared_between_stages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     codec = FakeCodec()
@@ -434,13 +546,18 @@ def test_codec_model_is_shared_between_stages(
         sys.modules, "neucodec", types.SimpleNamespace(NeuCodec=FakeNeuCodec)
     )
     stages._load_codec.cache_clear()
+    stages._codec_lock.cache_clear()
     try:
         first = stages._load_codec("codec", "revision", "cpu")
         second = stages._load_codec("codec", "revision", "cpu")
+        first_lock = stages._codec_lock("codec", "revision", "cpu")
+        second_lock = stages._codec_lock("codec", "revision", "cpu")
     finally:
         stages._load_codec.cache_clear()
+        stages._codec_lock.cache_clear()
 
     assert first is second is codec
+    assert first_lock is second_lock
     assert loads == 1
 
 
@@ -550,23 +667,12 @@ def test_vocoder_emits_24khz_audio_payload(
     }
 
 
-def test_vocoder_batch_callback_preserves_each_payload(
+def test_vocoder_does_not_claim_batching_without_tensor_batch_decode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     codec = FakeCodec()
     monkeypatch.setattr(stages, "_load_codec", lambda *args, **kwargs: codec)
-    scheduler = stages.create_vocoder_executor(gpu_id=None, max_batch_size=4)
-    payloads = [
-        make_payload(
-            request_id=f"request-{index}",
-            state=AudarTTSState(audio_codes=[index + 1, index + 2]),
-        )
-        for index in range(2)
-    ]
+    scheduler = stages.create_vocoder_executor(gpu_id=None)
 
-    results = asyncio.run(scheduler._batch_fn(payloads))
-
-    assert scheduler._max_batch_size == 4
-    assert codec.decode_calls == 2
-    assert len(results) == 2
-    assert all(result.data["sample_rate"] == 24000 for result in results)
+    assert scheduler._batch_fn is None
+    assert scheduler._max_batch_size == 1
