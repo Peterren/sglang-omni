@@ -255,9 +255,7 @@ def test_reference_encoder_singleflights_same_reference(
     monkeypatch.setattr(stages, "_normalize_reference", normalize)
     monkeypatch.setattr(codec, "encode_code", encode_code)
     monkeypatch.setattr(stages, "_load_codec", lambda *args, **kwargs: codec)
-    scheduler = stages.create_reference_encoder_executor(
-        gpu_id=None, max_concurrency=2
-    )
+    scheduler = stages.create_reference_encoder_executor(gpu_id=None, max_concurrency=2)
     reference_audio = {"bytes": five_second_wav()}
 
     def encode(request_id: str) -> AudarTTSState:
@@ -299,9 +297,7 @@ def test_reference_encoder_keeps_different_references_independent(
 
     monkeypatch.setattr(codec, "encode_code", encode_code)
     monkeypatch.setattr(stages, "_load_codec", lambda *args, **kwargs: codec)
-    scheduler = stages.create_reference_encoder_executor(
-        gpu_id=None, max_concurrency=2
-    )
+    scheduler = stages.create_reference_encoder_executor(gpu_id=None, max_concurrency=2)
 
     def encode(request_id: str, wav_bytes: bytes) -> AudarTTSState:
         payload = make_payload(
