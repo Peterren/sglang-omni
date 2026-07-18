@@ -57,7 +57,7 @@ def _run_snapshot(
     python: str,
     repeats: int,
 ) -> dict[str, Any]:
-    runner = checkout / "tests/benchmark/audar_tts/run_pipeline_benchmark.py"
+    runner = checkout / "benchmarks/audar_tts/run_pipeline_benchmark.py"
     if not runner.is_file():
         raise FileNotFoundError(f"benchmark runner not found: {runner}")
     environment = os.environ.copy()
