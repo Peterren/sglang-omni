@@ -7,6 +7,7 @@ import concurrent.futures
 import io
 import sys
 import threading
+import time
 import types
 import wave
 from typing import Any
@@ -322,6 +323,102 @@ def test_reference_encoder_keeps_different_references_independent(
 
     assert codec.encode_calls == 2
     assert all(result.prompt for result in results)
+
+
+def _reference_service(codec: FakeCodec) -> Any:
+    hook = stages._AudarReferenceEncodeHook(
+        codec=codec,
+        device="cpu",
+        codec_model="codec",
+        codec_revision="revision",
+    )
+    return stages.ReferenceEncodeService(hook)
+
+
+def test_reference_encoder_propagates_singleflight_failure() -> None:
+    codec = FakeCodec()
+    encode_started = threading.Event()
+    release_encode = threading.Event()
+
+    def encode_code(waveform: torch.Tensor) -> torch.Tensor:
+        codec.encode_calls += 1
+        encode_started.set()
+        assert release_encode.wait(timeout=2)
+        raise RuntimeError("codec failed")
+
+    codec.encode_code = encode_code
+    service = _reference_service(codec)
+    reference_audio = {"bytes": five_second_wav()}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        leader = executor.submit(service.get_or_encode, reference_audio)
+        assert encode_started.wait(timeout=2)
+        follower = executor.submit(service.get_or_encode, reference_audio)
+        deadline = time.monotonic() + 2
+        while service.stats()["merged"] < 1 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert service.stats()["merged"] == 1
+        release_encode.set()
+        for future in (leader, follower):
+            with pytest.raises(RuntimeError, match="codec failed"):
+                future.result(timeout=2)
+
+    assert codec.encode_calls == 1
+    assert service.stats()["failed"] == 1
+
+
+def test_reference_encoder_revalidates_changed_path(tmp_path) -> None:
+    codec = FakeCodec()
+    encode_started = threading.Event()
+    release_encode = threading.Event()
+    reference_path = tmp_path / "reference.wav"
+    original_audio = five_second_wav(0)
+    changed_audio = five_second_wav(1)
+    reference_path.write_bytes(original_audio)
+
+    def encode_code(waveform: torch.Tensor) -> torch.Tensor:
+        codec.encode_calls += 1
+        if codec.encode_calls == 1:
+            encode_started.set()
+            assert release_encode.wait(timeout=2)
+        return torch.tensor([[[7, 8, 9]]])
+
+    codec.encode_code = encode_code
+    service = _reference_service(codec)
+    reference_audio = {"audio_path": str(reference_path)}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        first = executor.submit(service.get_or_encode, reference_audio)
+        assert encode_started.wait(timeout=2)
+        reference_path.write_bytes(changed_audio)
+        release_encode.set()
+        first.result(timeout=2)
+
+    service.get_or_encode(reference_audio)
+    reference_path.write_bytes(original_audio)
+    service.get_or_encode(reference_audio)
+
+    assert codec.encode_calls == 3
+
+
+def test_reference_encoder_reports_cache_stats() -> None:
+    codec = FakeCodec()
+    service = _reference_service(codec)
+    reference_audio = {"bytes": five_second_wav()}
+
+    service.get_or_encode(reference_audio)
+    service.get_or_encode(reference_audio)
+
+    assert service.stats() == {
+        "hits": 1,
+        "misses": 1,
+        "merged": 0,
+        "entries": 1,
+        "bytes": 12,
+        "evictions": 0,
+        "failed": 0,
+        "uncacheable": 0,
+    }
 
 
 def test_codec_model_is_shared_between_stages(
