@@ -19,18 +19,11 @@ from sglang_omni.models.audar_tts.protocol import (
 )
 from sglang_omni.models.audar_tts.request_builders import build_audar_state
 from sglang_omni.preprocessing.audio import AudioMediaIO
-from sglang_omni.preprocessing.cache_key import hash_bytes, reference_path_cache_key
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.pipeline_state import build_usage
 from sglang_omni.scheduling.pipeline_state import load_state as load_pipeline_state
 from sglang_omni.scheduling.pipeline_state import store_state as store_pipeline_state
-from sglang_omni.scheduling.reference_encoder import (
-    ReferenceEncodeHook,
-    ReferenceEncodeKey,
-    ReferenceEncodeService,
-)
 from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
-from sglang_omni.scheduling.vocoder_base import BatchVocoderBase
 from sglang_omni.utils.audio_payload import audio_waveform_payload
 
 DEFAULT_GGUF_FILENAME = "Audar-TTS-V1-Turbo-Q4_K_M.gguf"
@@ -78,17 +71,6 @@ def _normalize_reference(raw_input: Any) -> _ReferenceInput:
     raise ValueError("Audar-TTS reference input has no audio payload")
 
 
-def _reference_key(item: _ReferenceInput) -> str | None:
-    if item.source_kind == "path":
-        return reference_path_cache_key(item.source, trust_stat=False)
-    if item.source_kind == "bytes":
-        return f"bytes:{hash_bytes(item.source)}"
-    if item.source_kind == "base64":
-        payload = str(item.source).encode("utf-8")
-        return f"base64:{item.media_type}:{hash_bytes(payload)}"
-    return None
-
-
 def _load_reference_waveform(item: _ReferenceInput) -> torch.Tensor:
     audio_io = AudioMediaIO(target_sr=REFERENCE_SAMPLE_RATE)
     if item.source_kind == "path":
@@ -120,54 +102,6 @@ def _encode_reference(codec: Any, device: str, item: _ReferenceInput) -> torch.T
     return codes.detach().to(device="cpu", dtype=torch.long)
 
 
-class _AudarReferenceEncodeHook(
-    ReferenceEncodeHook[_ReferenceInput, torch.Tensor, torch.Tensor]
-):
-    def __init__(
-        self,
-        *,
-        codec: Any,
-        device: str,
-        codec_model: str,
-        codec_revision: str,
-    ) -> None:
-        self._codec = codec
-        self._device = device
-        self._codec_model = codec_model
-        self._codec_revision = codec_revision
-        self._config_hash = hash_bytes(
-            f"sample_rate:{REFERENCE_SAMPLE_RATE}".encode("utf-8")
-        )
-
-    def normalize_input(self, raw_input: Any) -> _ReferenceInput:
-        return _normalize_reference(raw_input)
-
-    def cache_key(self, item: _ReferenceInput) -> ReferenceEncodeKey | None:
-        input_key = _reference_key(item)
-        if input_key is None:
-            return None
-        return ReferenceEncodeKey(
-            model_id=self._codec_model,
-            model_revision=self._codec_revision,
-            encoder_id="neucodec",
-            encoder_config_hash=self._config_hash,
-            artifact_kind="audar_reference_codes",
-            input_key=input_key,
-        )
-
-    def encode_one(self, item: _ReferenceInput) -> torch.Tensor:
-        return _encode_reference(self._codec, self._device, item)
-
-    def store_artifact(self, artifact: torch.Tensor) -> torch.Tensor:
-        return artifact.detach().to(device="cpu", dtype=torch.int32).clone()
-
-    def load_artifact(self, stored: torch.Tensor) -> torch.Tensor:
-        return stored.detach().clone().long()
-
-    def revalidate(self, item: _ReferenceInput, key: ReferenceEncodeKey) -> bool:
-        return item.source_kind != "path" or _reference_key(item) == key.input_key
-
-
 def create_preprocessing_executor() -> SimpleScheduler:
     return SimpleScheduler(
         lambda payload: _store_state(payload, build_audar_state(payload))
@@ -179,28 +113,14 @@ def create_reference_encoder_executor(
     gpu_id: int | None = None,
     codec_model: str = DEFAULT_CODEC_MODEL,
     codec_revision: str = "main",
-    cache_max_items: int = 256,
-    cache_max_bytes: int = 64 * 1024 * 1024,
-    max_concurrency: int = 8,
 ) -> SimpleScheduler:
     device = _device(gpu_id)
     codec = _load_codec(codec_model, codec_revision, device)
-    reference_service = ReferenceEncodeService(
-        _AudarReferenceEncodeHook(
-            codec=codec,
-            device=device,
-            codec_model=codec_model,
-            codec_revision=codec_revision,
-        ),
-        max_items=cache_max_items,
-        max_bytes=cache_max_bytes,
-        log_prefix="Audar-TTS",
-    )
 
     def _encode(payload: StagePayload) -> StagePayload:
         state = _load_state(payload)
-        codes = reference_service.get_or_encode(
-            state.reference_audio, desc="Audar-TTS reference"
+        codes = _encode_reference(
+            codec, device, _normalize_reference(state.reference_audio)
         )
         state.prompt = build_prompt(
             state.target_text, state.reference_text, codes.tolist()
@@ -210,7 +130,7 @@ def create_reference_encoder_executor(
         state.reference_audio = None
         return _store_state(payload, state)
 
-    return SimpleScheduler(_encode, max_concurrency=max_concurrency)
+    return SimpleScheduler(_encode)
 
 
 def _resolve_gguf(model_path: str, filename: str, revision: str) -> str:
@@ -307,49 +227,30 @@ def create_tts_engine_executor(
     return SimpleScheduler(_generate)
 
 
-class _AudarVocoder(BatchVocoderBase):
-    def __init__(self, codec: Any, device: str) -> None:
-        self._codec = codec
-        self._device = device
+def create_vocoder_executor(
+    *,
+    gpu_id: int | None = None,
+    codec_model: str = DEFAULT_CODEC_MODEL,
+    codec_revision: str = "main",
+) -> SimpleScheduler:
+    device = _device(gpu_id)
+    codec = _load_codec(codec_model, codec_revision, device)
 
-    def prepare_item(self, payload: StagePayload) -> tuple[AudarTTSState, torch.Tensor]:
+    async def _decode(payload: StagePayload) -> StagePayload:
         state = _load_state(payload)
         codes = torch.as_tensor(state.audio_codes, dtype=torch.long)
         if codes.ndim != 1 or codes.numel() == 0:
             raise RuntimeError("Audar-TTS vocoder requires non-empty audio codes")
-        return state, codes
-
-    async def decode_batch(
-        self, items: list[tuple[AudarTTSState, torch.Tensor]]
-    ) -> list[tuple[torch.Tensor, int]]:
-        outputs = []
         with torch.inference_mode():
-            for _, codes in items:
-                waveform = self._codec.decode_code(
-                    codes.to(self._device)[None, None, :]
-                )
-                outputs.append(
-                    (
-                        torch.as_tensor(waveform).detach().cpu().reshape(-1),
-                        OUTPUT_SAMPLE_RATE,
-                    )
-                )
-        return outputs
-
-    def store_result(
-        self,
-        payload: StagePayload,
-        state: AudarTTSState,
-        waveform: torch.Tensor,
-        sample_rate: int,
-    ) -> StagePayload:
+            waveform = codec.decode_code(codes.to(device)[None, None, :])
+        waveform = torch.as_tensor(waveform).detach().cpu().reshape(-1)
         state.audio_codes = None
-        state.sample_rate = int(sample_rate)
+        state.sample_rate = OUTPUT_SAMPLE_RATE
         _store_state(payload, state)
         payload.data.update(
             audio_waveform_payload(
                 waveform,
-                sample_rate=sample_rate,
+                sample_rate=OUTPUT_SAMPLE_RATE,
                 modality="audio",
                 source_hint="Audar-TTS",
             )
@@ -359,21 +260,7 @@ class _AudarVocoder(BatchVocoderBase):
             payload.data["usage"] = usage
         return payload
 
-
-def create_vocoder_executor(
-    *,
-    gpu_id: int | None = None,
-    codec_model: str = DEFAULT_CODEC_MODEL,
-    codec_revision: str = "main",
-    max_batch_size: int = 8,
-    max_batch_wait_ms: int = 2,
-) -> SimpleScheduler:
-    device = _device(gpu_id)
-    codec = _load_codec(codec_model, codec_revision, device)
-    return _AudarVocoder(codec, device).build_scheduler(
-        max_batch_size=max_batch_size,
-        max_batch_wait_ms=max_batch_wait_ms,
-    )
+    return SimpleScheduler(_decode)
 
 
 def _load_state(payload: StagePayload) -> AudarTTSState:
