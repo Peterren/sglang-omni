@@ -107,6 +107,10 @@ def test_config_and_state_contracts() -> None:
     assert capabilities.supports_reference_audio is True
     assert capabilities.supports_batch_vocoder is True
     assert capabilities.supports_streaming_vocoder is False
+    assert AudarTTSState().to_dict() == {
+        "sample_rate": 24000,
+        "generation_kwargs": {},
+    }
 
     state = AudarTTSState(
         target_text="target",
