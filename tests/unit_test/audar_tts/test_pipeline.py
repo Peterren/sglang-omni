@@ -185,7 +185,7 @@ def test_request_lowering_requires_one_transcribed_reference() -> None:
         )
 
 
-def test_reference_encoder_builds_prompt_and_caches(
+def test_reference_encoder_builds_prompt_without_cache(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     codec = FakeCodec()
@@ -207,7 +207,8 @@ def test_reference_encoder_builds_prompt_and_caches(
     first = encode("first")
     second = encode("second")
 
-    assert codec.encode_calls == 1
+    assert scheduler._max_concurrency == 1
+    assert codec.encode_calls == 2
     assert first.prompt == build_prompt("target", "reference", [7, 8, 9])
     assert second.prompt == first.prompt
     assert first.reference_audio is None
@@ -332,6 +333,7 @@ def test_vocoder_emits_24khz_audio_payload(
 
     result = asyncio.run(scheduler._fn(payload))
 
+    assert scheduler._batch_fn is None
     assert codec.decode_calls == 1
     assert result.data["audio_waveform_shape"] == [3]
     assert result.data["audio_waveform_dtype"] == "float32"
