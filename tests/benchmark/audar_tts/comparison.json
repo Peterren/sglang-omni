@@ -28,7 +28,6 @@
   "quality": {
     "sample_count": 1,
     "arabic_wer": 0.0,
-    "arabic_cer": 0.0,
     "translated_english_wer": 0.0,
     "translated_english_bleu": 100.0,
     "raw_arabic_bleu": 91.21679090703874,

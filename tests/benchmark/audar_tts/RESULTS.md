@@ -34,16 +34,15 @@ and GPT-5.6 Luna. Reusing that content-addressed evaluation gives:
 | Metric | Pre-T1 | Latest | Notes |
 | --- | ---: | ---: | --- |
 | Arabic WER | 0.0 | 0.0 | Qwen3-ASR-1.7B, normalized Arabic |
-| Arabic CER | 0.0 | 0.0 | Whisper large-v3-turbo, normalized Arabic |
 | Translated English WER | 0.0 | 0.0 | GPT-5.6 Luna translations |
 | Translated English BLEU | 100.0 | 100.0 | SacreBLEU 2.6, effective order |
 | Raw Arabic BLEU | 91.22 | 91.22 | Only diacritic difference in ASR text |
 | Normalized Arabic BLEU | 100.0 | 100.0 | Same normalization as WER |
 
 This is a one-sentence regression check, not a statistically meaningful model
-quality benchmark. BLEU is secondary for TTS; Arabic WER/CER and exact waveform
-equality are the stronger correctness signals here. Speaker similarity, MOS,
-and UTMOS were not measured in this run.
+quality benchmark. BLEU is secondary for TTS; Arabic WER and exact waveform
+equality are the stronger correctness signals here. CER, speaker similarity,
+MOS, and UTMOS were not measured in this run.
 
 ## Performance
 
@@ -90,6 +89,9 @@ claims vocoder batching or adds a batch wait.
 ## Source of truth
 
 - Lightweight summary: this file and `comparison.json` in Git.
+- Machine-generated evidence: `artifacts/performance/performance_summary.json`,
+  `artifacts/performance/wav_sha256s.txt`, and
+  `artifacts/quality/quality_summary.json` plus their raw JSON inputs.
 - Raw run outputs: `/data/jaxan/audar-results-production-equal-final` on H100.
 - Prior ASR/translation outputs:
   `/data/jaxan/audar-results/seedtts` on H100.

@@ -1,0 +1,234 @@
+{
+  "label": "latest-order2",
+  "audar_revision": "51f5635f32de3ab45ff28a4b958464532225b247",
+  "codec_revision": "30c1fdd19e68aee65d542cf043750d4c0165893e",
+  "model_path": "audarai/Audar-TTS-V1-Turbo",
+  "reference_file": "samples/demo_male_1_ar.wav",
+  "reference_text": "لا يمكنني الانتظار لأخبرك — [excited] لقد أنجزنا المشروع أخيراً بعد كلّ هذا التعب، [laughs] وصدّقني، إنه أجمل شعورٍ على الإطلاق!",
+  "target_text": "يسرّنا أن نختبر اليوم نظام تحويل النص العربي إلى كلام واضح وطبيعي.",
+  "seed": 1234,
+  "max_new_tokens": 512,
+  "repeats": 7,
+  "initialization_s": 7.376193946925923,
+  "deterministic_codes": true,
+  "deterministic_waveform": true,
+  "summary": {
+    "reference_s": {
+      "min": 0.0003508809022605419,
+      "median": 0.0003752009943127632,
+      "max": 0.4607173858676106,
+      "mean": 0.06614333697195564
+    },
+    "engine_wall_s": {
+      "min": 1.0659838051069528,
+      "median": 1.0692396538797766,
+      "max": 1.1180369770154357,
+      "mean": 1.0779445904440113
+    },
+    "vocoder_s": {
+      "min": 0.007378072943538427,
+      "median": 0.007425057934597135,
+      "max": 0.17021819483488798,
+      "mean": 0.030883337703666518
+    },
+    "total_s": {
+      "min": 1.0738861800637096,
+      "median": 1.0770292398519814,
+      "max": 1.7490274007432163,
+      "mean": 1.175011556030118
+    },
+    "rtf": {
+      "min": 0.18840108422170343,
+      "median": 0.18895249821964585,
+      "max": 0.3068469124110906,
+      "mean": 0.2061423782508979
+    },
+    "engine_tokens_per_s": {
+      "min": 279.4816537004922,
+      "median": 294.02886217358895,
+      "max": 294.6408391808765,
+      "mean": 291.69085076616807
+    }
+  },
+  "warmup_iterations_excluded": 1,
+  "warm_summary": {
+    "reference_s": {
+      "min": 0.0003508809022605419,
+      "median": 0.0003735830541700125,
+      "max": 0.0004384948406368494,
+      "mean": 0.00038099548934648436
+    },
+    "engine_wall_s": {
+      "min": 1.0659838051069528,
+      "median": 1.0687883984064683,
+      "max": 1.0850377050228417,
+      "mean": 1.0712625260154407
+    },
+    "vocoder_s": {
+      "min": 0.007378072943538427,
+      "median": 0.007420675014145672,
+      "max": 0.008631427073851228,
+      "mean": 0.007660861515129606
+    },
+    "total_s": {
+      "min": 1.0738861800637096,
+      "median": 1.0765995159745216,
+      "max": 1.0931268541608006,
+      "mean": 1.079342248577935
+    },
+    "rtf": {
+      "min": 0.18840108422170343,
+      "median": 0.18887710806570554,
+      "max": 0.1917766410808422,
+      "mean": 0.1893582892241991
+    },
+    "engine_tokens_per_s": {
+      "min": 291.1624072116893,
+      "median": 294.1638392754802,
+      "max": 294.6408391808765,
+      "mean": 293.7257169437807
+    }
+  },
+  "iterations": [
+    {
+      "index": 0,
+      "preprocessing_s": 5.484302528202534e-05,
+      "reference_s": 0.4607173858676106,
+      "engine_wall_s": 1.1180369770154357,
+      "engine_reported_s": 1.0197449321858585,
+      "vocoder_s": 0.17021819483488798,
+      "total_s": 1.7490274007432163,
+      "output_duration_s": 5.7,
+      "rtf": 0.3068469124110906,
+      "prompt_tokens": 632,
+      "completion_tokens": 285,
+      "engine_tokens_per_s": 279.4816537004922,
+      "audio_code_count": 285,
+      "audio_code_sha256": "f9f63e0ca99e82bf7bbcab20a3b6d6fc7e36bc73a320f2f84a7942edde6bc98e",
+      "waveform_sample_count": 136800,
+      "waveform_sha256": "44ec732c1243bf5d6115783b318de2cd7691f5ba0ab6a75c1e01ea85eae73492",
+      "waveform_rms": 0.1309211552143097,
+      "waveform_peak": 0.7778986096382141
+    },
+    {
+      "index": 1,
+      "preprocessing_s": 4.623504355549812e-05,
+      "reference_s": 0.00037196511402726173,
+      "engine_wall_s": 1.0661431909538805,
+      "engine_reported_s": 0.9675436608958989,
+      "vocoder_s": 0.008631427073851228,
+      "total_s": 1.0751928181853145,
+      "output_duration_s": 5.7,
+      "rtf": 0.18863031897987972,
+      "prompt_tokens": 632,
+      "completion_tokens": 285,
+      "engine_tokens_per_s": 294.5603506265585,
+      "audio_code_count": 285,
+      "audio_code_sha256": "f9f63e0ca99e82bf7bbcab20a3b6d6fc7e36bc73a320f2f84a7942edde6bc98e",
+      "waveform_sample_count": 136800,
+      "waveform_sha256": "44ec732c1243bf5d6115783b318de2cd7691f5ba0ab6a75c1e01ea85eae73492",
+      "waveform_rms": 0.1309211552143097,
+      "waveform_peak": 0.7778986096382141
+    },
+    {
+      "index": 2,
+      "preprocessing_s": 3.882218152284622e-05,
+      "reference_s": 0.0004384948406368494,
+      "engine_wall_s": 1.0659838051069528,
+      "engine_reported_s": 0.9672793520148844,
+      "vocoder_s": 0.007425057934597135,
+      "total_s": 1.0738861800637096,
+      "output_duration_s": 5.7,
+      "rtf": 0.18840108422170343,
+      "prompt_tokens": 632,
+      "completion_tokens": 285,
+      "engine_tokens_per_s": 294.6408391808765,
+      "audio_code_count": 285,
+      "audio_code_sha256": "f9f63e0ca99e82bf7bbcab20a3b6d6fc7e36bc73a320f2f84a7942edde6bc98e",
+      "waveform_sample_count": 136800,
+      "waveform_sha256": "44ec732c1243bf5d6115783b318de2cd7691f5ba0ab6a75c1e01ea85eae73492",
+      "waveform_rms": 0.1309211552143097,
+      "waveform_peak": 0.7778986096382141
+    },
+    {
+      "index": 3,
+      "preprocessing_s": 3.408011980354786e-05,
+      "reference_s": 0.0003508809022605419,
+      "engine_wall_s": 1.0850377050228417,
+      "engine_reported_s": 0.9788351550232619,
+      "vocoder_s": 0.0077041881158947945,
+      "total_s": 1.0931268541608006,
+      "output_duration_s": 5.7,
+      "rtf": 0.1917766410808422,
+      "prompt_tokens": 632,
+      "completion_tokens": 285,
+      "engine_tokens_per_s": 291.1624072116893,
+      "audio_code_count": 285,
+      "audio_code_sha256": "f9f63e0ca99e82bf7bbcab20a3b6d6fc7e36bc73a320f2f84a7942edde6bc98e",
+      "waveform_sample_count": 136800,
+      "waveform_sha256": "44ec732c1243bf5d6115783b318de2cd7691f5ba0ab6a75c1e01ea85eae73492",
+      "waveform_rms": 0.1309211552143097,
+      "waveform_peak": 0.7778986096382141
+    },
+    {
+      "index": 4,
+      "preprocessing_s": 3.535207360982895e-05,
+      "reference_s": 0.0003694659098982811,
+      "engine_wall_s": 1.072833658196032,
+      "engine_reported_s": 0.9705001129768789,
+      "vocoder_s": 0.007410130929201841,
+      "total_s": 1.080648607108742,
+      "output_duration_s": 5.7,
+      "rtf": 0.18958747493135825,
+      "prompt_tokens": 632,
+      "completion_tokens": 285,
+      "engine_tokens_per_s": 293.6630260925996,
+      "audio_code_count": 285,
+      "audio_code_sha256": "f9f63e0ca99e82bf7bbcab20a3b6d6fc7e36bc73a320f2f84a7942edde6bc98e",
+      "waveform_sample_count": 136800,
+      "waveform_sha256": "44ec732c1243bf5d6115783b318de2cd7691f5ba0ab6a75c1e01ea85eae73492",
+      "waveform_rms": 0.1309211552143097,
+      "waveform_peak": 0.7778986096382141
+    },
+    {
+      "index": 5,
+      "preprocessing_s": 3.6312034353613853e-05,
+      "reference_s": 0.0003752009943127632,
+      "engine_wall_s": 1.0692396538797766,
+      "engine_reported_s": 0.9692925990093499,
+      "vocoder_s": 0.007378072943538427,
+      "total_s": 1.0770292398519814,
+      "output_duration_s": 5.7,
+      "rtf": 0.18895249821964585,
+      "prompt_tokens": 632,
+      "completion_tokens": 285,
+      "engine_tokens_per_s": 294.02886217358895,
+      "audio_code_count": 285,
+      "audio_code_sha256": "f9f63e0ca99e82bf7bbcab20a3b6d6fc7e36bc73a320f2f84a7942edde6bc98e",
+      "waveform_sample_count": 136800,
+      "waveform_sha256": "44ec732c1243bf5d6115783b318de2cd7691f5ba0ab6a75c1e01ea85eae73492",
+      "waveform_rms": 0.1309211552143097,
+      "waveform_peak": 0.7778986096382141
+    },
+    {
+      "index": 6,
+      "preprocessing_s": 3.639189526438713e-05,
+      "reference_s": 0.0003799651749432087,
+      "engine_wall_s": 1.06833714293316,
+      "engine_reported_s": 0.9684034870006144,
+      "vocoder_s": 0.00741629209369421,
+      "total_s": 1.0761697920970619,
+      "output_duration_s": 5.7,
+      "rtf": 0.18880171791176523,
+      "prompt_tokens": 632,
+      "completion_tokens": 285,
+      "engine_tokens_per_s": 294.2988163773714,
+      "audio_code_count": 285,
+      "audio_code_sha256": "f9f63e0ca99e82bf7bbcab20a3b6d6fc7e36bc73a320f2f84a7942edde6bc98e",
+      "waveform_sample_count": 136800,
+      "waveform_sha256": "44ec732c1243bf5d6115783b318de2cd7691f5ba0ab6a75c1e01ea85eae73492",
+      "waveform_rms": 0.1309211552143097,
+      "waveform_peak": 0.7778986096382141
+    }
+  ]
+}

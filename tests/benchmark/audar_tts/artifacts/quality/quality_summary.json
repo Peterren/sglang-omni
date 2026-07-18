@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "sample_count": 1,
+  "evaluated_wav_sha256": "e7f0b6bb3ea5d950ff2fc1329a63954c2579cf97201dafb0a61514eb9b5ca04b",
+  "bleu_implementation": "sacrebleu BLEU effective_order=true",
+  "pre_t1": {
+    "asr_model": "Qwen/Qwen3-ASR-1.7B",
+    "translation_model": "gpt-5.6-luna",
+    "arabic_wer": 0.0,
+    "raw_arabic_bleu": 91.21679090703874,
+    "normalized_arabic_bleu": 100.00000000000004,
+    "translated_english_wer": 0.0,
+    "translated_english_bleu": 100.00000000000004,
+    "reference_text": "يسرّنا أن نختبر اليوم نظام تحويل النص العربي إلى كلام واضح وطبيعي.",
+    "asr_text": "يسرنا أن نختبر اليوم نظام تحويل النص العربي إلى كلام واضح وطبيعي.",
+    "translated_reference": "We are pleased to test today the system for converting Arabic text into clear and natural speech.",
+    "translated_hypothesis": "We are pleased to test today the system for converting Arabic text into clear and natural speech."
+  },
+  "latest": {
+    "asr_model": "Qwen/Qwen3-ASR-1.7B",
+    "translation_model": "gpt-5.6-luna",
+    "arabic_wer": 0.0,
+    "raw_arabic_bleu": 91.21679090703874,
+    "normalized_arabic_bleu": 100.00000000000004,
+    "translated_english_wer": 0.0,
+    "translated_english_bleu": 100.00000000000004,
+    "reference_text": "يسرّنا أن نختبر اليوم نظام تحويل النص العربي إلى كلام واضح وطبيعي.",
+    "asr_text": "يسرنا أن نختبر اليوم نظام تحويل النص العربي إلى كلام واضح وطبيعي.",
+    "translated_reference": "We are pleased to test today the system for converting Arabic text into clear and natural speech.",
+    "translated_hypothesis": "We are pleased to test today the system for converting Arabic text into clear and natural speech."
+  }
+}
