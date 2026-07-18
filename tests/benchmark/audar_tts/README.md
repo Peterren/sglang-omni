@@ -1,6 +1,18 @@
 # Audar-TTS comparison runner
 
-Run from the repository root on one CUDA GPU:
+Run the paired comparison from the latest checkout on one CUDA GPU. The driver
+uses the fixed order latest, pre-T1, pre-T1, latest and writes the aggregate
+summary automatically:
+
+```bash
+python tests/benchmark/audar_tts/compare_pipeline_benchmarks.py \
+  --pre-t1-checkout /path/to/pre-t1-checkout \
+  --latest-checkout /path/to/latest-checkout \
+  --output-dir /path/to/results \
+  --repeats 7
+```
+
+To run one snapshot directly from its repository root:
 
 ```bash
 PYTHONPATH=. python tests/benchmark/audar_tts/run_pipeline_benchmark.py \
