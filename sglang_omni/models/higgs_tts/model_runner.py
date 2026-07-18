@@ -492,7 +492,7 @@ class HiggsTTSModelRunner(ModelRunner):
 
         row = buffer[count]
         if codes_N.device.type == "cpu" and codes_N.dtype == torch.long:
-            row.copy_(codes_N, non_blocking=True)
+            row.copy_(codes_N)
         else:
             row.copy_(codes_N.detach().to(device="cpu", dtype=torch.long))
         data.output_code_count = count + 1
