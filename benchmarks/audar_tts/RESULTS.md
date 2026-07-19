@@ -15,7 +15,7 @@
 - Runtime: one NVIDIA H100 80GB, driver 580.126.20, CUDA 13.0,
   PyTorch 2.11.0, and CUDA-enabled llama-cpp-python 0.3.34.
 
-## Correctness and quality
+## Correctness
 
 Both integrations generated the same 285 acoustic codes and the same 136,800
 float32 waveform samples on all 28 requests. The output is 5.7 seconds of
@@ -28,21 +28,28 @@ float32 waveform samples on all 28 requests. The output is 5.7 seconds of
 - PCM WAV SHA-256:
   `e7f0b6bb3ea5d950ff2fc1329a63954c2579cf97201dafb0a61514eb9b5ca04b`
 
-The WAV hash is also identical to the earlier file evaluated by Qwen3-ASR-1.7B
-and GPT-5.6 Luna. Reusing that content-addressed evaluation gives:
+## Quality
 
-| Metric | Pre-T1 | Latest | Notes |
-| --- | ---: | ---: | --- |
-| Arabic WER | 0.0 | 0.0 | Qwen3-ASR-1.7B, normalized Arabic |
-| Translated English WER | 0.0 | 0.0 | GPT-5.6 Luna translations |
-| Translated English BLEU | 100.0 | 100.0 | SacreBLEU 2.6, effective order |
-| Raw Arabic BLEU | 91.22 | 91.22 | Only diacritic difference in ASR text |
-| Normalized Arabic BLEU | 100.0 | 100.0 | Same normalization as WER |
+The quality run uses 50 texts from the pinned FLEURS `ar_eg` test Parquet. It
+keeps rows with 6-20 words, at least 90% Arabic letters, and no digits. Digit
+rows are excluded because ASR verbalizes numbers while references retain
+digits. The target text is the reference; Qwen3-ASR-1.7B transcribes the speech.
+Metrics are computed directly between normalized Arabic references and Arabic
+ASR hypotheses. No translation is used.
 
-This is a one-sentence regression check, not a statistically meaningful model
-quality benchmark. BLEU is secondary for TTS; Arabic WER and exact waveform
-equality are the stronger correctness signals here. CER, speaker similarity,
-MOS, and UTMOS were not measured in this run.
+All 50 pre-T1 and latest acoustic-code, float-waveform, and PCM-WAV hashes match
+pairwise, so the one direct ASR run applies to both snapshots.
+
+| Metric | Pre-T1 | Latest |
+| --- | ---: | ---: |
+| Arabic corpus WER | 5.43% | 5.43% |
+| Arabic corpus CER | 1.46% | 1.46% |
+| Arabic corpus BLEU | 88.75 | 88.75 |
+| Arabic chrF++ | 95.57 | 95.57 |
+
+No sample has WER above 50%; the maximum per-sample WER is 35.29%.
+These ASR-based metrics measure intelligibility, not naturalness or speaker
+similarity. MOS, UTMOS, and speaker similarity were not measured.
 
 ## Performance
 
@@ -90,11 +97,11 @@ claims vocoder batching or adds a batch wait.
 
 - Lightweight summary: this file and `comparison.json` in Git.
 - Machine-generated evidence: `artifacts/performance/performance_summary.json`,
-  `artifacts/performance/wav_sha256s.txt`, and
-  `artifacts/quality/quality_summary.json` plus their raw JSON inputs.
+  `artifacts/performance/wav_sha256s.txt`, and the generation, ASR, and summary
+  JSON files under `artifacts/quality/`.
 - Raw run outputs: `/data/jaxan/audar-results-production-equal-final` on H100.
-- Prior ASR/translation outputs:
-  `/data/jaxan/audar-results/seedtts` on H100.
+- Raw 50-sentence quality outputs:
+  `/data/jaxan/audar-quality-results-fleurs50-nodigits` on H100.
 - Raw artifacts are local-only. Intended Hugging Face dataset destination is
   pending a credential for the correct owner; the shared H100 credential belongs
   to another user and was not used for upload.

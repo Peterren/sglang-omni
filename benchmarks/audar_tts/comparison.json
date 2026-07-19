@@ -26,12 +26,26 @@
     "all_28_requests_identical": true
   },
   "quality": {
-    "sample_count": 1,
-    "arabic_wer": 0.0,
-    "translated_english_wer": 0.0,
-    "translated_english_bleu": 100.0,
-    "raw_arabic_bleu": 91.21679090703874,
-    "normalized_arabic_bleu": 100.0
+    "dataset": {
+      "repo": "google/fleurs",
+      "config": "ar_eg",
+      "split": "test",
+      "revision": "ab93cf03f9d0cd083c853fad065a6377067408aa",
+      "sample_count": 50,
+      "digits_excluded": true
+    },
+    "commits": {
+      "pre_t1": "44eaf8819f34723d4ad132045614685a389d5f15",
+      "latest": "80d9b2a4062247406cd56ff43aa9f3e1e4b4cf3a"
+    },
+    "asr_model": "Qwen/Qwen3-ASR-1.7B",
+    "all_50_outputs_exact": true,
+    "arabic_wer": 0.054317548746518104,
+    "arabic_wer_excluding_above_50_percent": 0.054317548746518104,
+    "samples_above_50_percent_wer": 0,
+    "arabic_cer": 0.01457807681525091,
+    "arabic_bleu": 88.75254621903177,
+    "arabic_chrf_pp": 95.56573510676158
   },
   "performance": {
     "method": "fixed order latest/pre-T1/pre-T1/latest; mean of two warm run medians; 7 requests per run; iteration 0 excluded",
@@ -85,7 +99,10 @@
     }
   },
   "artifacts": {
-    "raw_local_path": "/data/jaxan/audar-results-production-equal-final",
+    "raw_local_paths": [
+      "/data/jaxan/audar-results-production-equal-final",
+      "/data/jaxan/audar-quality-results-fleurs50-nodigits"
+    ],
     "status": "local-only; Hugging Face destination pending correct-owner credential"
   }
 }
