@@ -25,31 +25,45 @@ The runner pins the Audar and NeuCodec revisions, reference sample, transcript,
 target text, seed, and sampling settings. `warm_summary` excludes iteration zero,
 which includes reference encoding and codec warmup.
 
-For Arabic intelligibility, score the saved WAV with the repository SeedTTS ASR
-pipeline. Translate the reference and ASR hypothesis independently before
-computing English metrics; do not translate only one side.
+For Arabic intelligibility, generate the pinned digit-free 50-sentence FLEURS
+`ar_eg` set
+from both checkouts. The same script runs against each checkout through
+`PYTHONPATH`, so text selection and generation settings are identical:
+
+```bash
+python benchmarks/audar_tts/compare_quality_benchmarks.py \
+  --pre-t1-checkout /path/to/pre-t1-checkout \
+  --latest-checkout /path/to/latest-checkout \
+  --output-dir /path/to/quality-results \
+  --samples 50
+```
+
+Transcribe the latest WAVs directly to Arabic with the repository SeedTTS ASR
+pipeline. When all paired waveform hashes match, this one ASR run is also the
+pre-T1 evidence:
 
 ```bash
 python -m benchmarks.eval.benchmark_tts_seedtts \
   --transcribe-only \
   --model audarai/Audar-TTS-V1-Turbo \
-  --output-dir /path/to/seedtts/results \
+  --output-dir /path/to/quality-results/latest \
   --lang ar \
-  --asr-model-path Qwen/Qwen3-ASR-1.7B
+  --asr-model-path Qwen/Qwen3-ASR-1.7B \
+  --asr-concurrency 16 \
+  --skip-gpu-cleanup
 ```
 
-Arabic WER is the primary quality signal. Translated English WER/BLEU is an
-auxiliary diagnostic because translation can hide Arabic recognition errors.
-See [RESULTS.md](./RESULTS.md) for the locked comparison.
+The TTS target text is the Arabic reference. Do not translate either side.
+`summarize_quality.py` computes normalized Arabic corpus BLEU, WER, CER, and
+chrF++ from the target and Arabic ASR hypothesis. See [RESULTS.md](./RESULTS.md)
+for the locked comparison.
 
 Regenerate the committed text-metric summary from the raw ASR artifacts:
 
 ```bash
 python benchmarks/audar_tts/summarize_quality.py \
-  --pre-t1-wer benchmarks/audar_tts/artifacts/quality/pre-t1-wer-results.json \
-  --pre-t1-translated-wer benchmarks/audar_tts/artifacts/quality/pre-t1-translated-wer-results.json \
+  --pre-t1-generation benchmarks/audar_tts/artifacts/quality/pre-t1-generation.json \
+  --latest-generation benchmarks/audar_tts/artifacts/quality/latest-generation.json \
   --latest-wer benchmarks/audar_tts/artifacts/quality/latest-wer-results.json \
-  --latest-translated-wer benchmarks/audar_tts/artifacts/quality/latest-translated-wer-results.json \
-  --wav-sha256 e7f0b6bb3ea5d950ff2fc1329a63954c2579cf97201dafb0a61514eb9b5ca04b \
   --output benchmarks/audar_tts/artifacts/quality/quality_summary.json
 ```

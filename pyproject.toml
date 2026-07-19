@@ -80,6 +80,7 @@ dependencies = [
 audar-tts = [
     "llama-cpp-python==0.3.34",
     "neucodec==0.0.6",
+    "sacrebleu==2.6.0",
 ]
 
 [project.scripts]
