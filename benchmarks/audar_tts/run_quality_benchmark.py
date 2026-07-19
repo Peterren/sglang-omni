@@ -43,6 +43,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-config", default="ar_eg")
     parser.add_argument("--dataset-split", default="test")
     parser.add_argument("--dataset-revision", default=FLEURS_REVISION)
+    parser.add_argument("--text-column", default="transcription")
     parser.add_argument("--samples", type=int, default=50)
     parser.add_argument("--min-words", type=int, default=6)
     parser.add_argument("--max-words", type=int, default=20)
@@ -87,16 +88,11 @@ def _load_targets(args: argparse.Namespace) -> list[dict[str, Any]]:
         data_files=str(parquet_path),
         split="train",
     )
-    text_column = next(
-        (
-            column
-            for column in ("transcription", "raw_transcription", "text")
-            if column in dataset.column_names
-        ),
-        None,
-    )
-    if text_column is None:
-        raise ValueError(f"no text column in dataset: {dataset.column_names}")
+    text_column = args.text_column
+    if text_column not in dataset.column_names:
+        raise ValueError(
+            f"text column {text_column!r} not in dataset: {dataset.column_names}"
+        )
     id_column = "id" if "id" in dataset.column_names else None
     retained_columns = [text_column] + ([id_column] if id_column else [])
     dataset = dataset.select_columns(retained_columns)
@@ -308,6 +304,7 @@ def main() -> None:
                 "max_words": args.max_words,
                 "minimum_arabic_letter_fraction": 0.9,
                 "exclude_digits": not args.include_digits,
+                "text_column": args.text_column,
             },
         },
         "seed": args.seed,

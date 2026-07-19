@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from benchmarks.audar_tts.summarize_quality import (
     _compare_generations,
     _quality_metrics,
 )
+from benchmarks.metrics.wer import SampleOutput
+from benchmarks.tasks.tts import save_wer_results
 
 
 def _generation_result(samples: list[dict]) -> dict:
@@ -25,12 +30,14 @@ def test_arabic_quality_uses_target_and_asr_text_directly() -> None:
                 "target_text": "مرحبا بالعالم",
                 "is_success": True,
                 "reached_max_new_tokens": False,
+                "wav_sha256": "wav-one",
             },
             {
                 "sample_id": "two",
                 "target_text": "هذا اختبار بسيط",
                 "is_success": True,
                 "reached_max_new_tokens": False,
+                "wav_sha256": "wav-two",
             },
         ]
     )
@@ -42,12 +49,14 @@ def test_arabic_quality_uses_target_and_asr_text_directly() -> None:
                 {
                     "id": "one",
                     "is_success": True,
+                    "wav_sha256": "wav-one",
                     "ref_norm": "مرحبا بالعالم",
                     "hyp_norm": "مرحبا بالعالم",
                 },
                 {
                     "id": "two",
                     "is_success": True,
+                    "wav_sha256": "wav-two",
                     "ref_norm": "هذا اختبار بسيط",
                     "hyp_norm": "هذا اختبار",
                 },
@@ -108,6 +117,7 @@ def test_arabic_quality_rejects_asr_reference_not_derived_from_target() -> None:
                 "target_text": target_text,
                 "is_success": True,
                 "reached_max_new_tokens": False,
+                "wav_sha256": f"wav-{sample_id}",
             }
             for sample_id, target_text in (
                 ("one", "النص الأول"),
@@ -122,12 +132,14 @@ def test_arabic_quality_rejects_asr_reference_not_derived_from_target() -> None:
             {
                 "id": "one",
                 "is_success": True,
+                "wav_sha256": "wav-one",
                 "ref_norm": "مرجع خاطئ",
                 "hyp_norm": "مرجع خاطئ",
             },
             {
                 "id": "two",
                 "is_success": True,
+                "wav_sha256": "wav-two",
                 "ref_norm": "النص الثاني",
                 "hyp_norm": "النص الثاني",
             },
@@ -136,3 +148,59 @@ def test_arabic_quality_rejects_asr_reference_not_derived_from_target() -> None:
 
     with pytest.raises(ValueError, match="ASR reference does not match target text"):
         _quality_metrics(wer, generation)
+
+
+def test_arabic_quality_rejects_asr_audio_not_from_generation() -> None:
+    generation = _generation_result(
+        [
+            {
+                "sample_id": sample_id,
+                "target_text": target_text,
+                "is_success": True,
+                "reached_max_new_tokens": False,
+                "wav_sha256": f"wav-{sample_id}",
+            }
+            for sample_id, target_text in (
+                ("one", "النص الأول"),
+                ("two", "النص الثاني"),
+            )
+        ]
+    )
+    wer = {
+        "config": {"asr_model": "test-asr"},
+        "summary": {"wer_corpus": 0.0},
+        "per_sample": [
+            {
+                "id": "one",
+                "is_success": True,
+                "wav_sha256": "different-wav",
+                "ref_norm": "النص الاول",
+                "hyp_norm": "النص الاول",
+            },
+            {
+                "id": "two",
+                "is_success": True,
+                "wav_sha256": "wav-two",
+                "ref_norm": "النص الثاني",
+                "hyp_norm": "النص الثاني",
+            },
+        ],
+    }
+
+    with pytest.raises(ValueError, match="ASR WAV does not match generated WAV"):
+        _quality_metrics(wer, generation)
+
+
+def test_wer_artifact_records_transcribed_wav_hash(tmp_path: Path) -> None:
+    output = SampleOutput(
+        sample_id="one",
+        target_text="النص الأول",
+        whisper_text="النص الأول",
+        wav_sha256="abc123",
+        is_success=True,
+    )
+
+    save_wer_results([output], {}, {}, str(tmp_path))
+
+    artifact = json.loads((tmp_path / "wer_results.json").read_text())
+    assert artifact["per_sample"][0]["wav_sha256"] == "abc123"

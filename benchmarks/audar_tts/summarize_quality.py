@@ -105,6 +105,8 @@ def _quality_metrics(wer: dict[str, Any], generation: dict[str, Any]) -> dict[st
         sample = samples_by_id[sample_id]
         if sample["ref_norm"] != expected_reference:
             raise ValueError(f"ASR reference does not match target text: {sample_id}")
+        if sample.get("wav_sha256") != generation_samples[sample_id]["wav_sha256"]:
+            raise ValueError(f"ASR WAV does not match generated WAV: {sample_id}")
         references.append(expected_reference)
         hypotheses.append(sample["hyp_norm"])
 

@@ -30,6 +30,7 @@ class SampleOutput:
     audio_duration_s: float = 0.0
     latency_s: float = 0.0
     asr_latency_s: float = 0.0
+    wav_sha256: str = ""
     is_success: bool = False
     error: str = ""
 

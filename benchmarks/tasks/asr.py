@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import functools
+import hashlib
 import io
 import logging
 import os
@@ -360,6 +361,7 @@ def make_asr_send_fn(
         except OSError as exc:
             result.error = str(exc)
             return result
+        result.wav_sha256 = hashlib.sha256(audio_bytes).hexdigest()
         result.audio_duration_s = get_wav_duration(audio_bytes)
 
         form = aiohttp.FormData()
@@ -453,6 +455,7 @@ def build_asr_eval_results(
             output.latency_s = result.latency_s
             output.asr_latency_s = result.latency_s
             output.audio_duration_s = result.audio_duration_s
+            output.wav_sha256 = result.wav_sha256
             output = apply_wer(output, result.text, lang)
         sample_outputs.append(output)
         per_sample.append(
@@ -466,6 +469,7 @@ def build_asr_eval_results(
                 "hyp_norm": output.hyp_norm,
                 "audio_duration_s": output.audio_duration_s,
                 "latency_s": output.latency_s,
+                "wav_sha256": output.wav_sha256,
                 "error": output.error,
             }
         )

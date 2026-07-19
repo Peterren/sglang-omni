@@ -31,25 +31,29 @@ float32 waveform samples on all 28 requests. The output is 5.7 seconds of
 ## Quality
 
 The quality run uses 50 texts from the pinned FLEURS `ar_eg` test Parquet. It
-keeps rows with 6-20 words, at least 90% Arabic letters, and no digits. Digit
-rows are excluded because ASR verbalizes numbers while references retain
-digits. The target text is the reference; Qwen3-ASR-1.7B transcribes the speech.
-Metrics are computed directly between normalized Arabic references and Arabic
-ASR hypotheses. No translation is used.
+keeps rows from the explicit `transcription` column with 6-20 words, at least
+90% Arabic letters, and no digits. Digit rows are excluded because ASR
+verbalizes numbers while references retain digits. The target text is the
+reference; Qwen3-ASR-1.7B transcribes the speech. Metrics are computed directly
+between normalized Arabic references and Arabic ASR hypotheses. No translation
+is used.
 
 All 50 pre-T1 and latest acoustic-code, float-waveform, and PCM-WAV hashes match
-pairwise, so the one direct ASR run applies to both snapshots.
+pairwise. The ASR artifact also records and verifies the SHA-256 of every WAV it
+actually transcribed. Latest was transcribed once; the pre-T1 quality result is
+inherited only from exact WAV identity, not measured in a second ASR run.
 
-| Metric | Pre-T1 | Latest |
-| --- | ---: | ---: |
-| Arabic corpus WER | 5.43% | 5.43% |
-| Arabic corpus CER | 1.46% | 1.46% |
-| Arabic corpus BLEU | 88.75 | 88.75 |
-| Arabic chrF++ | 95.57 | 95.57 |
+| Metric | Shared value |
+| --- | ---: |
+| Arabic corpus WER | 5.43% |
+| Arabic corpus CER | 1.46% |
+| Arabic corpus BLEU | 88.75 |
+| Arabic chrF++ | 95.57 |
 
 No sample has WER above 50%; the maximum per-sample WER is 35.29%.
-These ASR-based metrics measure intelligibility, not naturalness or speaker
-similarity. MOS, UTMOS, and speaker similarity were not measured.
+These values come from one Qwen3-ASR pass, so no ASR run-to-run interval is
+claimed. They measure intelligibility, not naturalness or speaker similarity.
+MOS, UTMOS, and speaker similarity were not measured.
 
 ## Performance
 
@@ -72,10 +76,6 @@ the result is performance parity rather than evidence of a speedup or
 regression. The paired driver fixes the order to latest, pre-T1, pre-T1,
 latest. The AR implementation is the same serial llama.cpp decode in both
 branches.
-
-Steady-state H100 SM utilization was 61-64%. One GPU is already the minimum
-allocation; this single-request latency workload is limited by serial GGUF
-decoding and Python token handling rather than available GPU count.
 
 ## Integration size
 
@@ -101,7 +101,7 @@ claims vocoder batching or adds a batch wait.
   JSON files under `artifacts/quality/`.
 - Raw run outputs: `/data/jaxan/audar-results-production-equal-final` on H100.
 - Raw 50-sentence quality outputs:
-  `/data/jaxan/audar-quality-results-fleurs50-nodigits` on H100.
+  `/data/jaxan/audar-quality-results-fleurs50-nodigits-v2` on H100.
 - Raw artifacts are local-only. Intended Hugging Face dataset destination is
   pending a credential for the correct owner; the shared H100 credential belongs
   to another user and was not used for upload.

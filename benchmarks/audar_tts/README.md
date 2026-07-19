@@ -47,7 +47,9 @@ python -m benchmarks.eval.benchmark_tts_seedtts \
   --transcribe-only \
   --model audarai/Audar-TTS-V1-Turbo \
   --output-dir /path/to/quality-results/latest \
+  --meta google/fleurs \
   --lang ar \
+  --max-new-tokens 1024 \
   --asr-model-path Qwen/Qwen3-ASR-1.7B \
   --asr-concurrency 16 \
   --skip-gpu-cleanup

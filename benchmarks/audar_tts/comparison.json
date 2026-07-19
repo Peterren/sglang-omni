@@ -32,7 +32,8 @@
       "split": "test",
       "revision": "ab93cf03f9d0cd083c853fad065a6377067408aa",
       "sample_count": 50,
-      "digits_excluded": true
+      "digits_excluded": true,
+      "text_column": "transcription"
     },
     "commits": {
       "pre_t1": "44eaf8819f34723d4ad132045614685a389d5f15",
@@ -101,7 +102,7 @@
   "artifacts": {
     "raw_local_paths": [
       "/data/jaxan/audar-results-production-equal-final",
-      "/data/jaxan/audar-quality-results-fleurs50-nodigits"
+      "/data/jaxan/audar-quality-results-fleurs50-nodigits-v2"
     ],
     "status": "local-only; Hugging Face destination pending correct-owner credential"
   }

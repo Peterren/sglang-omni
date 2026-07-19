@@ -19,6 +19,7 @@ class RequestResult:
     engine_time_s: float = 0.0
     tok_per_s: float = 0.0
     wav_path: str = ""
+    wav_sha256: str = ""
     error: str = ""
     audio_ttfp_s: float | None = None
     inter_chunk_s: list[float] = field(default_factory=list)
