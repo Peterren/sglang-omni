@@ -114,7 +114,7 @@ The production LOC result stacks the Audar integration at
 PR #1096 at `7aa65583833d355e5cddd17ff4005c7a6e71d059`. This removes 13 more
 model-owned lines. The correctness and performance artifacts above remain tied
 to the original locked snapshots; the stack changes only equivalent key and
-tensor cache plumbing and passes 31 focused Audar and shared-service tests.
+tensor cache plumbing and passes 32 focused Audar and shared-service tests.
 
 The production tier includes bounded reference caching, composite keys,
 same-reference single-flight, distinct-reference request isolation, serialized

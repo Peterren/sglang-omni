@@ -500,6 +500,40 @@ def _reference_service(codec: FakeCodec) -> Any:
     return stages.ReferenceEncodeService(hook)
 
 
+def test_reference_hook_preserves_key_and_tensor_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    hook = stages._AudarReferenceEncodeHook(
+        codec=FakeCodec(),
+        device="cpu",
+        codec_model="codec",
+        codec_revision="revision",
+    )
+    item = hook.normalize_input({"bytes": five_second_wav()})
+    key = hook.cache_key(item)
+
+    assert key == stages.ReferenceEncodeKey(
+        model_id="codec",
+        model_revision="revision",
+        encoder_id="neucodec",
+        encoder_config_hash=stages.hash_bytes(b"sample_rate:16000"),
+        artifact_kind="audar_reference_codes",
+        input_key=stages._reference_key(item),
+    )
+
+    stored = hook.store_artifact(torch.tensor([7, 8, 9], dtype=torch.long))
+    first = hook.load_artifact(stored)
+    second = hook.load_artifact(stored)
+    assert stored.device.type == "cpu" and stored.dtype == torch.int32
+    assert first.device.type == "cpu" and first.dtype == torch.long
+    assert torch.equal(first, second)
+    assert first.data_ptr() != stored.data_ptr()
+    assert first.data_ptr() != second.data_ptr()
+
+    monkeypatch.setattr(stages, "_reference_key", lambda item: None)
+    assert hook.cache_key(item) is None
+
+
 def test_reference_encoder_propagates_singleflight_failure() -> None:
     codec = FakeCodec()
     encode_started = threading.Event()
