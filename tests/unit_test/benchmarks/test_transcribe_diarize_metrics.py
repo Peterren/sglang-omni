@@ -379,3 +379,34 @@ def test_eval_saves_speed_results_before_accuracy_metrics(
     assert speed_payload["speed"]["rtf_mean"] == 0.3
     assert "ASR Speed Result" in printed
     assert "ASR requests only" in printed
+
+
+def test_merge_concat_references_shifts_and_remaps() -> None:
+    from benchmarks.tasks.transcribe_diarize import merge_concat_references
+
+    clip_a = "[0.00][S01]hello[2.00][3.00][S02]there[4.50]"
+    clip_b = "[1.00][S01]again[2.00]"
+
+    merged = merge_concat_references([clip_a, clip_b], [0.0, 10.0], [None, None])
+
+    assert merged == (
+        "[0.00][S01]hello[2.00]" "[3.00][S02]there[4.50]" "[11.00][S03]again[12.00]"
+    )
+
+
+def test_merge_concat_references_drops_segments_past_truncation() -> None:
+    from benchmarks.tasks.transcribe_diarize import merge_concat_references
+
+    clip_a = "[0.00][S01]kept[2.00][5.00][S01]dropped[9.00]"
+    clip_b = "[0.50][S01]tail[1.50]"
+
+    merged = merge_concat_references([clip_a, clip_b], [0.0, 4.0], [4.0, None])
+
+    assert merged == "[0.00][S01]kept[2.00][4.50][S02]tail[5.50]"
+
+
+def test_merge_concat_references_rejects_reference_without_segments() -> None:
+    from benchmarks.tasks.transcribe_diarize import merge_concat_references
+
+    with pytest.raises(ValueError, match="no parseable timestamped segments"):
+        merge_concat_references(["no markup here"], [0.0], [None])
