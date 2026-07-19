@@ -11,7 +11,8 @@
       "min_words": 6,
       "max_words": 20,
       "minimum_arabic_letter_fraction": 0.9,
-      "exclude_digits": true
+      "exclude_digits": true,
+      "text_column": "transcription"
     }
   },
   "commits": {

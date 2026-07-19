@@ -17,7 +17,8 @@
       "min_words": 6,
       "max_words": 20,
       "minimum_arabic_letter_fraction": 0.9,
-      "exclude_digits": true
+      "exclude_digits": true,
+      "text_column": "transcription"
     }
   },
   "seed": 1234,
@@ -42,11 +43,11 @@
       "audio_duration_s": 10.44,
       "completion_tokens": 522,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 6.671715527772903e-05,
-      "reference_s": 0.4934225019533187,
-      "engine_s": 3.2132763958070427,
-      "vocoder_s": 0.18772568204440176,
-      "total_s": 3.894491296960041
+      "preprocessing_s": 8.13810620456934e-05,
+      "reference_s": 0.5002025249414146,
+      "engine_s": 1.8950245359446853,
+      "vocoder_s": 0.1817410618532449,
+      "total_s": 2.5770495038013905
     },
     {
       "sample_id": "fleurs-ar-eg-0003",
@@ -65,11 +66,11 @@
       "audio_duration_s": 11.14,
       "completion_tokens": 557,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 5.154707469046116e-05,
-      "reference_s": 0.00037180399522185326,
-      "engine_s": 3.4159970039036125,
-      "vocoder_s": 0.03865770506672561,
-      "total_s": 3.4550780600402504
+      "preprocessing_s": 5.1555922254920006e-05,
+      "reference_s": 0.0003977369051426649,
+      "engine_s": 2.0321209500543773,
+      "vocoder_s": 0.02835497399792075,
+      "total_s": 2.0609252168796957
     },
     {
       "sample_id": "fleurs-ar-eg-0004",
@@ -88,11 +89,11 @@
       "audio_duration_s": 7.08,
       "completion_tokens": 354,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.2970990762114525e-05,
-      "reference_s": 0.0003512620460242033,
-      "engine_s": 2.2054904878605157,
-      "vocoder_s": 0.03481723694130778,
-      "total_s": 2.24070195783861
+      "preprocessing_s": 4.4635962694883347e-05,
+      "reference_s": 0.00033834902569651604,
+      "engine_s": 1.3133531999774277,
+      "vocoder_s": 0.026910604909062386,
+      "total_s": 1.3406467898748815
     },
     {
       "sample_id": "fleurs-ar-eg-0006",
@@ -111,11 +112,11 @@
       "audio_duration_s": 8.58,
       "completion_tokens": 429,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.8002926632761955e-05,
-      "reference_s": 0.0003765921574085951,
-      "engine_s": 2.5166038679890335,
-      "vocoder_s": 0.029550919076427817,
-      "total_s": 2.5465793821495026
+      "preprocessing_s": 3.666803240776062e-05,
+      "reference_s": 0.00031524011865258217,
+      "engine_s": 1.5664580839220434,
+      "vocoder_s": 0.02535720798186958,
+      "total_s": 1.5921672000549734
     },
     {
       "sample_id": "fleurs-ar-eg-0008",
@@ -134,11 +135,11 @@
       "audio_duration_s": 6.26,
       "completion_tokens": 313,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.3907901272177696e-05,
-      "reference_s": 0.00036762794479727745,
-      "engine_s": 1.792638401966542,
-      "vocoder_s": 0.031100964872166514,
-      "total_s": 1.824150902684778
+      "preprocessing_s": 4.233303479850292e-05,
+      "reference_s": 0.0003336269874125719,
+      "engine_s": 1.1737778789829463,
+      "vocoder_s": 0.022975347004830837,
+      "total_s": 1.1971291860099882
     },
     {
       "sample_id": "fleurs-ar-eg-0013",
@@ -157,11 +158,11 @@
       "audio_duration_s": 6.34,
       "completion_tokens": 317,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.1774939745664597e-05,
-      "reference_s": 0.00037475302815437317,
-      "engine_s": 1.8467440879903734,
-      "vocoder_s": 0.037337908055633307,
-      "total_s": 1.8844985240139067
+      "preprocessing_s": 4.124804399907589e-05,
+      "reference_s": 0.0003267768770456314,
+      "engine_s": 1.1766101839020848,
+      "vocoder_s": 0.022938472917303443,
+      "total_s": 1.199916681740433
     },
     {
       "sample_id": "fleurs-ar-eg-0014",
@@ -180,11 +181,11 @@
       "audio_duration_s": 7.94,
       "completion_tokens": 397,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.906711935997009e-05,
-      "reference_s": 0.00035299709998071194,
-      "engine_s": 2.332440559985116,
-      "vocoder_s": 0.031743943924084306,
-      "total_s": 2.364576568128541
+      "preprocessing_s": 3.768410533666611e-05,
+      "reference_s": 0.0003106868825852871,
+      "engine_s": 1.4686907050199807,
+      "vocoder_s": 0.02580959303304553,
+      "total_s": 1.4948486690409482
     },
     {
       "sample_id": "fleurs-ar-eg-0017",
@@ -203,11 +204,11 @@
       "audio_duration_s": 5.94,
       "completion_tokens": 297,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.047807306051254e-05,
-      "reference_s": 0.00033237109892070293,
-      "engine_s": 1.7514738619793206,
-      "vocoder_s": 0.026338355150073767,
-      "total_s": 1.7781850663013756
+      "preprocessing_s": 4.337402060627937e-05,
+      "reference_s": 0.000353790121152997,
+      "engine_s": 1.1345878399442881,
+      "vocoder_s": 0.024240846978500485,
+      "total_s": 1.159225851064548
     },
     {
       "sample_id": "fleurs-ar-eg-0019",
@@ -226,11 +227,11 @@
       "audio_duration_s": 5.62,
       "completion_tokens": 281,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.573298454284668e-05,
-      "reference_s": 0.0003140391781926155,
-      "engine_s": 1.7502319170162082,
-      "vocoder_s": 0.03182478388771415,
-      "total_s": 1.7824064730666578
+      "preprocessing_s": 4.144595004618168e-05,
+      "reference_s": 0.0003682519309222698,
+      "engine_s": 1.0806659169029444,
+      "vocoder_s": 0.022341654868796468,
+      "total_s": 1.1034172696527094
     },
     {
       "sample_id": "fleurs-ar-eg-0021",
@@ -249,11 +250,11 @@
       "audio_duration_s": 9.4,
       "completion_tokens": 470,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 5.5181095376610756e-05,
-      "reference_s": 0.00041883205994963646,
-      "engine_s": 2.7726605178322643,
-      "vocoder_s": 0.03149728081189096,
-      "total_s": 2.8046318117994815
+      "preprocessing_s": 4.3850159272551537e-05,
+      "reference_s": 0.0003466398920863867,
+      "engine_s": 1.7222517358604819,
+      "vocoder_s": 0.026589222019538283,
+      "total_s": 1.749231447931379
     },
     {
       "sample_id": "fleurs-ar-eg-0023",
@@ -272,11 +273,11 @@
       "audio_duration_s": 8.98,
       "completion_tokens": 449,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 5.1391078159213066e-05,
-      "reference_s": 0.0004262251313775778,
-      "engine_s": 2.6264617040287703,
-      "vocoder_s": 0.03126735286787152,
-      "total_s": 2.6582066731061786
+      "preprocessing_s": 4.464201629161835e-05,
+      "reference_s": 0.0003628958947956562,
+      "engine_s": 1.655244288034737,
+      "vocoder_s": 0.026815424906089902,
+      "total_s": 1.6824672508519143
     },
     {
       "sample_id": "fleurs-ar-eg-0024",
@@ -295,11 +296,11 @@
       "audio_duration_s": 9.56,
       "completion_tokens": 478,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.826392978429794e-05,
-      "reference_s": 0.00041477102786302567,
-      "engine_s": 2.7533555820118636,
-      "vocoder_s": 0.0297870219219476,
-      "total_s": 2.7836056388914585
+      "preprocessing_s": 4.886300303041935e-05,
+      "reference_s": 0.0003954698331654072,
+      "engine_s": 1.7351368379313499,
+      "vocoder_s": 0.02354370499961078,
+      "total_s": 1.7591248757671565
     },
     {
       "sample_id": "fleurs-ar-eg-0025",
@@ -318,11 +319,11 @@
       "audio_duration_s": 8.28,
       "completion_tokens": 414,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.682107828557491e-05,
-      "reference_s": 0.0003758268430829048,
-      "engine_s": 2.3918082320597023,
-      "vocoder_s": 0.031392202945426106,
-      "total_s": 2.423623082926497
+      "preprocessing_s": 4.022102802991867e-05,
+      "reference_s": 0.0003317741211503744,
+      "engine_s": 1.5209072090219706,
+      "vocoder_s": 0.022373192943632603,
+      "total_s": 1.5436523971147835
     },
     {
       "sample_id": "fleurs-ar-eg-0027",
@@ -341,11 +342,11 @@
       "audio_duration_s": 6.58,
       "completion_tokens": 329,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.6043191105127335e-05,
-      "reference_s": 0.0004081770312041044,
-      "engine_s": 1.9256345839239657,
-      "vocoder_s": 0.030136857880279422,
-      "total_s": 1.9562256620265543
+      "preprocessing_s": 3.8217054679989815e-05,
+      "reference_s": 0.00032408186234533787,
+      "engine_s": 1.2260888209566474,
+      "vocoder_s": 0.02419803896918893,
+      "total_s": 1.2506491588428617
     },
     {
       "sample_id": "fleurs-ar-eg-0028",
@@ -364,11 +365,11 @@
       "audio_duration_s": 7.3,
       "completion_tokens": 365,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.384689964354038e-05,
-      "reference_s": 0.00036284211091697216,
-      "engine_s": 2.087289700983092,
-      "vocoder_s": 0.025502252159640193,
-      "total_s": 2.113198642153293
+      "preprocessing_s": 4.3675070628523827e-05,
+      "reference_s": 0.0003480510786175728,
+      "engine_s": 1.3472866548690945,
+      "vocoder_s": 0.02902183821424842,
+      "total_s": 1.376700219232589
     },
     {
       "sample_id": "fleurs-ar-eg-0029",
@@ -387,11 +388,11 @@
       "audio_duration_s": 8.44,
       "completion_tokens": 422,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.3173087760806084e-05,
-      "reference_s": 0.00038700690492987633,
-      "engine_s": 2.3956732789520174,
-      "vocoder_s": 0.028424980118870735,
-      "total_s": 2.424528439063579
+      "preprocessing_s": 4.467181861400604e-05,
+      "reference_s": 0.00040220608934760094,
+      "engine_s": 1.5320070360321552,
+      "vocoder_s": 0.02324497001245618,
+      "total_s": 1.555698883952573
     },
     {
       "sample_id": "fleurs-ar-eg-0030",
@@ -410,11 +411,11 @@
       "audio_duration_s": 5.78,
       "completion_tokens": 289,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.502804949879646e-05,
-      "reference_s": 0.0003801851999014616,
-      "engine_s": 1.6634145190473646,
-      "vocoder_s": 0.030098780058324337,
-      "total_s": 1.6939385123550892
+      "preprocessing_s": 3.8739992305636406e-05,
+      "reference_s": 0.0003253938630223274,
+      "engine_s": 1.07962078996934,
+      "vocoder_s": 0.02083070599474013,
+      "total_s": 1.100815629819408
     },
     {
       "sample_id": "fleurs-ar-eg-0031",
@@ -433,11 +434,11 @@
       "audio_duration_s": 9.08,
       "completion_tokens": 454,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.551699385046959e-05,
-      "reference_s": 0.00038553099147975445,
-      "engine_s": 2.5434416469652206,
-      "vocoder_s": 0.03138699405826628,
-      "total_s": 2.575259689008817
+      "preprocessing_s": 3.5600969567894936e-05,
+      "reference_s": 0.00035974103957414627,
+      "engine_s": 1.6260172040201724,
+      "vocoder_s": 0.024083659052848816,
+      "total_s": 1.6504962050821632
     },
     {
       "sample_id": "fleurs-ar-eg-0032",
@@ -456,11 +457,11 @@
       "audio_duration_s": 5.62,
       "completion_tokens": 281,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.7552788853645325e-05,
-      "reference_s": 0.0003546068910509348,
-      "engine_s": 1.5799189889803529,
-      "vocoder_s": 0.009362596087157726,
-      "total_s": 1.5896737447474152
+      "preprocessing_s": 4.5591965317726135e-05,
+      "reference_s": 0.00037297396920621395,
+      "engine_s": 1.0613171479199082,
+      "vocoder_s": 0.00766867003403604,
+      "total_s": 1.0694043838884681
     },
     {
       "sample_id": "fleurs-ar-eg-0033",
@@ -479,11 +480,11 @@
       "audio_duration_s": 4.28,
       "completion_tokens": 214,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.645809531211853e-05,
-      "reference_s": 0.0004011851269751787,
-      "engine_s": 1.25477801496163,
-      "vocoder_s": 0.026118026115000248,
-      "total_s": 1.2813436842989177
+      "preprocessing_s": 3.825989551842213e-05,
+      "reference_s": 0.0003690570592880249,
+      "engine_s": 0.8541283390950412,
+      "vocoder_s": 0.02451440179720521,
+      "total_s": 0.8790500578470528
     },
     {
       "sample_id": "fleurs-ar-eg-0036",
@@ -502,11 +503,11 @@
       "audio_duration_s": 9.72,
       "completion_tokens": 486,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.983103670179844e-05,
-      "reference_s": 0.000351188937202096,
-      "engine_s": 2.703482569893822,
-      "vocoder_s": 0.030027237022295594,
-      "total_s": 2.7339008268900216
+      "preprocessing_s": 4.2448053136467934e-05,
+      "reference_s": 0.00036039506085217,
+      "engine_s": 1.7597525648307055,
+      "vocoder_s": 0.024476272985339165,
+      "total_s": 1.7846316809300333
     },
     {
       "sample_id": "fleurs-ar-eg-0037",
@@ -525,11 +526,11 @@
       "audio_duration_s": 6.42,
       "completion_tokens": 321,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.619290120899677e-05,
-      "reference_s": 0.00037490110844373703,
-      "engine_s": 1.8194461548700929,
-      "vocoder_s": 0.025223307078704238,
-      "total_s": 1.8450905559584498
+      "preprocessing_s": 3.988901153206825e-05,
+      "reference_s": 0.00032852613367140293,
+      "engine_s": 1.1934562360402197,
+      "vocoder_s": 0.022867304971441627,
+      "total_s": 1.2166919561568648
     },
     {
       "sample_id": "fleurs-ar-eg-0039",
@@ -548,11 +549,11 @@
       "audio_duration_s": 5.86,
       "completion_tokens": 293,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.725895658135414e-05,
-      "reference_s": 0.000327305868268013,
-      "engine_s": 1.7140529688913375,
-      "vocoder_s": 0.02613240503706038,
-      "total_s": 1.7405499387532473
+      "preprocessing_s": 3.9255013689398766e-05,
+      "reference_s": 0.0003416410181671381,
+      "engine_s": 1.0988741021137685,
+      "vocoder_s": 0.023205875884741545,
+      "total_s": 1.1224608740303665
     },
     {
       "sample_id": "fleurs-ar-eg-0040",
@@ -571,11 +572,11 @@
       "audio_duration_s": 9.7,
       "completion_tokens": 485,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.119612276554108e-05,
-      "reference_s": 0.0003902919124811888,
-      "engine_s": 2.7360239159315825,
-      "vocoder_s": 0.030175226042047143,
-      "total_s": 2.7666306300088763
+      "preprocessing_s": 4.48648352175951e-05,
+      "reference_s": 0.00036201695911586285,
+      "engine_s": 1.727284203050658,
+      "vocoder_s": 0.023338723927736282,
+      "total_s": 1.7510298087727278
     },
     {
       "sample_id": "fleurs-ar-eg-0042",
@@ -594,11 +595,11 @@
       "audio_duration_s": 8.42,
       "completion_tokens": 421,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.5945169404149055e-05,
-      "reference_s": 0.00038557802326977253,
-      "engine_s": 2.4037722810171545,
-      "vocoder_s": 0.032879758859053254,
-      "total_s": 2.4370835630688816
+      "preprocessing_s": 4.046689718961716e-05,
+      "reference_s": 0.0003703390248119831,
+      "engine_s": 1.5298371699173003,
+      "vocoder_s": 0.02276191720739007,
+      "total_s": 1.553009893046692
     },
     {
       "sample_id": "fleurs-ar-eg-0043",
@@ -617,11 +618,11 @@
       "audio_duration_s": 14.36,
       "completion_tokens": 718,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.304898902773857e-05,
-      "reference_s": 0.0003663410898298025,
-      "engine_s": 3.968136239098385,
-      "vocoder_s": 0.040584800066426396,
-      "total_s": 4.009130429243669
+      "preprocessing_s": 4.080100916326046e-05,
+      "reference_s": 0.0003526899963617325,
+      "engine_s": 2.504276238847524,
+      "vocoder_s": 0.027963839937001467,
+      "total_s": 2.5326335697900504
     },
     {
       "sample_id": "fleurs-ar-eg-0044",
@@ -640,11 +641,11 @@
       "audio_duration_s": 6.44,
       "completion_tokens": 322,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.1431980207562447e-05,
-      "reference_s": 0.0003773260395973921,
-      "engine_s": 1.8625334601383656,
-      "vocoder_s": 0.027692860923707485,
-      "total_s": 1.890645079081878
+      "preprocessing_s": 3.866991028189659e-05,
+      "reference_s": 0.0003384470473974943,
+      "engine_s": 1.1927215158939362,
+      "vocoder_s": 0.021847038064152002,
+      "total_s": 1.2149456709157676
     },
     {
       "sample_id": "fleurs-ar-eg-0045",
@@ -663,11 +664,11 @@
       "audio_duration_s": 14.36,
       "completion_tokens": 718,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.8906000554561615e-05,
-      "reference_s": 0.0003327140584588051,
-      "engine_s": 4.0006542389746755,
-      "vocoder_s": 0.01489635999314487,
-      "total_s": 4.015922219026834
+      "preprocessing_s": 3.96540854126215e-05,
+      "reference_s": 0.00034426082856953144,
+      "engine_s": 2.508966607041657,
+      "vocoder_s": 0.012492756824940443,
+      "total_s": 2.5218432787805796
     },
     {
       "sample_id": "fleurs-ar-eg-0046",
@@ -686,11 +687,11 @@
       "audio_duration_s": 12.58,
       "completion_tokens": 629,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.672887735068798e-05,
-      "reference_s": 0.00041971891187131405,
-      "engine_s": 3.5572440719697624,
-      "vocoder_s": 0.032326944172382355,
-      "total_s": 3.590037463931367
+      "preprocessing_s": 5.150097422301769e-05,
+      "reference_s": 0.0004352650139480829,
+      "engine_s": 2.249210763955489,
+      "vocoder_s": 0.026651724008843303,
+      "total_s": 2.276349253952503
     },
     {
       "sample_id": "fleurs-ar-eg-0048",
@@ -709,11 +710,11 @@
       "audio_duration_s": 8.9,
       "completion_tokens": 445,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 5.0029950216412544e-05,
-      "reference_s": 0.0004415181465446949,
-      "engine_s": 2.514773870119825,
-      "vocoder_s": 0.02570054493844509,
-      "total_s": 2.540965963155031
+      "preprocessing_s": 4.6320026740431786e-05,
+      "reference_s": 0.00040985713712871075,
+      "engine_s": 1.6120120990090072,
+      "vocoder_s": 0.022457378916442394,
+      "total_s": 1.6349256550893188
     },
     {
       "sample_id": "fleurs-ar-eg-0050",
@@ -732,11 +733,11 @@
       "audio_duration_s": 6.92,
       "completion_tokens": 346,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.885803744196892e-05,
-      "reference_s": 0.0003435639664530754,
-      "engine_s": 1.9869749029166996,
-      "vocoder_s": 0.02593638002872467,
-      "total_s": 2.0132937049493194
+      "preprocessing_s": 3.826501779258251e-05,
+      "reference_s": 0.0003410051576793194,
+      "engine_s": 1.280634680064395,
+      "vocoder_s": 0.02404625085182488,
+      "total_s": 1.3050602010916919
     },
     {
       "sample_id": "fleurs-ar-eg-0052",
@@ -755,11 +756,11 @@
       "audio_duration_s": 10.82,
       "completion_tokens": 541,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.825104795396328e-05,
-      "reference_s": 0.00031495094299316406,
-      "engine_s": 3.0107497200369835,
-      "vocoder_s": 0.028461202047765255,
-      "total_s": 3.039564124075696
+      "preprocessing_s": 4.0117884054780006e-05,
+      "reference_s": 0.0003331978805363178,
+      "engine_s": 1.9391333791427314,
+      "vocoder_s": 0.02555119921453297,
+      "total_s": 1.9650578941218555
     },
     {
       "sample_id": "fleurs-ar-eg-0053",
@@ -778,11 +779,11 @@
       "audio_duration_s": 9.32,
       "completion_tokens": 466,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.919797018170357e-05,
-      "reference_s": 0.0003296250943094492,
-      "engine_s": 2.6610734090209007,
-      "vocoder_s": 0.026461713016033173,
-      "total_s": 2.687903945101425
+      "preprocessing_s": 3.789900802075863e-05,
+      "reference_s": 0.0003453472163528204,
+      "engine_s": 1.666034554131329,
+      "vocoder_s": 0.025053248973563313,
+      "total_s": 1.691471049329266
     },
     {
       "sample_id": "fleurs-ar-eg-0055",
@@ -801,11 +802,11 @@
       "audio_duration_s": 7.7,
       "completion_tokens": 385,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.8906000554561615e-05,
-      "reference_s": 0.0003607850521802902,
-      "engine_s": 2.264386974973604,
-      "vocoder_s": 0.03318892908282578,
-      "total_s": 2.2979755951091647
+      "preprocessing_s": 4.697195254266262e-05,
+      "reference_s": 0.0003920788876712322,
+      "engine_s": 1.424681348958984,
+      "vocoder_s": 0.022285537095740438,
+      "total_s": 1.4474059368949383
     },
     {
       "sample_id": "fleurs-ar-eg-0057",
@@ -824,11 +825,11 @@
       "audio_duration_s": 9.56,
       "completion_tokens": 478,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.7486042603850365e-05,
-      "reference_s": 0.0003846439067274332,
-      "engine_s": 2.699139729142189,
-      "vocoder_s": 0.012952242977917194,
-      "total_s": 2.7125241020694375
+      "preprocessing_s": 3.691180609166622e-05,
+      "reference_s": 0.0003271291498094797,
+      "engine_s": 1.7075153079349548,
+      "vocoder_s": 0.009243459906429052,
+      "total_s": 1.717122808797285
     },
     {
       "sample_id": "fleurs-ar-eg-0060",
@@ -847,11 +848,11 @@
       "audio_duration_s": 8.04,
       "completion_tokens": 402,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.6793993785977364e-05,
-      "reference_s": 0.0003699150402098894,
-      "engine_s": 2.1628114450722933,
-      "vocoder_s": 0.03150403196923435,
-      "total_s": 2.1947221860755235
+      "preprocessing_s": 3.9763981476426125e-05,
+      "reference_s": 0.00036694202572107315,
+      "engine_s": 1.468579864827916,
+      "vocoder_s": 0.023610583040863276,
+      "total_s": 1.4925971538759768
     },
     {
       "sample_id": "fleurs-ar-eg-0064",
@@ -870,11 +871,11 @@
       "audio_duration_s": 7.14,
       "completion_tokens": 357,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.203803837299347e-05,
-      "reference_s": 0.0003665490075945854,
-      "engine_s": 2.0055184939410537,
-      "vocoder_s": 0.03154277103021741,
-      "total_s": 2.0374698520172387
+      "preprocessing_s": 4.437193274497986e-05,
+      "reference_s": 0.0003395969979465008,
+      "engine_s": 1.335135545115918,
+      "vocoder_s": 0.021038549952208996,
+      "total_s": 1.3565580639988184
     },
     {
       "sample_id": "fleurs-ar-eg-0067",
@@ -893,11 +894,11 @@
       "audio_duration_s": 4.76,
       "completion_tokens": 238,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.794006235897541e-05,
-      "reference_s": 0.0003889820072799921,
-      "engine_s": 1.408954570069909,
-      "vocoder_s": 0.030944881960749626,
-      "total_s": 1.4403363741002977
+      "preprocessing_s": 4.186597652733326e-05,
+      "reference_s": 0.00035344716161489487,
+      "engine_s": 0.927154241129756,
+      "vocoder_s": 0.022035691887140274,
+      "total_s": 0.9495852461550385
     },
     {
       "sample_id": "fleurs-ar-eg-0068",
@@ -916,11 +917,11 @@
       "audio_duration_s": 6.82,
       "completion_tokens": 341,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.215305671095848e-05,
-      "reference_s": 0.00037757097743451595,
-      "engine_s": 1.9730458410922438,
-      "vocoder_s": 0.026518339989706874,
-      "total_s": 1.9999839051160961
+      "preprocessing_s": 3.874208778142929e-05,
+      "reference_s": 0.0003413539379835129,
+      "engine_s": 1.289568732958287,
+      "vocoder_s": 0.02283793594688177,
+      "total_s": 1.3127867649309337
     },
     {
       "sample_id": "fleurs-ar-eg-0071",
@@ -939,11 +940,11 @@
       "audio_duration_s": 7.38,
       "completion_tokens": 369,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.320614971220493e-05,
-      "reference_s": 0.00036102510057389736,
-      "engine_s": 2.108133398927748,
-      "vocoder_s": 0.02815655409358442,
-      "total_s": 2.1366941842716187
+      "preprocessing_s": 4.002591595053673e-05,
+      "reference_s": 0.0003455749247223139,
+      "engine_s": 1.3688055349048227,
+      "vocoder_s": 0.023650976829230785,
+      "total_s": 1.3928421125747263
     },
     {
       "sample_id": "fleurs-ar-eg-0074",
@@ -962,11 +963,11 @@
       "audio_duration_s": 9.6,
       "completion_tokens": 480,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.053208976984024e-05,
-      "reference_s": 0.00033219996839761734,
-      "engine_s": 2.707084540044889,
-      "vocoder_s": 0.03493370697833598,
-      "total_s": 2.7423909790813923
+      "preprocessing_s": 4.297005943953991e-05,
+      "reference_s": 0.00041755614802241325,
+      "engine_s": 1.7503841230645776,
+      "vocoder_s": 0.02484213118441403,
+      "total_s": 1.7756867804564536
     },
     {
       "sample_id": "fleurs-ar-eg-0076",
@@ -985,11 +986,11 @@
       "audio_duration_s": 4.82,
       "completion_tokens": 241,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.2771920561790466e-05,
-      "reference_s": 0.0003602891229093075,
-      "engine_s": 1.4164796569384634,
-      "vocoder_s": 0.0317367441020906,
-      "total_s": 1.4486194620840251
+      "preprocessing_s": 5.168607458472252e-05,
+      "reference_s": 0.0003437250852584839,
+      "engine_s": 0.9518738249316812,
+      "vocoder_s": 0.024111543083563447,
+      "total_s": 0.9763807791750878
     },
     {
       "sample_id": "fleurs-ar-eg-0077",
@@ -1008,11 +1009,11 @@
       "audio_duration_s": 9.62,
       "completion_tokens": 481,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.3689971789717674e-05,
-      "reference_s": 0.0003886111080646515,
-      "engine_s": 2.7505123228766024,
-      "vocoder_s": 0.029627648880705237,
-      "total_s": 2.780572272837162
+      "preprocessing_s": 3.803102299571037e-05,
+      "reference_s": 0.00033837510272860527,
+      "engine_s": 1.7466143348719925,
+      "vocoder_s": 0.022961228154599667,
+      "total_s": 1.7699519691523165
     },
     {
       "sample_id": "fleurs-ar-eg-0079",
@@ -1031,11 +1032,11 @@
       "audio_duration_s": 8.58,
       "completion_tokens": 429,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.4980086386203766e-05,
-      "reference_s": 0.00036218203604221344,
-      "engine_s": 2.453258771216497,
-      "vocoder_s": 0.013178086839616299,
-      "total_s": 2.4668440201785415
+      "preprocessing_s": 4.6791043132543564e-05,
+      "reference_s": 0.0003914171829819679,
+      "engine_s": 1.5773870318662375,
+      "vocoder_s": 0.008701317943632603,
+      "total_s": 1.5865265580359846
     },
     {
       "sample_id": "fleurs-ar-eg-0080",
@@ -1054,11 +1055,11 @@
       "audio_duration_s": 6.92,
       "completion_tokens": 346,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.7384994104504585e-05,
-      "reference_s": 0.000393842114135623,
-      "engine_s": 1.9803171679377556,
-      "vocoder_s": 0.0127698490396142,
-      "total_s": 1.99352824408561
+      "preprocessing_s": 4.093209281563759e-05,
+      "reference_s": 0.00036865007132291794,
+      "engine_s": 1.285229864064604,
+      "vocoder_s": 0.00871909293346107,
+      "total_s": 1.2943585391622037
     },
     {
       "sample_id": "fleurs-ar-eg-0082",
@@ -1077,11 +1078,11 @@
       "audio_duration_s": 7.7,
       "completion_tokens": 385,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.935582935810089e-05,
-      "reference_s": 0.0003613701555877924,
-      "engine_s": 2.118340027052909,
-      "vocoder_s": 0.011876841075718403,
-      "total_s": 2.1306175941135734
+      "preprocessing_s": 4.291906952857971e-05,
+      "reference_s": 0.0004135018680244684,
+      "engine_s": 1.4348812298849225,
+      "vocoder_s": 0.01275795791298151,
+      "total_s": 1.448095608735457
     },
     {
       "sample_id": "fleurs-ar-eg-0084",
@@ -1100,11 +1101,11 @@
       "audio_duration_s": 9.62,
       "completion_tokens": 481,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.796000964939594e-05,
-      "reference_s": 0.0003440899308770895,
-      "engine_s": 2.643880211049691,
-      "vocoder_s": 0.010064492002129555,
-      "total_s": 2.654326752992347
+      "preprocessing_s": 5.5521028116345406e-05,
+      "reference_s": 0.0005109859630465508,
+      "engine_s": 1.738009479129687,
+      "vocoder_s": 0.008930017007514834,
+      "total_s": 1.7475060031283647
     },
     {
       "sample_id": "fleurs-ar-eg-0085",
@@ -1123,11 +1124,11 @@
       "audio_duration_s": 9.22,
       "completion_tokens": 461,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.67000063508749e-05,
-      "reference_s": 0.00041331909596920013,
-      "engine_s": 2.5291103271301836,
-      "vocoder_s": 0.03319489397108555,
-      "total_s": 2.562765240203589
+      "preprocessing_s": 3.926805220544338e-05,
+      "reference_s": 0.00035664695315063,
+      "engine_s": 1.668188429903239,
+      "vocoder_s": 0.02901936019770801,
+      "total_s": 1.697603705106303
     },
     {
       "sample_id": "fleurs-ar-eg-0086",
@@ -1146,11 +1147,11 @@
       "audio_duration_s": 4.24,
       "completion_tokens": 212,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 4.105898551642895e-05,
-      "reference_s": 0.000332175986841321,
-      "engine_s": 1.2304538479074836,
-      "vocoder_s": 0.024080150993540883,
-      "total_s": 1.2549072338733822
+      "preprocessing_s": 4.805601201951504e-05,
+      "reference_s": 0.00045242486521601677,
+      "engine_s": 0.858075822936371,
+      "vocoder_s": 0.020785687025636435,
+      "total_s": 0.8793619908392429
     },
     {
       "sample_id": "fleurs-ar-eg-0088",
@@ -1169,11 +1170,11 @@
       "audio_duration_s": 8.1,
       "completion_tokens": 405,
       "reached_max_new_tokens": false,
-      "preprocessing_s": 3.8653844967484474e-05,
-      "reference_s": 0.0003196077886968851,
-      "engine_s": 2.2130856751464307,
-      "vocoder_s": 0.027199255069717765,
-      "total_s": 2.240643191849813
+      "preprocessing_s": 3.8253143429756165e-05,
+      "reference_s": 0.0003261610399931669,
+      "engine_s": 1.4876698078587651,
+      "vocoder_s": 0.025558636989444494,
+      "total_s": 1.5135928590316325
     }
   ]
 }
