@@ -66,11 +66,5 @@
     "arabic_bleu_signature": "nrefs:1|case:mixed|eff:no|tok:none|smooth:exp|version:2.6.0",
     "arabic_chrf_pp": 92.2314636067578,
     "normalization": "NFKC, Arabic diacritics/tatweel/punctuation stripped, Alef and digits normalized"
-  },
-  "tts_minus_reference_audio": {
-    "arabic_wer": -0.034818941504178275,
-    "arabic_cer": -0.01233529576675077,
-    "arabic_bleu": 7.071806144302855,
-    "arabic_chrf_pp": 3.33427150000378
   }
 }

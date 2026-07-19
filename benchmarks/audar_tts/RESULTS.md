@@ -47,20 +47,24 @@ pairwise. The ASR artifact also records and verifies the SHA-256 of every WAV it
 actually transcribed. Latest was transcribed once; the pre-T1 quality result is
 inherited only from exact WAV identity, not measured in a second ASR run.
 
-The same ASR and normalization were also run on the original human FLEURS audio
-for these 50 rows. This is an ASR baseline, not a theoretical floor: cleaner
-synthetic speech can be easier to recognize than the source recordings.
+| Audar TTS metric | Value |
+| --- | ---: |
+| Arabic corpus WER | 5.43% |
+| Arabic corpus CER | 1.46% |
+| Arabic corpus BLEU | 88.75 |
+| Arabic chrF++ | 95.57 |
 
-| Metric | FLEURS source audio | Audar TTS | TTS - source |
-| --- | ---: | ---: | ---: |
-| Arabic corpus WER | 8.91% | 5.43% | -3.48 pp |
-| Arabic corpus CER | 2.69% | 1.46% | -1.23 pp |
-| Arabic corpus BLEU | 81.68 | 88.75 | +7.07 |
-| Arabic chrF++ | 92.23 | 95.57 | +3.33 |
+The same ASR and normalization give 8.91% WER on the original human FLEURS
+audio for these rows. This is context for the recognizer, not a directly
+comparable floor or quality delta: the source audio can diverge from the written
+transcription, including spoken-number and grammatical-form differences, and it
+is 16 kHz rather than the TTS output's 24 kHz. No sample has WER above 50%;
+maximum per-sample WER is 35.29% for TTS and 37.50% for source audio.
 
-No sample has WER above 50%; maximum per-sample WER is 35.29% for TTS and
-37.50% for source audio. BLEU, CER, and chrF++ are alternate views of the same
-ASR transcripts, not independent quality measurements.
+BLEU, CER, and chrF++ are alternate views of the same ASR transcripts, not
+independent quality measurements. Hash identity alone establishes pre/post
+refactor equivalence; these ASR metrics are a separate absolute-intelligibility
+check for Audar.
 These values come from one Qwen3-ASR pass, so no ASR run-to-run interval is
 claimed. Metrics use folded Arabic orthography: Alef variants and alif maqsura
 are normalized, and diacritics, tatweel, and punctuation are removed. They

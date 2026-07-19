@@ -205,16 +205,6 @@ def main() -> None:
         "pre_t1": pre_quality,
         "latest": latest_quality,
         "reference_audio_asr_baseline": reference_quality,
-        "tts_minus_reference_audio": {
-            "arabic_wer": latest_quality["arabic_wer"]
-            - reference_quality["arabic_wer"],
-            "arabic_cer": latest_quality["arabic_cer"]
-            - reference_quality["arabic_cer"],
-            "arabic_bleu": latest_quality["arabic_bleu"]
-            - reference_quality["arabic_bleu"],
-            "arabic_chrf_pp": latest_quality["arabic_chrf_pp"]
-            - reference_quality["arabic_chrf_pp"],
-        },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
