@@ -188,6 +188,11 @@ def create_sglang_moss_transcribe_diarize_executor(
         processor=processor,
         tokenizer=tokenizer,
         max_new_tokens=resolved_max_new_tokens,
+        # note (db-ol): server_args wins over the resolved value when a
+        # server_args_overrides entry changes context_length, and the builder
+        # limit must match what the scheduler actually enforces.
+        context_length=int(server_args.context_length),
+        duration_scaled_default=max_new_tokens is None,
     )
     stream_output_builder = make_moss_transcribe_diarize_stream_output_builder(
         tokenizer=tokenizer,

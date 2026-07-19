@@ -127,6 +127,8 @@ _BAD_REQUEST_MARKERS = (
     "Requested token count exceeds the model's maximum context length",
     "accepts audio up to",
     "max_new_tokens must be",
+    "exceeds the maximum allowed length",
+    "sequence exceeds max_length",
 )
 
 

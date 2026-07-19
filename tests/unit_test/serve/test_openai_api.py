@@ -269,6 +269,27 @@ class SuccessfulTranscriptionClient:
         return CompletionResult(request_id="transcription-1", text="hello world")
 
 
+class FailingTranscriptionClient:
+    def __init__(self, message: str, exc_type: type[Exception] | None = None) -> None:
+        self.message = message
+        self.exc_type = exc_type
+
+    def health(self) -> dict[str, Any]:
+        return {"running": True}
+
+    async def completion(
+        self,
+        request: GenerateRequest,
+        *,
+        request_id: str,
+        audio_format: str = "wav",
+    ):
+        from sglang_omni.client import ClientError
+
+        del request, request_id, audio_format
+        raise (self.exc_type or ClientError)(self.message)
+
+
 class AdminClient:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, Any], list[str] | None, float]] = []
@@ -1084,6 +1105,89 @@ def test_transcription_endpoint_passes_explicit_max_new_tokens() -> None:
     assert request.model == "OpenMOSS-Team/MOSS-Transcribe-Diarize"
     assert request.sampling.max_new_tokens == 4096
     assert request.metadata[EXPLICIT_GENERATION_PARAMS_KEY] == ["max_new_tokens"]
+
+
+def test_transcription_endpoint_maps_input_length_error_to_400() -> None:
+    transcription_client = FailingTranscriptionClient(
+        "Input length (140000 tokens) exceeds the maximum allowed length "
+        "(131071 tokens). Use a shorter input or enable --allow-auto-truncate."
+    )
+    client = TestClient(
+        create_app(
+            transcription_client,
+            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
+        )
+    )
+
+    response = client.post(
+        "/v1/audio/transcriptions",
+        data={"model": "OpenMOSS-Team/MOSS-Transcribe-Diarize"},
+        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
+    )
+
+    assert response.status_code == 400
+    assert "exceeds the maximum allowed length" in response.json()["detail"]
+
+
+def test_transcription_endpoint_maps_runtime_input_length_error_to_400() -> None:
+    transcription_client = FailingTranscriptionClient(
+        "Input length (140000 tokens) exceeds the maximum allowed length "
+        "(131071 tokens).",
+        exc_type=RuntimeError,
+    )
+    client = TestClient(
+        create_app(
+            transcription_client,
+            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
+        )
+    )
+
+    response = client.post(
+        "/v1/audio/transcriptions",
+        data={"model": "OpenMOSS-Team/MOSS-Transcribe-Diarize"},
+        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
+    )
+
+    assert response.status_code == 400
+
+
+def test_transcription_endpoint_maps_processor_max_length_error_to_400() -> None:
+    transcription_client = FailingTranscriptionClient(
+        "Prompt/audio sequence exceeds max_length=132096"
+    )
+    client = TestClient(
+        create_app(
+            transcription_client,
+            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
+        )
+    )
+
+    response = client.post(
+        "/v1/audio/transcriptions",
+        data={"model": "OpenMOSS-Team/MOSS-Transcribe-Diarize"},
+        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
+    )
+
+    assert response.status_code == 400
+    assert "exceeds max_length" in response.json()["detail"]
+
+
+def test_transcription_endpoint_keeps_500_for_server_errors() -> None:
+    transcription_client = FailingTranscriptionClient("scheduler worker crashed")
+    client = TestClient(
+        create_app(
+            transcription_client,
+            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
+        )
+    )
+
+    response = client.post(
+        "/v1/audio/transcriptions",
+        data={"model": "OpenMOSS-Team/MOSS-Transcribe-Diarize"},
+        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
+    )
+
+    assert response.status_code == 500
 
 
 def test_transcription_endpoint_uses_openai_temperature_default() -> None:

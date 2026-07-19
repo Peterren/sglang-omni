@@ -171,7 +171,11 @@ def _stub_factory_env(monkeypatch: pytest.MonkeyPatch, *, want_cuda_graph: bool)
     monkeypatch.setattr(stages, "_default_max_new_tokens", lambda path: 100)
     monkeypatch.setattr(stages, "_default_context_length", lambda path: 4096)
     monkeypatch.setattr(stages, "build_generation_batch_overrides", lambda **k: {})
-    monkeypatch.setattr(stages, "build_sglang_server_args", lambda *a, **k: object())
+    monkeypatch.setattr(
+        stages,
+        "build_sglang_server_args",
+        lambda *a, **k: SimpleNamespace(context_length=4096),
+    )
     monkeypatch.setattr(stages, "validate_generation_batch_policy", lambda **k: None)
     monkeypatch.setattr(
         stages, "create_sglang_infrastructure_defer_cuda_graph", lambda *a, **k: infra
