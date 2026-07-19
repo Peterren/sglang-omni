@@ -108,8 +108,8 @@ def test_reaching_target_releases_before_deadline(upstream, clock):
 
 
 def test_partial_admission_leftovers_keep_their_deadline(upstream, clock):
-    # Upstream admitted part of an expired wave; the leftovers still carry old
-    # enqueue times and must NOT re-wait a fresh window.
+    # Note: (maydomine) leftovers of a partially admitted wave keep their old
+    # stamps and must not re-wait a fresh window.
     sched = _StubScheduler(coalesce_requests=8, wait_ms=60.0)
     clock.return_value = 100.1
     sched.waiting_queue = [_req(100.0), _req(100.02)]  # both past the deadline
@@ -117,8 +117,8 @@ def test_partial_admission_leftovers_keep_their_deadline(upstream, clock):
 
 
 def test_abort_does_not_hand_newcomers_an_expired_deadline(upstream, clock):
-    # The request that opened the window was aborted; a fresh arrival must
-    # wait its own window rather than inherit the nearly expired one.
+    # Note: (maydomine) a fresh arrival after an abort waits its own window
+    # rather than inheriting the nearly expired one.
     sched = _StubScheduler(coalesce_requests=8, wait_ms=60.0)
     clock.return_value = 100.1
     sched.waiting_queue = [_req(100.09)]  # newcomer, 10ms old
@@ -126,7 +126,8 @@ def test_abort_does_not_hand_newcomers_an_expired_deadline(upstream, clock):
 
 
 def test_idle_loop_bypasses_gate(upstream):
-    # Note(maydomine): No decode in flight: holding prefill amortizes nothing, only costs TTFB.
+    # Note: (maydomine) no decode in flight: holding amortizes nothing, only
+    # costs TTFB.
     sched = _StubScheduler(coalesce_requests=8)
     sched.waiting_queue = [_req(0.0)]
     sched.running_batch = None
@@ -185,7 +186,7 @@ def test_newcomer_after_queue_drain_waits_its_own_window(upstream, clock):
 
 
 def test_unstamped_request_is_stamped_and_eventually_released(upstream, clock):
-    # Note(maydomine): Stamp-on-miss: held at first observation, then guaranteed release
+    # Note: (maydomine) stamp-on-miss: held at first observation, released
     # within the wait deadline (never a K-only unbounded hold).
     sched = _StubScheduler(coalesce_requests=8, wait_ms=60.0)
     clock.return_value = 200.0

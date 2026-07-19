@@ -195,9 +195,8 @@ class OmniScheduler:
         if model_runner is not None:
             model_runner._async_enabled = enable_async_decode
 
-        # Note(maydomine): Prefill admission coalescing: hold prefill until K requests are
-        # waiting or the oldest has waited T ms, amortizing the per-step host
-        # cost (mostly batch-size-independent) over more requests. 0 = off.
+        # Note: (maydomine) coalescing gate: hold prefill until K requests wait
+        # or the oldest has waited T ms; 0 disables.
         if int(prefill_coalesce_requests) > 1 and int(server_args.tp_size) > 1:
             logger.warning(
                 "Prefill admission coalescing is disabled for "
@@ -833,10 +832,8 @@ class OmniScheduler:
         )
 
     def get_new_batch_prefill(self):
-        # NOTE(maydomine): requests often arrive faster than they batch, so the
-        # loop burns its time on tiny prefill batches. Hold admission until the
-        # batch is worth its fixed step cost; the deadline is measured from the
-        # oldest queued request, so partial admission or aborts never restart it.
+        # Note: (maydomine) batch prefill admissions to amortize the fixed step
+        # cost; the oldest-request deadline survives partial admission and aborts.
         if self.prefill_coalesce_requests <= 1 or self.chunked_req is not None:
             return _Upstream.get_new_batch_prefill(self)
         if self.running_batch is None or self.running_batch.is_empty():

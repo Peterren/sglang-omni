@@ -517,7 +517,7 @@ def create_vocoder_executor(
                 dtype=torch.long,
                 device="cpu",
             )
-            # note (stephenkgli): Match serving's contiguous [T, N] layout and
+            # Note: (stephenkgli) match serving's contiguous [T, N] layout and
             # warm the zero-one-specialized batch and frame-count classes.
             for frame_count in _VOCODER_COMPILE_WARMUP_FRAME_COUNTS:
                 frame_codes_TN = warm_codes_TN[:frame_count]

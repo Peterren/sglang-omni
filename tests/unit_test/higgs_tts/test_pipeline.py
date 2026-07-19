@@ -271,14 +271,14 @@ def test_higgs_tts_engine_memory_budget_override_is_loud(caplog) -> None:
     builder = _make_higgs_builder(total_gpu_memory_fraction=0.8)
     assert builder.generation_defaults(dtype="bfloat16")["mem_fraction_static"] == 0.8
 
-    # Matching override (the no-CLI-flag path) stays silent.
+    # Note: (Jiaxin Deng) the matching no-CLI-flag path stays silent.
     with caplog.at_level(logging.WARNING):
         builder.adjust_overrides({"mem_fraction_static": 0.8})
         _make_higgs_builder().adjust_overrides({"mem_fraction_static": 0.9})
     assert not caplog.records
 
-    # A diverging override (e.g. --talker-mem-fraction-static) still wins, but
-    # warns instead of silently shadowing the placement-validated budget.
+    # Note: (Jiaxin Deng) a diverging override (e.g. --talker-mem-fraction-static)
+    # wins but warns instead of silently shadowing the placement budget.
     with caplog.at_level(logging.WARNING):
         builder.adjust_overrides({"mem_fraction_static": 0.3})
     assert any(
