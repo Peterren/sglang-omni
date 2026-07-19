@@ -26,9 +26,9 @@ from sglang_omni.scheduling.pipeline_state import build_usage
 from sglang_omni.scheduling.pipeline_state import load_state as load_pipeline_state
 from sglang_omni.scheduling.pipeline_state import store_state as store_pipeline_state
 from sglang_omni.scheduling.reference_encoder import (
-    ReferenceEncodeHook,
     ReferenceEncodeKey,
     ReferenceEncodeService,
+    TensorReferenceEncodeHook,
 )
 from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
 from sglang_omni.utils.audio_payload import audio_waveform_payload
@@ -125,9 +125,12 @@ def _encode_reference(codec: Any, device: str, item: _ReferenceInput) -> torch.T
     return codes.detach().to(device="cpu", dtype=torch.long)
 
 
-class _AudarReferenceEncodeHook(
-    ReferenceEncodeHook[_ReferenceInput, torch.Tensor, torch.Tensor]
-):
+class _AudarReferenceEncodeHook(TensorReferenceEncodeHook[_ReferenceInput]):
+    encoder_id = "neucodec"
+    artifact_kind = "audar_reference_codes"
+    storage_dtype = torch.int32
+    output_dtype = torch.long
+
     def __init__(
         self,
         *,
@@ -139,38 +142,22 @@ class _AudarReferenceEncodeHook(
     ) -> None:
         self._codec = codec
         self._device = device
-        self._codec_model = codec_model
-        self._codec_revision = codec_revision
+        self.model_id = codec_model
+        self.model_revision = codec_revision
         self._codec_lock = codec_lock or threading.Lock()
-        self._config_hash = hash_bytes(
+        self.encoder_config_hash = hash_bytes(
             f"sample_rate:{REFERENCE_SAMPLE_RATE}".encode("utf-8")
         )
 
     def normalize_input(self, raw_input: Any) -> _ReferenceInput:
         return _normalize_reference(raw_input)
 
-    def cache_key(self, item: _ReferenceInput) -> ReferenceEncodeKey | None:
-        input_key = _reference_key(item)
-        if input_key is None:
-            return None
-        return ReferenceEncodeKey(
-            model_id=self._codec_model,
-            model_revision=self._codec_revision,
-            encoder_id="neucodec",
-            encoder_config_hash=self._config_hash,
-            artifact_kind="audar_reference_codes",
-            input_key=input_key,
-        )
+    def input_key(self, item: _ReferenceInput) -> str | None:
+        return _reference_key(item)
 
     def encode_one(self, item: _ReferenceInput) -> torch.Tensor:
         with self._codec_lock:
             return _encode_reference(self._codec, self._device, item)
-
-    def store_artifact(self, artifact: torch.Tensor) -> torch.Tensor:
-        return artifact.detach().to(device="cpu", dtype=torch.int32).clone()
-
-    def load_artifact(self, stored: torch.Tensor) -> torch.Tensor:
-        return stored.detach().clone().long()
 
     def revalidate(self, item: _ReferenceInput, key: ReferenceEncodeKey) -> bool:
         return item.source_kind != "path" or _reference_key(item) == key.input_key
