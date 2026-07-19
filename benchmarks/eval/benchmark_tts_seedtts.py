@@ -595,7 +595,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--lang",
         type=str,
-        choices=["ar", "en", "zh"],
+        choices=["en", "zh"],
         default="en",
         help="Language for ASR model (transcribe phase).",
     )

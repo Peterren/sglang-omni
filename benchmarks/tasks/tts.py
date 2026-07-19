@@ -95,7 +95,6 @@ def save_wer_results(
                 "hits": o.hits if o.is_success else None,
                 "audio_duration_s": round(o.audio_duration_s, 4),
                 "latency_s": round(o.latency_s, 4),
-                "wav_sha256": o.wav_sha256 or None,
                 "is_success": o.is_success,
                 "error": o.error or None,
             }
@@ -119,7 +118,6 @@ def save_wer_results(
                 "hits",
                 "audio_duration_s",
                 "latency_s",
-                "wav_sha256",
                 "is_success",
                 "error",
             ]
@@ -137,7 +135,6 @@ def save_wer_results(
                     o.hits if o.is_success else "",
                     f"{o.audio_duration_s:.4f}",
                     f"{o.latency_s:.4f}",
-                    o.wav_sha256,
                     o.is_success,
                     o.error or "",
                 ]
@@ -557,7 +554,6 @@ def _transcribe_generated_via_runner(
             output.error = (result.error if result else "") or "No transcription"
         else:
             output.asr_latency_s = result.latency_s
-            output.wav_sha256 = result.wav_sha256
             output = apply_wer(output, result.text, lang)
         _log_transcribe_result(
             idx=idx,

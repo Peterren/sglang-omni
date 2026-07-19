@@ -1,3 +1,2 @@
 config_cls: AudarTTSPipelineConfig
 model_path: audarai/Audar-TTS-V1-Turbo
-relay_backend: shm

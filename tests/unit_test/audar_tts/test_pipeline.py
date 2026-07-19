@@ -20,6 +20,7 @@ import torch
 from sglang_omni.client.client import Client
 from sglang_omni.comm import stage_io
 from sglang_omni.comm.data_ref import DataRef, TransportKind
+from sglang_omni.config.manager import ConfigManager
 from sglang_omni.config.runtime import resolve_factory_signature_args
 from sglang_omni.config.schema import EndpointsConfig
 from sglang_omni.models.audar_tts import stages
@@ -105,6 +106,11 @@ def test_prompt_matches_official_audar_protocol() -> None:
 
 def test_config_and_state_contracts() -> None:
     config = AudarTTSPipelineConfig(model_path="audarai/Audar-TTS-V1-Turbo")
+    file_config = ConfigManager.from_file(
+        "examples/configs/audar_tts_turbo.yaml"
+    ).config
+    assert isinstance(file_config, AudarTTSPipelineConfig)
+    assert file_config.model_path == config.model_path
     assert [stage.name for stage in config.stages] == [
         "preprocessing",
         "reference_encoder",

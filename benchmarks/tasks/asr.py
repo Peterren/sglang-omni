@@ -12,13 +12,11 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import functools
-import hashlib
 import io
 import logging
 import os
 import string
 import time
-import unicodedata
 import wave
 
 import aiohttp
@@ -83,35 +81,6 @@ def normalize_text(text: str, lang: str) -> str:
         text = text.replace(" ", "").replace("\u3000", "").strip()
         text = " ".join(list(text))
         return text
-
-    if lang == "ar":
-        normalized = unicodedata.normalize("NFKC", text).translate(
-            str.maketrans(
-                {
-                    "أ": "ا",
-                    "إ": "ا",
-                    "آ": "ا",
-                    "ٱ": "ا",
-                    "ى": "ي",
-                    "٠": "0",
-                    "١": "1",
-                    "٢": "2",
-                    "٣": "3",
-                    "٤": "4",
-                    "٥": "5",
-                    "٦": "6",
-                    "٧": "7",
-                    "٨": "8",
-                    "٩": "9",
-                }
-            )
-        )
-        normalized = "".join(
-            " " if unicodedata.category(ch).startswith("P") else ch
-            for ch in normalized
-            if ch != "ـ" and not unicodedata.combining(ch)
-        )
-        return " ".join(normalized.split())
 
     normalizer = _get_en_normalizer()
     return normalizer(text)
@@ -285,7 +254,7 @@ def load_asr_model(lang: str, device: str, generation_mode: str | None = None):
     """
     mode_suffix = f" for {generation_mode} generation" if generation_mode else ""
     del device
-    if lang not in {"ar", "en", "zh"}:
+    if lang not in {"en", "zh"}:
         raise ValueError(f"Unsupported language: {lang}")
     raise ValueError(
         "WER transcription requires a running SGLang Omni ASR server"
@@ -361,7 +330,6 @@ def make_asr_send_fn(
         except OSError as exc:
             result.error = str(exc)
             return result
-        result.wav_sha256 = hashlib.sha256(audio_bytes).hexdigest()
         result.audio_duration_s = get_wav_duration(audio_bytes)
 
         form = aiohttp.FormData()
@@ -455,7 +423,6 @@ def build_asr_eval_results(
             output.latency_s = result.latency_s
             output.asr_latency_s = result.latency_s
             output.audio_duration_s = result.audio_duration_s
-            output.wav_sha256 = result.wav_sha256
             output = apply_wer(output, result.text, lang)
         sample_outputs.append(output)
         per_sample.append(
@@ -469,7 +436,6 @@ def build_asr_eval_results(
                 "hyp_norm": output.hyp_norm,
                 "audio_duration_s": output.audio_duration_s,
                 "latency_s": output.latency_s,
-                "wav_sha256": output.wav_sha256,
                 "error": output.error,
             }
         )
