@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "dataset": {
     "repo": "google/fleurs",
     "config": "ar_eg",
@@ -35,6 +35,7 @@
     "max_sample_wer": 0.35294117647058826,
     "arabic_cer": 0.01457807681525091,
     "arabic_bleu": 88.75254621903177,
+    "arabic_bleu_signature": "nrefs:1|case:mixed|eff:no|tok:none|smooth:exp|version:2.6.0",
     "arabic_chrf_pp": 95.56573510676158,
     "normalization": "NFKC, Arabic diacritics/tatweel/punctuation stripped, Alef and digits normalized",
     "evidence": "exact waveform match with latest"
@@ -48,8 +49,28 @@
     "max_sample_wer": 0.35294117647058826,
     "arabic_cer": 0.01457807681525091,
     "arabic_bleu": 88.75254621903177,
+    "arabic_bleu_signature": "nrefs:1|case:mixed|eff:no|tok:none|smooth:exp|version:2.6.0",
     "arabic_chrf_pp": 95.56573510676158,
     "normalization": "NFKC, Arabic diacritics/tatweel/punctuation stripped, Alef and digits normalized",
     "evidence": "direct ASR evaluation"
+  },
+  "reference_audio_asr_baseline": {
+    "sample_count": 50,
+    "asr_model": "Qwen/Qwen3-ASR-1.7B",
+    "arabic_wer": 0.08913649025069638,
+    "arabic_wer_excluding_above_50_percent": 0.08913649025069638,
+    "samples_above_50_percent_wer": 0,
+    "max_sample_wer": 0.375,
+    "arabic_cer": 0.02691337258200168,
+    "arabic_bleu": 81.68074007472892,
+    "arabic_bleu_signature": "nrefs:1|case:mixed|eff:no|tok:none|smooth:exp|version:2.6.0",
+    "arabic_chrf_pp": 92.2314636067578,
+    "normalization": "NFKC, Arabic diacritics/tatweel/punctuation stripped, Alef and digits normalized"
+  },
+  "tts_minus_reference_audio": {
+    "arabic_wer": -0.034818941504178275,
+    "arabic_cer": -0.01233529576675077,
+    "arabic_bleu": 7.071806144302855,
+    "arabic_chrf_pp": 3.33427150000378
   }
 }
