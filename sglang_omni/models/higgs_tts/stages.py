@@ -159,12 +159,7 @@ class _HiggsReferenceInput:
 
 
 class _HiggsReferenceEncodeHook(TensorReferenceEncodeHook[_HiggsReferenceInput]):
-    """M4a hook: delayed reference codes for a 24 kHz waveform.
-
-    Keys are waveform-content hashes (computed once in preprocessing), so
-    identical reference audio hits across request ids and source forms.
-    Waveform-content keys cannot go stale, so the default revalidate applies.
-    """
+    """Encode delayed 24 kHz reference codes keyed by waveform content."""
 
     model_revision = ""
     encoder_id = "higgs_codec_delayed"

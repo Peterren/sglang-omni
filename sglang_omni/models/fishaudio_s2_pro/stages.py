@@ -22,6 +22,7 @@ from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.pipeline_state import load_state as _load_pipeline_state
 from sglang_omni.scheduling.pipeline_state import store_state as _store_pipeline_state
 from sglang_omni.scheduling.reference_encoder import (
+    ReferenceEncodeKey,
     ReferenceEncodeService,
     TensorReferenceEncodeHook,
 )
@@ -184,6 +185,9 @@ class _FishReferenceEncodeHook(TensorReferenceEncodeHook[_FishReferenceInput]):
             audio_tensor = torch.from_numpy(audio).float().reshape(1, -1)
             return self._encode_reference_waveform(audio_tensor, int(sr))
         raise TypeError(f"unknown FishAudio reference source: {item.source_kind}")
+
+    def revalidate(self, item: _FishReferenceInput, key: ReferenceEncodeKey) -> bool:
+        return item.source_kind != "path" or self.input_key(item) == key.input_key
 
     def input_key(self, item: _FishReferenceInput) -> str | None:
         if item.source_kind == "path":

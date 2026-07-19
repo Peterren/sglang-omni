@@ -102,6 +102,16 @@ def test_tensor_hook_builds_key_and_owns_stored_and_loaded_tensors() -> None:
     assert loaded.dtype == torch.long
     assert torch.equal(loaded, torch.tensor([1, 2], dtype=torch.long))
 
+    class _PreservingHook(_TensorHook):
+        storage_dtype = None
+        output_dtype = None
+
+    preserving_hook = _PreservingHook()
+    source = torch.tensor([1.5], dtype=torch.float32)
+    preserved = preserving_hook.load_artifact(preserving_hook.store_artifact(source))
+    assert preserved.dtype == torch.float32
+    assert preserved.data_ptr() != source.data_ptr()
+
 
 def test_same_key_concurrent_single_flight() -> None:
     release = threading.Event()
