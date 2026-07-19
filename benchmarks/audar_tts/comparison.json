@@ -96,6 +96,8 @@
     }
   },
   "loc": {
+    "stack_base": "7aa65583833d355e5cddd17ff4005c7a6e71d059",
+    "latest_integration": "47510c63ded49271b547f4f6d9e0673f8ed0f11a",
     "tests_and_docs_excluded": true,
     "minimal": {
       "pre_t1": 575,
@@ -103,7 +105,7 @@
     },
     "production": {
       "pre_t1": 797,
-      "latest": 633
+      "latest": 620
     }
   },
   "artifacts": {

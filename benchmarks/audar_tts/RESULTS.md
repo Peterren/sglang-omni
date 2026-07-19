@@ -106,8 +106,15 @@ Tests and Markdown/RST files are excluded from this LOC table.
 | Capability tier | Pre-T1 | Latest | Reduction |
 | --- | ---: | ---: | ---: |
 | Minimal integration | 575 | 543 | 32 (5.6%) |
-| Production-enhanced integration | 797 | 633 | 164 (20.6%) |
-| Production capability premium | 222 | 90 | 132 (59.5%) |
+| Production-enhanced integration | 797 | 620 | 177 (22.2%) |
+| Production capability premium | 222 | 77 | 145 (65.3%) |
+
+The production LOC result stacks the Audar integration at
+`47510c63ded49271b547f4f6d9e0673f8ed0f11a` on the shared tensor hook from
+PR #1096 at `7aa65583833d355e5cddd17ff4005c7a6e71d059`. This removes 13 more
+model-owned lines. The correctness and performance artifacts above remain tied
+to the original locked snapshots; the stack changes only equivalent key and
+tensor cache plumbing and passes 31 focused Audar and shared-service tests.
 
 The production tier includes bounded reference caching, composite keys,
 same-reference single-flight, distinct-reference request isolation, serialized
