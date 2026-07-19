@@ -10,6 +10,10 @@
   `ec25335e9815ef53daa9c60239a1859804282270`.
 - Latest production integration:
   `49cde765101bf3c4501dc1838f47ec23dbbf225b`.
+- Quality artifact heads: pre-T1 `44eaf8819f34723d4ad132045614685a389d5f15`
+  and latest `80d9b2a4062247406cd56ff43aa9f3e1e4b4cf3a`. Changes after the
+  production integration commits only add benchmark evidence, tests, docs, and
+  a latest-side import-order cleanup; model behavior is unchanged.
 - Audar revision: `51f5635f32de3ab45ff28a4b958464532225b247`.
 - NeuCodec revision: `30c1fdd19e68aee65d542cf043750d4c0165893e`.
 - Runtime: one NVIDIA H100 80GB, driver 580.126.20, CUDA 13.0,
@@ -43,17 +47,25 @@ pairwise. The ASR artifact also records and verifies the SHA-256 of every WAV it
 actually transcribed. Latest was transcribed once; the pre-T1 quality result is
 inherited only from exact WAV identity, not measured in a second ASR run.
 
-| Metric | Shared value |
-| --- | ---: |
-| Arabic corpus WER | 5.43% |
-| Arabic corpus CER | 1.46% |
-| Arabic corpus BLEU | 88.75 |
-| Arabic chrF++ | 95.57 |
+The same ASR and normalization were also run on the original human FLEURS audio
+for these 50 rows. This is an ASR baseline, not a theoretical floor: cleaner
+synthetic speech can be easier to recognize than the source recordings.
 
-No sample has WER above 50%; the maximum per-sample WER is 35.29%.
+| Metric | FLEURS source audio | Audar TTS | TTS - source |
+| --- | ---: | ---: | ---: |
+| Arabic corpus WER | 8.91% | 5.43% | -3.48 pp |
+| Arabic corpus CER | 2.69% | 1.46% | -1.23 pp |
+| Arabic corpus BLEU | 81.68 | 88.75 | +7.07 |
+| Arabic chrF++ | 92.23 | 95.57 | +3.33 |
+
+No sample has WER above 50%; maximum per-sample WER is 35.29% for TTS and
+37.50% for source audio. BLEU, CER, and chrF++ are alternate views of the same
+ASR transcripts, not independent quality measurements.
 These values come from one Qwen3-ASR pass, so no ASR run-to-run interval is
-claimed. They measure intelligibility, not naturalness or speaker similarity.
-MOS, UTMOS, and speaker similarity were not measured.
+claimed. Metrics use folded Arabic orthography: Alef variants and alif maqsura
+are normalized, and diacritics, tatweel, and punctuation are removed. They
+measure intelligibility, not naturalness or speaker similarity. MOS, UTMOS, and
+speaker similarity were not measured.
 
 ## Performance
 
@@ -63,7 +75,7 @@ so each snapshot contributes 12 measured warm requests.
 
 | Metric | Pre-T1 | Latest | Delta |
 | --- | ---: | ---: | ---: |
-| Total latency | 1.0779 s | 1.0764 s | -0.13% |
+| Stage-sum latency | 1.0779 s | 1.0764 s | -0.13% |
 | RTF | 0.1891 | 0.1888 | -0.13% |
 | Engine wall latency | 1.0696 s | 1.0685 s | -0.11% |
 | Engine codes/s | 293.95 | 294.43 | +0.16% |
@@ -76,6 +88,12 @@ the result is performance parity rather than evidence of a speedup or
 regression. The paired driver fixes the order to latest, pre-T1, pre-T1,
 latest. The AR implementation is the same serial llama.cpp decode in both
 branches.
+
+The quality generator is not a performance benchmark: it runs pre-T1 first and
+has no warmup exclusion. Its first two pre-T1 blocks ramp from 157.57 to 193.80
+codes/s. Over samples 20-49, after that startup effect, pre-T1 and latest are
+274.78 and 274.02 codes/s. The balanced performance driver above excludes
+warmup and is the source of the parity conclusion.
 
 ## Integration size
 

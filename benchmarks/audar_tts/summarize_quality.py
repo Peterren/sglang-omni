@@ -21,6 +21,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--latest-generation", type=Path, required=True)
     parser.add_argument("--latest-wer", type=Path, required=True)
     parser.add_argument("--pre-t1-wer", type=Path)
+    parser.add_argument("--reference-audio-generation", type=Path, required=True)
+    parser.add_argument("--reference-wer", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
@@ -140,6 +142,8 @@ def _quality_metrics(wer: dict[str, Any], generation: dict[str, Any]) -> dict[st
         cer_reference_characters += (
             measures.substitutions + measures.deletions + measures.hits
         )
+    bleu = BLEU(tokenize="none")
+    bleu_score = bleu.corpus_score(hypotheses, [references])
     return {
         "sample_count": len(samples_by_id),
         "asr_model": wer["config"]["asr_model"],
@@ -150,9 +154,8 @@ def _quality_metrics(wer: dict[str, Any], generation: dict[str, Any]) -> dict[st
         ),
         "max_sample_wer": max(per_sample_wers),
         "arabic_cer": cer_errors / cer_reference_characters,
-        "arabic_bleu": BLEU(tokenize="none", effective_order=True)
-        .corpus_score(hypotheses, [references])
-        .score,
+        "arabic_bleu": bleu_score.score,
+        "arabic_bleu_signature": str(bleu.get_signature()),
         "arabic_chrf_pp": CHRF(word_order=2)
         .corpus_score(hypotheses, [references])
         .score,
@@ -164,8 +167,24 @@ def main() -> None:
     args = _parse_args()
     pre_generation = _load(args.pre_t1_generation)
     latest_generation = _load(args.latest_generation)
+    reference_generation = _load(args.reference_audio_generation)
+    if reference_generation["dataset"] != latest_generation["dataset"]:
+        raise ValueError("reference-audio and TTS dataset metadata differ")
+    reference_samples = _complete_generation_samples(
+        reference_generation, label="reference audio"
+    )
+    latest_samples = _complete_generation_samples(latest_generation, label="latest")
+    if reference_samples.keys() != latest_samples.keys() or any(
+        reference_samples[sample_id]["target_text"]
+        != latest_samples[sample_id]["target_text"]
+        for sample_id in reference_samples
+    ):
+        raise ValueError("reference-audio and TTS target corpora differ")
     exactness = _compare_generations(pre_generation, latest_generation)
     latest_quality = _quality_metrics(_load(args.latest_wer), latest_generation)
+    reference_quality = _quality_metrics(
+        _load(args.reference_wer), reference_generation
+    )
     if exactness["all_outputs_exact"]:
         pre_quality = dict(latest_quality)
         pre_quality["evidence"] = "exact waveform match with latest"
@@ -176,7 +195,7 @@ def main() -> None:
         pre_quality["evidence"] = "independent ASR evaluation"
     latest_quality["evidence"] = "direct ASR evaluation"
     summary = {
-        "schema_version": 2,
+        "schema_version": 3,
         "dataset": latest_generation["dataset"],
         "commits": {
             "pre_t1": pre_generation["commit"],
@@ -185,6 +204,17 @@ def main() -> None:
         "exactness": exactness,
         "pre_t1": pre_quality,
         "latest": latest_quality,
+        "reference_audio_asr_baseline": reference_quality,
+        "tts_minus_reference_audio": {
+            "arabic_wer": latest_quality["arabic_wer"]
+            - reference_quality["arabic_wer"],
+            "arabic_cer": latest_quality["arabic_cer"]
+            - reference_quality["arabic_cer"],
+            "arabic_bleu": latest_quality["arabic_bleu"]
+            - reference_quality["arabic_bleu"],
+            "arabic_chrf_pp": latest_quality["arabic_chrf_pp"]
+            - reference_quality["arabic_chrf_pp"],
+        },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

@@ -46,7 +46,20 @@
     "samples_above_50_percent_wer": 0,
     "arabic_cer": 0.01457807681525091,
     "arabic_bleu": 88.75254621903177,
-    "arabic_chrf_pp": 95.56573510676158
+    "arabic_bleu_signature": "nrefs:1|case:mixed|eff:no|tok:none|smooth:exp|version:2.6.0",
+    "arabic_chrf_pp": 95.56573510676158,
+    "reference_audio_asr_baseline": {
+      "arabic_wer": 0.08913649025069638,
+      "arabic_cer": 0.02691337258200168,
+      "arabic_bleu": 81.68074007472892,
+      "arabic_chrf_pp": 92.2314636067578
+    },
+    "tts_minus_reference_audio": {
+      "arabic_wer": -0.034818941504178275,
+      "arabic_cer": -0.01233529576675077,
+      "arabic_bleu": 7.071806144302855,
+      "arabic_chrf_pp": 3.33427150000378
+    }
   },
   "performance": {
     "method": "fixed order latest/pre-T1/pre-T1/latest; mean of two warm run medians; 7 requests per run; iteration 0 excluded",

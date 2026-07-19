@@ -27,14 +27,14 @@ def test_arabic_quality_uses_target_and_asr_text_directly() -> None:
         [
             {
                 "sample_id": "one",
-                "target_text": "مرحبا بالعالم",
+                "target_text": "مرحبا بكم في هذا العالم الجميل",
                 "is_success": True,
                 "reached_max_new_tokens": False,
                 "wav_sha256": "wav-one",
             },
             {
                 "sample_id": "two",
-                "target_text": "هذا اختبار بسيط",
+                "target_text": "هذا اختبار عربي بسيط وواضح جدا",
                 "is_success": True,
                 "reached_max_new_tokens": False,
                 "wav_sha256": "wav-two",
@@ -44,21 +44,21 @@ def test_arabic_quality_uses_target_and_asr_text_directly() -> None:
     result = _quality_metrics(
         {
             "config": {"asr_model": "test-asr"},
-            "summary": {"wer_corpus": 0.2},
+            "summary": {"wer_corpus": 1 / 12},
             "per_sample": [
                 {
                     "id": "one",
                     "is_success": True,
                     "wav_sha256": "wav-one",
-                    "ref_norm": "مرحبا بالعالم",
-                    "hyp_norm": "مرحبا بالعالم",
+                    "ref_norm": "مرحبا بكم في هذا العالم الجميل",
+                    "hyp_norm": "مرحبا بكم في هذا العالم الجميل",
                 },
                 {
                     "id": "two",
                     "is_success": True,
                     "wav_sha256": "wav-two",
-                    "ref_norm": "هذا اختبار بسيط",
-                    "hyp_norm": "هذا اختبار",
+                    "ref_norm": "هذا اختبار عربي بسيط وواضح جدا",
+                    "hyp_norm": "هذا اختبار عربي بسيط جدا",
                 },
             ],
         },
@@ -67,7 +67,7 @@ def test_arabic_quality_uses_target_and_asr_text_directly() -> None:
 
     assert result["sample_count"] == 2
     assert result["asr_model"] == "test-asr"
-    assert result["arabic_wer"] == 0.2
+    assert result["arabic_wer"] == pytest.approx(1 / 12)
     assert result["samples_above_50_percent_wer"] == 0
     assert 0 < result["arabic_cer"] < 1
     assert 0 < result["arabic_bleu"] < 100
