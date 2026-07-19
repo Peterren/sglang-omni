@@ -136,6 +136,54 @@ def test_idle_loop_bypasses_gate(upstream):
     assert sched.get_new_batch_prefill() is _UPSTREAM_BATCH
 
 
+def test_real_partial_admission_cycle_releases_leftovers_immediately(clock):
+    # Note: (Jiaxin Deng) real admit cycle: upstream pops only the head of an
+    # expired wave; the leftover keeps its stamp and releases on the next pass.
+    def _admit_head(self):
+        self.waiting_queue.pop(0)
+        return _UPSTREAM_BATCH
+
+    sched = _StubScheduler(coalesce_requests=8, wait_ms=60.0)
+    clock.return_value = 100.07
+    leftover = _req(100.005)
+    sched.waiting_queue = [_req(100.0), leftover]
+    with mock.patch.object(
+        omni_scheduler._Upstream,
+        "get_new_batch_prefill",
+        autospec=True,
+        side_effect=_admit_head,
+    ) as patched:
+        assert sched.get_new_batch_prefill() is _UPSTREAM_BATCH
+        assert sched.waiting_queue == [leftover]
+        assert sched.get_new_batch_prefill() is _UPSTREAM_BATCH
+        assert patched.call_count == 2
+        assert sched.waiting_queue == []
+
+
+def test_newcomer_after_queue_drain_waits_its_own_window(upstream, clock):
+    # Note: (Jiaxin Deng) once the arming request leaves the queue (abort's
+    # queue filtering), a stamp-on-miss newcomer ages from its own arrival.
+    sched = _StubScheduler(coalesce_requests=8, wait_ms=60.0)
+    clock.return_value = 100.0
+    armer = _req(None)
+    sched.waiting_queue = [armer]
+    assert sched.get_new_batch_prefill() is None
+    assert armer._coalesce_enqueue_t == 100.0
+
+    clock.return_value = 100.059  # abort just before the armer's deadline
+    sched.waiting_queue.remove(armer)
+    newcomer = _req(None)
+    sched.waiting_queue.append(newcomer)
+    assert sched.get_new_batch_prefill() is None
+    assert newcomer._coalesce_enqueue_t == 100.059
+
+    clock.return_value = 100.07  # past the armer's window, inside the newcomer's
+    assert sched.get_new_batch_prefill() is None
+
+    clock.return_value = 100.12  # newcomer's own deadline expires
+    assert sched.get_new_batch_prefill() is _UPSTREAM_BATCH
+
+
 def test_unstamped_request_is_stamped_and_eventually_released(upstream, clock):
     # Note(maydomine): Stamp-on-miss: held at first observation, then guaranteed release
     # within the wait deadline (never a K-only unbounded hold).
