@@ -35,7 +35,7 @@ from sglang_omni.pipeline.mp_runner import _build_stage_groups
 from sglang_omni.pipeline.runtime_config import prepare_pipeline_runtime
 from sglang_omni.proto import DataReadyMessage, OmniRequest, StagePayload
 from sglang_omni.relay.shm import ShmRelay
-from sglang_omni.serve.protocol import SUPPORTED_TTS_LANGUAGES
+from sglang_omni.serve.speech_errors import SpeechAPIError
 from sglang_omni.serve.speech_service import SpeechRequestValidator
 from sglang_omni.utils.imports import import_string
 from tests.unit_test.fixtures.pipeline_fakes import FakeMpContext
@@ -119,7 +119,9 @@ def test_config_and_state_contracts() -> None:
     ]
     assert config.terminal_stages == ["vocoder"]
     assert config.supports_uploaded_voice_references() is True
-    assert "Arabic" in SUPPORTED_TTS_LANGUAGES
+    assert config.required_speech_reference_count == 1
+    assert config.speech_reference_text_required is True
+    assert config.additional_speech_languages == frozenset({"Arabic"})
     assert (
         PIPELINE_CONFIG_REGISTRY.get_config("AudarTTSForConditionalGeneration")
         is AudarTTSPipelineConfig
@@ -146,6 +148,67 @@ def test_config_and_state_contracts() -> None:
         engine_time_s=0.5,
     )
     assert AudarTTSState.from_dict(state.to_dict()) == state
+
+
+@pytest.mark.parametrize(
+    ("payload", "param"),
+    [
+        ({"input": "target"}, "ref_audio"),
+        (
+            {
+                "input": "target",
+                "ref_audio": "data:audio/wav;base64,UklGRg==",
+            },
+            "ref_text",
+        ),
+        (
+            {
+                "input": "target",
+                "ref_audio": "data:audio/wav;base64,UklGRg==",
+                "ref_text": "reference",
+                "references": [
+                    {
+                        "data": "UklGRg==",
+                        "media_type": "audio/wav",
+                        "text": "reference",
+                    }
+                ],
+            },
+            "references",
+        ),
+    ],
+)
+def test_public_speech_validation_rejects_invalid_audar_references(
+    payload: dict[str, Any], param: str
+) -> None:
+    config = AudarTTSPipelineConfig(model_path="audarai/Audar-TTS-V1-Turbo")
+    validator = SpeechRequestValidator(
+        default_model=config.model_path,
+        required_speech_reference_count=config.required_speech_reference_count,
+        speech_reference_text_required=config.speech_reference_text_required,
+        additional_speech_languages=config.additional_speech_languages,
+    )
+
+    with pytest.raises(SpeechAPIError) as exc_info:
+        validator.parse_generation_request(payload)
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.param == param
+
+
+def test_arabic_language_is_scoped_to_audar() -> None:
+    with pytest.raises(SpeechAPIError) as exc_info:
+        SpeechRequestValidator(default_model="qwen3-tts").parse_request(
+            {"input": "target", "language": "Arabic"}
+        )
+    assert exc_info.value.param == "language"
+
+    validator = SpeechRequestValidator(
+        default_model="audarai/Audar-TTS-V1-Turbo",
+        additional_speech_languages=frozenset({"Arabic"}),
+    )
+    request = validator.parse_request({"input": "target", "language": "arabic"})
+    assert request.language == "Arabic"
 
 
 def test_config_dispatch_injects_model_path_and_gpu(tmp_path: Any) -> None:

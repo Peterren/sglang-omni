@@ -50,6 +50,9 @@ class AudarTTSPipelineConfig(PipelineConfig):
     architecture: ClassVar[str] = "AudarTTSForConditionalGeneration"
     architecture_aliases: ClassVar[tuple[str, ...]] = ("AudarTTS",)
     requires_model_capabilities: ClassVar[bool] = True
+    required_speech_reference_count: ClassVar[int | None] = 1
+    speech_reference_text_required: ClassVar[bool] = True
+    additional_speech_languages: ClassVar[frozenset[str]] = frozenset({"Arabic"})
 
     model_path: str
     stages: list[StageConfig] = Field(default_factory=_stages)
