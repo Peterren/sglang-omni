@@ -239,6 +239,7 @@ SUPPORTED_TTS_RESPONSE_FORMATS = frozenset({"wav", "mp3", "flac", "pcm", "aac", 
 SUPPORTED_TTS_LANGUAGES = frozenset(
     {
         "Auto",
+        "Arabic",
         "Chinese",
         "English",
         "Japanese",

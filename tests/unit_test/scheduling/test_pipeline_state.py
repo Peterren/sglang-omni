@@ -86,6 +86,7 @@ def test_serialize_value_detaches_tensor_to_cpu() -> None:
 def test_tts_pipeline_states_share_base_usage_contract() -> None:
     import dataclasses
 
+    from sglang_omni.models.audar_tts.payload_types import AudarTTSState
     from sglang_omni.models.fishaudio_s2_pro.payload_types import S2ProState
     from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
     from sglang_omni.models.ming_tts.payload_types import MingTTSState
@@ -96,6 +97,7 @@ def test_tts_pipeline_states_share_base_usage_contract() -> None:
 
     # Every in-scope TTS model routes its state through PipelineStateBase.
     state_classes = (
+        AudarTTSState,
         S2ProState,
         HiggsTtsState,
         MingTTSState,
@@ -177,6 +179,7 @@ def _assert_restored_fields(
 
 
 def test_tts_pipeline_state_round_trips_preserve_payload_fields() -> None:
+    from sglang_omni.models.audar_tts.payload_types import AudarTTSState
     from sglang_omni.models.fishaudio_s2_pro.payload_types import S2ProState
     from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
     from sglang_omni.models.ming_tts.payload_types import MingTTSState
@@ -196,6 +199,20 @@ def test_tts_pipeline_state_round_trips_preserve_payload_fields() -> None:
     # their tensor fields natively. Note the float32 tensor -> Python list
     # conversions derive expected values through the same precision path.
     cases: list[tuple[PipelineStateBase, dict[str, Any]]] = [
+        (
+            AudarTTSState(
+                target_text="target",
+                reference_text="reference",
+                reference_audio={"bytes": b"wav"},
+                prompt="prompt",
+                audio_codes=[1, 2, 3],
+                generation_kwargs={"temperature": 0.7},
+                prompt_tokens=4,
+                completion_tokens=6,
+                engine_time_s=0.125,
+            ),
+            {},
+        ),
         (
             S2ProState(
                 input_ids=[1, 2, 3],
