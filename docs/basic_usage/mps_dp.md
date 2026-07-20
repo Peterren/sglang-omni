@@ -167,7 +167,7 @@ Low SM activity at the tuned single replica's peak may indicate reclaimable head
 
 ## Optional: share AR weights across same-GPU replicas (CUDA IPC)
 
-By default each replica loads its own AR weights. On H100 Higgs that costs about 7.6 GB per replica and can prevent DP4 from keeping Equal KV at `MAX_TOTAL_TOKENS=100000`. Setting `WEIGHT_IPC=1` makes replica 0 export AR parameters over CUDA IPC and replicas 1…N-1 alias them (see [`docs/design/weight_ipc_same_gpu_dp.md`](../design/weight_ipc_same_gpu_dp.md)).
+By default each replica loads its own AR weights. On H100 Higgs that costs about 7.6 GB per replica and can prevent DP4 from keeping Equal KV at `MAX_TOTAL_TOKENS=100000`. Setting `WEIGHT_IPC=1` makes replica 0 export AR parameters over CUDA IPC and replicas 1…N-1 alias them. The minimal parity reproduction is available in [`examples/weight_ipc/validate_dp_parity.py`](../../examples/weight_ipc/validate_dp_parity.py).
 
 ```bash
 # DP4 shared weights + Equal KV 100k

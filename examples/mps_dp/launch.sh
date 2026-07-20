@@ -28,7 +28,7 @@
 #     value takes precedence when both are set.
 #   MF: optional explicit --mem-fraction-static override (unset = pipeline default).
 #   WEIGHT_IPC: 0|1 (default 0). When 1, replica 0 exports AR weights via CUDA IPC
-#     and replicas 1..N-1 alias them (see docs/design/weight_ipc_same_gpu_dp.md).
+#     and replicas 1..N-1 alias them.
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
