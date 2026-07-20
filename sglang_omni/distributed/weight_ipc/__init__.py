@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from sglang_omni.distributed.weight_ipc.compat import validate_weight_ipc_compatibility
 from sglang_omni.distributed.weight_ipc.config import (
     apply_weight_ipc_cli_env,
     resolve_weight_ipc_config,
@@ -39,4 +40,5 @@ __all__ = [
     "import_and_alias",
     "materialize_follower_weights",
     "resolve_weight_ipc_config",
+    "validate_weight_ipc_compatibility",
 ]

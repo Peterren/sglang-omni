@@ -64,7 +64,9 @@ def _validate(config: WeightIpcConfig) -> None:
             f"{config.role!r} but store_dir / WEIGHT_IPC_STORE is unset"
         )
     if config.timeout_s <= 0:
-        raise ValueError(f"weight IPC timeout_s must be positive, got {config.timeout_s}")
+        raise ValueError(
+            f"weight IPC timeout_s must be positive, got {config.timeout_s}"
+        )
 
 
 def is_weight_ipc_follower() -> bool:

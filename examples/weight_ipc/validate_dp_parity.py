@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -65,9 +64,9 @@ def main() -> int:
     parser.add_argument("--out-json", type=Path, default=None)
     args = parser.parse_args()
 
-    prompts = (DEFAULT_PROMPTS * ((args.n + len(DEFAULT_PROMPTS) - 1) // len(DEFAULT_PROMPTS)))[
-        : args.n
-    ]
+    prompts = (
+        DEFAULT_PROMPTS * ((args.n + len(DEFAULT_PROMPTS) - 1) // len(DEFAULT_PROMPTS))
+    )[: args.n]
     rows: list[dict] = []
     identical = 0
     for i, text in enumerate(prompts):

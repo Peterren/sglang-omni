@@ -164,6 +164,17 @@ tracked_pids() {
   echo "$out"
 }
 
+tracked_follower_pids() {
+  local pgid out="" p idx
+  while IFS=$'\t' read -r idx _ pgid _ _; do
+    [ "$idx" = 0 ] && continue
+    for p in $(pgrep -g "$pgid" 2>/dev/null || true); do
+      pid_is_live "$p" && out+=" $p"
+    done
+  done < "$1/replicas.tsv"
+  echo "$out"
+}
+
 run_is_active() {
   local state=$1 port live
   live=$(tracked_pids "$state")
@@ -238,14 +249,32 @@ teardown_state() {
   # Note (jiaxin): these GPUs are shared; teardown only signals processes recorded
   # in this run's state, never scans the whole GPU, and keeps the state directory
   # whenever cleanup cannot be confirmed, so nothing is hidden from inspection.
-  # Stop highest replica index first so weight-IPC followers unmap before leader.
-  local state=$1 keep=${2:-} leader_pid pgid leader_start t live raw control_pid=""
+  # Followers must fully exit before the leader releases their aliased CUDA storage.
+  local state=$1 keep=${2:-} idx leader_pid pgid leader_start t live raw control_pid=""
   [ -n "$state" ] && [ -f "$state/replicas.tsv" ] || die "invalid or missing run state '$state'"
   control_pid=$(mps_control_pid "$state" || true)
-  while IFS=$'\t' read -r _ leader_pid pgid _ _ leader_start; do
+  while IFS=$'\t' read -r idx leader_pid pgid _ _ leader_start; do
+    [ "$idx" = 0 ] && continue
     leader_identity_matches "$leader_pid" "$leader_start" || continue
     kill -TERM -- "-$pgid" 2>/dev/null || true
   done < <(tac "$state/replicas.tsv")
+  for ((t=1; t<=DRAIN_TRIES; t++)); do
+    live=$(tracked_follower_pids "$state")
+    [ -z "${live// /}" ] && break
+    sleep "$DRAIN_INTERVAL"
+  done
+  live=$(tracked_follower_pids "$state")
+  if [ -n "${live// /}" ]; then
+    echo "error: follower processes did not exit after TERM:$live" >&2
+    echo "leader left running to preserve aliased CUDA storage; state kept at $state" >&2
+    return 1
+  fi
+  while IFS=$'\t' read -r idx leader_pid pgid _ _ leader_start; do
+    [ "$idx" = 0 ] || continue
+    leader_identity_matches "$leader_pid" "$leader_start" || break
+    kill -TERM -- "-$pgid" 2>/dev/null || true
+    break
+  done < "$state/replicas.tsv"
   for ((t=1; t<=DRAIN_TRIES; t++)); do
     live=$(tracked_pids "$state")
     [ -z "${live// /}" ] && break
