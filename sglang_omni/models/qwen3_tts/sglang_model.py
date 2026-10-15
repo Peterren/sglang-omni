@@ -53,6 +53,10 @@ from sglang_omni.models.qwen3_tts.speaker_encoder_cuda_graph import (
 )
 from sglang_omni.platforms import current_platform
 from sglang_omni.platforms.device_graph import ReplayableGraph
+from sglang_omni.sampling.sampler_compile import (
+    SamplerCompileForms,
+    compile_sampler_functions,
+)
 from sglang_omni.scheduling.types import SchedulerRequest
 from sglang_omni.utils.predictor_layers import resolve_fused_predictor_layers
 from sglang_omni.vendor.sglang.core import ForwardBatch
@@ -1280,8 +1284,11 @@ class Qwen3TTSTalker(Qwen3TTSPromptBuilderMixin, nn.Module):
         else:
             pass
         logits, _ = self.codec_head(hidden_states)
+        # note (ratish): the sampler divides and softmaxes in the logits' own dtype, and
+        # FlashInfer's draw needs probabilities that sum to 1; a bf16 row that falls short
+        # draws the last valid id, EOS.
         logits_output = LogitsProcessorOutput(
-            next_token_logits=logits,
+            next_token_logits=logits.float(),
             hidden_states=hidden_states,
         )
         return logits_output
@@ -2205,6 +2212,22 @@ class Qwen3TTSTalker(Qwen3TTSPromptBuilderMixin, nn.Module):
             batch_size * num_tokens, attn.num_heads * attn.head_dim
         )
         return attn_output
+
+    def precompile_kernels_after_loading(self) -> None:
+        """Compile the repetition penalty every request reaches and the seeded draw a
+        request seed reaches, on the codec head's fp32 logits, and load FlashInfer's
+        sampling module when it draws the unseeded requests."""
+        compile_sampler_functions(
+            SamplerCompileForms(
+                device=self.codec_head.weight.device,
+                vocab_size=self.config.vocab_size,
+                seeded_log_probability_dtype=torch.float64,
+                penalized_logits_dtype=torch.float32,
+                should_load_flashinfer_sampling=(
+                    get_exec().kernel.sampling_backend == "flashinfer"
+                ),
+            )
+        )
 
     def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]) -> None:
         params_dict = self.cached_params_dict
